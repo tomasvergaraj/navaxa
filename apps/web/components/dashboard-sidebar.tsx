@@ -8,23 +8,29 @@ import {
   Users,
   Scissors,
   Megaphone,
+  Wallet,
+  UserCircle,
   Settings,
   LogOut,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Logo, cn } from "@navaxa/ui";
 
-const nav = [
+const baseNav = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/agenda", label: "Agenda", icon: Calendar },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/barberos", label: "Barberos", icon: Scissors },
+  { href: "/comisiones", label: "Comisiones", icon: Wallet },
   { href: "/marketing", label: "Marketing", icon: Megaphone },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ isBarber = false }: { isBarber?: boolean }) {
   const pathname = usePathname();
+  const nav = isBarber
+    ? [...baseNav, { href: "/mi-perfil", label: "Mi perfil", icon: UserCircle }]
+    : baseNav;
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card md:flex">
       <div className="flex h-16 items-center border-b border-border px-5">

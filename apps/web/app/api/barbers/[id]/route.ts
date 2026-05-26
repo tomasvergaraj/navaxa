@@ -33,18 +33,35 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { role } = getTenantContext();
-    if (role !== "OWNER" && role !== "ADMIN") {
+    const { role, userId } = getTenantContext();
+    const isManager = role === "OWNER" || role === "ADMIN";
+
+    const db = scopedDb();
+    // El dueño/admin edita a cualquier barbero; un barbero solo su propio perfil.
+    const target = await db.barber.findFirst({
+      where: { id: params.id },
+      select: { userId: true },
+    });
+    if (!target) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    if (!isManager && target.userId !== userId) {
       return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
     }
+
     const parsed = updateSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
-    const db = scopedDb();
+
+    // El barbero no puede cambiar su comisión ni su estado activo (eso es del dueño).
+    let data = parsed.data;
+    if (!isManager) {
+      const { commissionRate: _c, active: _a, ...selfEditable } = data;
+      data = selfEditable;
+    }
+
     const updated = await db.barber.update({
       where: { id: params.id },
-      data: parsed.data,
+      data,
     });
     return NextResponse.json({ barber: updated });
   } catch (e) {

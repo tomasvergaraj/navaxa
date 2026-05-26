@@ -15,8 +15,9 @@ import {
   DialogFooter,
 } from "@navaxa/ui";
 import { toast } from "sonner";
+import { TagsInput } from "@/components/ui/tags-input";
 
-const empty = { name: "", email: "", commissionRate: "40", bio: "" };
+const empty = { name: "", email: "", commissionRate: "40", bio: "", specialties: [] as string[] };
 
 export function NewBarberButton() {
   const router = useRouter();
@@ -43,6 +44,7 @@ export function NewBarberButton() {
           email: form.email.trim(),
           commissionRate: Number(form.commissionRate) / 100,
           bio: form.bio.trim() || undefined,
+          specialties: form.specialties,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -120,6 +122,15 @@ export function NewBarberButton() {
                   placeholder="Especialidad, estilo, experiencia…"
                   value={form.bio}
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="b-spec">Especialidades (opcional)</Label>
+                <TagsInput
+                  id="b-spec"
+                  value={form.specialties}
+                  onChange={(specialties) => setForm({ ...form, specialties })}
+                  placeholder="fade, barba, color… (Enter para agregar)"
                 />
               </div>
               <p className="text-xs text-muted-foreground">

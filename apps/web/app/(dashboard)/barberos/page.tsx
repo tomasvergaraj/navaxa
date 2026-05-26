@@ -2,7 +2,8 @@ import { Card, Badge } from "@navaxa/ui";
 import { UserPlus } from "lucide-react";
 import { NewBarberButton } from "@/components/barbers/new-barber-button";
 import { BarberAvatar } from "@/components/barbers/barber-avatar";
-import { scopedDb } from "@/lib/tenant";
+import { EditBarberButton } from "@/components/barbers/edit-barber-button";
+import { scopedDb, getTenantContext } from "@/lib/tenant";
 import { AppointmentStatus } from "@navaxa/db";
 import { subDays } from "date-fns";
 import { formatCLP, formatRelative } from "@/lib/format";
@@ -11,6 +12,8 @@ import { EmptyState } from "@/components/empty-state";
 export const dynamic = "force-dynamic";
 
 export default async function BarberosPage() {
+  const { role } = getTenantContext();
+  const canManage = role === "OWNER" || role === "ADMIN";
   const db = scopedDb();
   const last30 = subDays(new Date(), 30);
 
@@ -62,17 +65,28 @@ export default async function BarberosPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {stats.map((b) => (
-            <Card key={b.id} className="p-5">
+            <Card key={b.id} className="flex h-full flex-col p-5">
               <div className="mb-4 flex items-center gap-3">
                 <BarberAvatar barberId={b.id} avatarUrl={b.avatarUrl} name={b.user.name} />
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate font-medium">{b.user.name}</h3>
                   <p className="truncate text-xs text-muted-foreground">{b.user.email}</p>
                 </div>
+                {canManage && (
+                  <EditBarberButton
+                    barberId={b.id}
+                    name={b.user.name ?? ""}
+                    bio={b.bio ?? ""}
+                    specialties={b.specialties}
+                    instagram={b.instagram ?? ""}
+                  />
+                )}
               </div>
 
               {b.bio && (
-                <p className="mb-3 text-xs leading-relaxed text-muted-foreground">{b.bio}</p>
+                <p className="mb-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  {b.bio}
+                </p>
               )}
 
               {b.specialties.length > 0 && (
@@ -85,7 +99,7 @@ export default async function BarberosPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-2 border-t border-border pt-4 text-center">
+              <div className="mt-auto grid grid-cols-3 gap-2 border-t border-border pt-4 text-center">
                 <div>
                   <div className="text-xs text-muted-foreground">Cortes 30d</div>
                   <div className="mt-1 font-medium tabular-nums">{b.apptsCount}</div>

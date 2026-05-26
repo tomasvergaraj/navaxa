@@ -14,7 +14,7 @@ export default async function DashboardLayout({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [subscription, tenant] = await Promise.all([
+  const [subscription, tenant, barber] = await Promise.all([
     prisma.subscription.findUnique({
       where: { tenantId: session.user.tenantId },
       select: { status: true },
@@ -23,12 +23,16 @@ export default async function DashboardLayout({
       where: { id: session.user.tenantId },
       select: { trialEndsAt: true, plan: true },
     }),
+    prisma.barber.findFirst({
+      where: { userId: session.user.id },
+      select: { id: true },
+    }),
   ]);
 
   return (
     <AuthSessionProvider>
       <div className="flex min-h-screen bg-background">
-        <DashboardSidebar />
+        <DashboardSidebar isBarber={!!barber} />
         <div className="flex flex-1 flex-col">
           <DashboardHeader />
           <SubscriptionBanner
