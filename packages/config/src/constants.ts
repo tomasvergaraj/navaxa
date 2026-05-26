@@ -3,7 +3,7 @@ export const APP_TAGLINE = "Cortes que cuentan una historia";
 export const APP_DESCRIPTION =
   "El sistema operativo para barberías que recuerdan a cada cliente";
 
-export const SUPPORT_EMAIL = "hola@navaxa.app";
+export const SUPPORT_EMAIL = "contacto@navaxa.cl";
 
 export const BRAND_COLORS = {
   graphite: "#0A0B0E",

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     title: "navaxa",
     description:
       "El sistema operativo para barberías que recuerdan a cada cliente.",
-    url: "https://navaxa.app",
+    url: "https://navaxa.cl",
     siteName: "navaxa",
     locale: "es_CL",
     type: "website",

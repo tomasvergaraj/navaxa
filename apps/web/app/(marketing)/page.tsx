@@ -193,8 +193,8 @@ export default function MarketingPage() {
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <Link href="/legal" className="hover:text-foreground">Términos</Link>
               <Link href="/legal" className="hover:text-foreground">Privacidad</Link>
-              <a href="mailto:hola@navaxa.app" className="hover:text-foreground">
-                hola@navaxa.app
+              <a href="mailto:contacto@navaxa.cl" className="hover:text-foreground">
+                contacto@navaxa.cl
               </a>
             </div>
           </div>

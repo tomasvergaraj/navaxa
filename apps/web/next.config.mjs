@@ -11,7 +11,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "placehold.co" },
-      { protocol: "https", hostname: "cdn.navaxa.app" },
+      { protocol: "https", hostname: "cdn.navaxa.cl" },
       { protocol: "https", hostname: "*.r2.cloudflarestorage.com" },
       { protocol: "https", hostname: "*.amazonaws.com" },
     ],

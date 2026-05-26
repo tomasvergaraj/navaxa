@@ -3,7 +3,7 @@ import { sendNotification } from "./index";
 import { addHours, addMinutes, subHours } from "date-fns";
 import { formatDate, formatTime } from "../format";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://navaxa.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://navaxa.cl";
 
 /**
  * Recordatorios de citas (24h o 1h antes), pensado para correr cada ~15 min.

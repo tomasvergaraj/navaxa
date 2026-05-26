@@ -232,7 +232,7 @@ export const runtime = "edge"; // si el handler lo permite
 Excepción: cualquier ruta que use Prisma client va con Node runtime obligatoriamente.
 
 **REGLA V2:** No servir imágenes desde Vercel cuando ya están en R2. La regla de
-`next.config.mjs` debe apuntar a `cdn.navaxa.app` directamente para imágenes de cortes,
+`next.config.mjs` debe apuntar a `cdn.navaxa.cl` directamente para imágenes de cortes,
 **no** pasar por el optimizador de Next/Vercel (eso suma bandwidth Vercel).
 
 ```tsx

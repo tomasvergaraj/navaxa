@@ -35,8 +35,8 @@ export default function LegalPage() {
           <h2 className="mt-8 font-display text-xl font-medium">Contacto</h2>
           <p>
             Para consultas legales o de privacidad escribe a{" "}
-            <a href="mailto:hola@navaxa.app" className="underline">
-              hola@navaxa.app
+            <a href="mailto:contacto@navaxa.cl" className="underline">
+              contacto@navaxa.cl
             </a>
             .
           </p>

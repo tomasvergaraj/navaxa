@@ -89,7 +89,7 @@ class MockProvider implements StorageProvider {
     /* no-op */
   }
   async signedUploadUrl({ key }: { key: string }) {
-    return `https://mock.navaxa.app/upload/${key}`;
+    return `https://mock.navaxa.cl/upload/${key}`;
   }
 }
 

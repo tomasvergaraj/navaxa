@@ -22,7 +22,7 @@ class ResendEmailProvider implements ChannelProvider {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "navaxa <hola@navaxa.app>",
+        from: "navaxa <contacto@navaxa.cl>",
         to,
         subject: subject ?? "navaxa",
         text: body,
