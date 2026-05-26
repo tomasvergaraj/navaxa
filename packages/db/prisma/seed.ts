@@ -34,6 +34,7 @@ async function main() {
   await prisma.notificationLog.deleteMany();
   await prisma.campaign.deleteMany();
   await prisma.commission.deleteMany();
+  await prisma.review.deleteMany();
   await prisma.appointmentService.deleteMany();
   await prisma.appointment.deleteMany();
   await prisma.haircutRecord.deleteMany();
@@ -332,6 +333,17 @@ async function main() {
   const now = new Date();
   let pastAppts = 0;
   let commissionTotal = 0;
+  let reviewCount = 0;
+  const REVIEW_COMMENTS = [
+    "Excelente atención, quedé muy conforme con el corte.",
+    "El mejor fade que me han hecho. Volveré seguro.",
+    "Muy puntuales y profesionales. Recomendado.",
+    "Buen ambiente y gran trabajo con la barba.",
+    "Quedó tal como lo pedí, gracias!",
+    null,
+    "Atención de primera, mi barbero de confianza.",
+    null,
+  ];
   for (let monthsAgo = 3; monthsAgo >= 1; monthsAgo--) {
     const year = now.getFullYear();
     const month = now.getMonth() - monthsAgo;
@@ -351,7 +363,7 @@ async function main() {
         const endsAt = new Date(startsAt.getTime() + service.durationMin * 60_000);
         const amount = Math.round(service.price * barber.commissionRate);
 
-        await prisma.appointment.create({
+        const appt = await prisma.appointment.create({
           data: {
             tenantId: tenant.id,
             clientId: client.id,
@@ -379,11 +391,28 @@ async function main() {
         });
         pastAppts++;
         commissionTotal += amount;
+
+        // ~2 de cada 3 citas dejan reseña (notas 4-5).
+        const idx = pastAppts;
+        if (idx % 3 !== 0) {
+          await prisma.review.create({
+            data: {
+              tenantId: tenant.id,
+              appointmentId: appt.id,
+              clientId: client.id,
+              barberId: barber.id,
+              rating: 4 + (idx % 2), // 4 o 5
+              comment: REVIEW_COMMENTS[idx % REVIEW_COMMENTS.length],
+              createdAt: endsAt,
+            },
+          });
+          reviewCount++;
+        }
       }
     }
   }
   console.log(
-    `  · ${pastAppts} citas completadas + comisiones (CLP ${commissionTotal} en comisiones)`,
+    `  · ${pastAppts} citas completadas + comisiones (CLP ${commissionTotal} en comisiones), ${reviewCount} reseñas`,
   );
 
   // ===== Campañas por defecto =====

@@ -7,7 +7,8 @@ export type TemplateKey =
   | "appointment_confirmed"
   | "appointment_cancelled"
   | "barber_invite"
-  | "password_reset";
+  | "password_reset"
+  | "review_request";
 
 interface Template {
   subject?: string;
@@ -55,6 +56,11 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     subject: "Recupera tu contraseña en navaxa",
     body:
       "Hola {firstName}, recibimos una solicitud para restablecer tu contraseña. Crea una nueva acá: {actionUrl}\n\nEl enlace vence en 1 hora. Si no fuiste tú, ignora este mensaje.",
+  },
+  review_request: {
+    subject: "¿Cómo te fue en {shopName}?",
+    body:
+      "Hola {firstName} 👋 Gracias por tu visita a {shopName}. ¿Nos dejas tu reseña? Toma menos de un minuto: {reviewUrl}",
   },
 };
 

@@ -56,6 +56,7 @@ model Tenant {
   haircuts      HaircutRecord[]
   commissions   Commission[]
   payments      Payment[]
+  reviews       Review[]
   subscription  Subscription?
 
   @@map("tenants")
@@ -218,6 +219,7 @@ model Barber {
   appointments Appointment[]
   commissions  Commission[]
   haircuts     HaircutRecord[]
+  reviews      Review[]
 
   @@index([tenantId])
   @@map("barbers")
@@ -277,6 +279,7 @@ model Client {
   appointments    Appointment[]
   preferences     ClientPreference?
   recommendations AIRecommendation[]
+  reviews         Review[]
 
   @@index([tenantId, phone])
   @@index([tenantId, lastVisitAt])
@@ -350,6 +353,7 @@ model Appointment {
   services   AppointmentService[]
   commission Commission?
   payment    Payment?
+  review     Review?
 
   @@index([tenantId, startsAt])
   @@index([barberId, startsAt])
@@ -436,6 +440,29 @@ model Commission {
   @@index([tenantId, periodStart])
   @@index([barberId, paid])
   @@map("commissions")
+}
+
+// Reseña del cliente tras una cita completada. Una nota (1-5) por cita que
+// cuenta tanto para el promedio de la barbería como para el del barbero.
+model Review {
+  id            String   @id @default(cuid())
+  tenantId      String
+  appointmentId String   @unique
+  clientId      String
+  barberId      String
+  rating        Int // 1-5
+  comment       String?
+  hidden        Boolean  @default(false) // el dueño puede ocultarla del storefront
+  createdAt     DateTime @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  barber      Barber      @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, hidden, createdAt])
+  @@index([barberId, hidden])
+  @@map("reviews")
 }
 
 // =====================

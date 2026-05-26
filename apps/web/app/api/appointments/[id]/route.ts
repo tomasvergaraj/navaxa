@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
 import { completeAppointment } from "@/lib/booking";
+import { sendReviewRequest } from "@/lib/reviews";
 import { AppointmentStatus } from "@navaxa/db";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     if (parsed.data.status === AppointmentStatus.COMPLETED) {
       const result = await completeAppointment(params.id, tenantId);
+      // Invitación a reseñar (idempotente; no bloquea la respuesta si falla).
+      await sendReviewRequest(params.id, tenantId).catch(() => {});
       return NextResponse.json({ appointment: result });
     }
 

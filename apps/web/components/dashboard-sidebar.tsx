@@ -9,6 +9,7 @@ import {
   Scissors,
   Megaphone,
   Wallet,
+  Star,
   UserCircle,
   Settings,
   LogOut,
@@ -22,6 +23,7 @@ const baseNav = [
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/barberos", label: "Barberos", icon: Scissors },
   { href: "/comisiones", label: "Comisiones", icon: Wallet },
+  { href: "/resenas", label: "Reseñas", icon: Star },
   { href: "/marketing", label: "Marketing", icon: Megaphone },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];

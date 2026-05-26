@@ -6,6 +6,8 @@ import { resolveTenantBySlug, getPublicHours } from "@/lib/public-booking";
 import { ServicesBrowser } from "@/components/booking/services-browser";
 import { HoursToggle } from "@/components/booking/hours-toggle";
 import { WhatsappIcon } from "@/components/ui/whatsapp-icon";
+import { Stars } from "@/components/ui/stars";
+import { formatRelative } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +23,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
   const tenant = await resolveTenantBySlug(params.slug);
   if (!tenant) notFound();
 
-  const [services, barbers, hours] = await Promise.all([
+  const [services, barbers, hours, reviewAgg, barberRatings, reviews] = await Promise.all([
     prisma.service.findMany({
       where: { tenantId: tenant.id, active: true },
       select: { id: true, name: true, description: true, durationMin: true, price: true, category: true },
@@ -33,7 +35,35 @@ export default async function ReservarPage({ params }: { params: { slug: string 
       orderBy: { createdAt: "asc" },
     }),
     getPublicHours(tenant.id),
+    prisma.review.aggregate({
+      where: { tenantId: tenant.id, hidden: false },
+      _avg: { rating: true },
+      _count: true,
+    }),
+    prisma.review.groupBy({
+      by: ["barberId"],
+      where: { tenantId: tenant.id, hidden: false },
+      _avg: { rating: true },
+      _count: true,
+    }),
+    prisma.review.findMany({
+      where: { tenantId: tenant.id, hidden: false },
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        client: { select: { firstName: true } },
+        barber: { select: { user: { select: { name: true } } } },
+      },
+    }),
   ]);
+
+  const ratingByBarber = new Map(
+    barberRatings.map((r) => [r.barberId, { avg: r._avg.rating ?? 0, count: r._count }]),
+  );
 
   const professionals = barbers.map((b) => ({
     id: b.id,
@@ -42,7 +72,11 @@ export default async function ReservarPage({ params }: { params: { slug: string 
     instagramHref: b.instagram
       ? `https://instagram.com/${b.instagram.replace(/^@/, "")}`
       : null,
+    rating: ratingByBarber.get(b.id) ?? null,
   }));
+
+  const avgRating = reviewAgg._avg.rating ?? 0;
+  const reviewCount = reviewAgg._count;
 
   const fullAddress = [tenant.address, tenant.city].filter(Boolean).join(", ");
   const mapsQuery = fullAddress ? `${tenant.name} ${fullAddress}` : tenant.name;
@@ -97,6 +131,16 @@ export default async function ReservarPage({ params }: { params: { slug: string 
           )}
 
           <h1 className="mt-3 font-display text-3xl font-medium tracking-tight">{tenant.name}</h1>
+
+          {reviewCount > 0 && (
+            <div className="mt-2 flex items-center gap-2 text-sm">
+              <Stars value={avgRating} size={16} />
+              <span className="font-medium tabular-nums">{avgRating.toFixed(1)}</span>
+              <span className="text-muted-foreground">
+                · {reviewCount} reseña{reviewCount === 1 ? "" : "s"}
+              </span>
+            </div>
+          )}
 
           {(igHref || tenant.website) && (
             <div className="mt-2 flex items-center gap-3">
@@ -180,6 +224,12 @@ export default async function ReservarPage({ params }: { params: { slug: string 
                   ) : (
                     <span className="mt-1 h-4" aria-hidden />
                   )}
+                  {p.rating && p.rating.count > 0 && (
+                    <span className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Stars value={p.rating.avg} size={11} />
+                      {p.rating.avg.toFixed(1)}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -193,6 +243,31 @@ export default async function ReservarPage({ params }: { params: { slug: string 
           </h2>
           <ServicesBrowser slug={tenant.slug} services={services} />
         </section>
+
+        {/* Reseñas */}
+        {reviews.length > 0 && (
+          <section className="mt-12">
+            <h2 className="mb-5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Reseñas
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {reviews.map((r) => (
+                <div key={r.id} className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <Stars value={r.rating} size={14} />
+                    <span className="text-xs text-muted-foreground">{formatRelative(r.createdAt)}</span>
+                  </div>
+                  {r.comment && (
+                    <p className="mt-2 text-sm leading-relaxed text-foreground/90">{r.comment}</p>
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {r.client.firstName} · con {r.barber.user.name}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Ubicación y horario */}
         {(fullAddress || hours.length > 0) && (
