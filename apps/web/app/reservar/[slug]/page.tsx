@@ -29,7 +29,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
     }),
     prisma.barber.findMany({
       where: { tenantId: tenant.id, active: true },
-      select: { id: true, avatarUrl: true, specialties: true, user: { select: { name: true } } },
+      select: { id: true, avatarUrl: true, specialties: true, instagram: true, user: { select: { name: true } } },
       orderBy: { createdAt: "asc" },
     }),
     getPublicHours(tenant.id),
@@ -39,6 +39,9 @@ export default async function ReservarPage({ params }: { params: { slug: string 
     id: b.id,
     name: b.user.name,
     avatarUrl: b.avatarUrl,
+    instagramHref: b.instagram
+      ? `https://instagram.com/${b.instagram.replace(/^@/, "")}`
+      : null,
   }));
 
   const fullAddress = [tenant.address, tenant.city].filter(Boolean).join(", ");
@@ -53,10 +56,13 @@ export default async function ReservarPage({ params }: { params: { slug: string 
       : `https://instagram.com/${tenant.instagram.replace(/^@/, "")}`
     : null;
 
+  const pill =
+    "inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30";
+
   return (
     <div className="min-h-screen bg-muted/30">
       <nav className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <span className="font-display text-lg font-medium tracking-tight">{tenant.name}</span>
           <Link href="/login" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Iniciar sesión
@@ -64,123 +70,169 @@ export default async function ReservarPage({ params }: { params: { slug: string 
         </div>
       </nav>
 
-      <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Columna izquierda: portada + info */}
-          <div className="space-y-4 lg:col-span-2">
-            <div className="aspect-[5/2] w-full overflow-hidden rounded-xl border border-border bg-muted">
-              {tenant.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={tenant.coverUrl} alt={tenant.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="h-full w-full bg-gradient-to-br from-brand-graphite to-accent/30" />
+      <main className="mx-auto max-w-4xl px-4 pb-14">
+        {/* Portada */}
+        <div className="mt-6 aspect-[16/5] w-full overflow-hidden rounded-2xl border border-border bg-muted">
+          {tenant.coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={tenant.coverUrl} alt={tenant.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-brand-graphite to-accent/30" />
+          )}
+        </div>
+
+        {/* Identidad centrada (logo sobre la portada) */}
+        <header className="flex flex-col items-center px-4 text-center">
+          {tenant.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={tenant.logoUrl}
+              alt={tenant.name}
+              className="-mt-12 h-24 w-24 rounded-2xl border-4 border-card bg-card object-cover shadow-sm"
+            />
+          ) : (
+            <div className="-mt-12 flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-card bg-accent/15 font-display text-4xl font-medium text-accent-foreground shadow-sm">
+              {tenant.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+
+          <h1 className="mt-3 font-display text-3xl font-medium tracking-tight">{tenant.name}</h1>
+
+          {(igHref || tenant.website) && (
+            <div className="mt-2 flex items-center gap-3">
+              {igHref && (
+                <a href={igHref} target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+                  className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Instagram className="h-5 w-5" />
+                </a>
+              )}
+              {tenant.website && (
+                <a href={tenant.website} target="_blank" rel="noopener noreferrer" aria-label="Sitio web"
+                  className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Globe className="h-5 w-5" />
+                </a>
               )}
             </div>
+          )}
 
-            <div className="flex gap-4">
-              {tenant.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={tenant.logoUrl}
-                  alt={tenant.name}
-                  className="-mt-10 h-20 w-20 shrink-0 rounded-2xl border-4 border-card bg-card object-cover shadow-sm"
-                />
-              ) : (
-                <div className="-mt-10 flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border-4 border-card bg-accent/15 font-display text-3xl font-medium text-accent-foreground shadow-sm">
-                  {tenant.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className="min-w-0 flex-1 pt-1">
-                <div className="flex items-start justify-between gap-2">
-                  <h1 className="font-display text-2xl font-medium tracking-tight">{tenant.name}</h1>
-                  <div className="flex items-center gap-2 pt-1">
-                    {igHref && (
-                      <a href={igHref} target="_blank" rel="noopener noreferrer" aria-label="Instagram"
-                        className="text-muted-foreground transition-colors hover:text-foreground">
-                        <Instagram className="h-5 w-5" />
-                      </a>
-                    )}
-                    {tenant.website && (
-                      <a href={tenant.website} target="_blank" rel="noopener noreferrer" aria-label="Sitio web"
-                        className="text-muted-foreground transition-colors hover:text-foreground">
-                        <Globe className="h-5 w-5" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-                {tenant.description && (
-                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                    {tenant.description}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
+          {tenant.description && (
+            <p className="mt-3 max-w-2xl whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+              {tenant.description}
+            </p>
+          )}
 
-          {/* Columna derecha: mapa + contacto + horario + profesionales */}
-          <aside className="space-y-5 rounded-xl border border-border bg-card p-4">
+          {/* Contacto en píldoras */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
             {fullAddress && (
-              <div className="overflow-hidden rounded-lg border border-border">
-                <iframe
-                  title="Mapa"
-                  src={mapsEmbed}
-                  className="h-40 w-full"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </div>
+              <a href={mapsLink} target="_blank" rel="noopener noreferrer" className={pill}>
+                <MapPin className="h-4 w-4 shrink-0" />
+                {tenant.city || "Ubicación"}
+              </a>
             )}
+            {tenant.phone && telHref && (
+              <a href={telHref} className={pill}>
+                <Phone className="h-4 w-4 shrink-0" />
+                {tenant.phone}
+              </a>
+            )}
+            {waHref && (
+              <a
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              >
+                <WhatsappIcon className="h-4 w-4 shrink-0" />
+                WhatsApp
+              </a>
+            )}
+          </div>
+        </header>
 
-            <div className="space-y-3 text-sm">
-              {fullAddress && (
-                <a href={mapsLink} target="_blank" rel="noopener noreferrer"
-                  className="flex items-start gap-2 text-muted-foreground transition-colors hover:text-foreground">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{fullAddress}</span>
-                </a>
-              )}
-              {tenant.phone && telHref && (
-                <a href={telHref} className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground">
-                  <Phone className="h-4 w-4 shrink-0" />
-                  {tenant.phone}
-                </a>
-              )}
-              {waHref && (
-                <a href={waHref} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 font-medium text-foreground">
-                  <WhatsappIcon className="h-4 w-4 shrink-0" />
-                  Contáctanos por WhatsApp
-                </a>
-              )}
-              {hours.length > 0 && <HoursToggle hours={hours} timezone={tenant.timezone ?? "America/Santiago"} />}
-            </div>
-
-            {professionals.length > 0 && (
-              <div className="border-t border-border pt-4">
-                <h2 className="mb-3 text-sm font-medium">Profesionales</h2>
-                <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
-                  {professionals.map((p) => (
-                    <div key={p.id} className="flex w-16 shrink-0 flex-col items-center text-center">
-                      {p.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.avatarUrl} alt={p.name} className="h-12 w-12 rounded-full object-cover" />
-                      ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-graphite text-xs text-brand-ivory">
-                          {p.name.split(" ").slice(0, 2).map((x) => x[0]?.toUpperCase()).join("")}
-                        </div>
-                      )}
-                      <span className="mt-1 line-clamp-2 text-[11px] leading-tight text-muted-foreground">{p.name}</span>
+        {/* Equipo */}
+        {professionals.length > 0 && (
+          <section className="mt-12">
+            <h2 className="mb-5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Nuestro equipo
+            </h2>
+            <div className="flex flex-wrap justify-center gap-6">
+              {professionals.map((p) => (
+                <div key={p.id} className="flex w-20 flex-col items-center text-center">
+                  {p.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.avatarUrl} alt={p.name} className="h-16 w-16 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-graphite text-sm text-brand-ivory">
+                      {p.name.split(" ").slice(0, 2).map((x) => x[0]?.toUpperCase()).join("")}
                     </div>
-                  ))}
+                  )}
+                  <span className="mt-2 line-clamp-2 h-[28px] text-xs leading-tight text-muted-foreground">{p.name}</span>
+                  {p.instagramHref ? (
+                    <a
+                      href={p.instagramHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Instagram de ${p.name}`}
+                      className="mt-1 text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <Instagram className="h-4 w-4" />
+                    </a>
+                  ) : (
+                    <span className="mt-1 h-4" aria-hidden />
+                  )}
                 </div>
-              </div>
-            )}
-          </aside>
-        </div>
+              ))}
+            </div>
+          </section>
+        )}
 
-        <div className="mt-8">
+        {/* Servicios */}
+        <section className="mt-12">
+          <h2 className="mb-5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Servicios
+          </h2>
           <ServicesBrowser slug={tenant.slug} services={services} />
-        </div>
+        </section>
+
+        {/* Ubicación y horario */}
+        {(fullAddress || hours.length > 0) && (
+          <section className="mt-12">
+            <h2 className="mb-5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Cómo llegar
+            </h2>
+            <div className="grid gap-5 md:grid-cols-[1fr_280px]">
+              {fullAddress ? (
+                <div className="overflow-hidden rounded-xl border border-border">
+                  <iframe
+                    title="Mapa"
+                    src={mapsEmbed}
+                    className="h-56 w-full md:h-full"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+              ) : (
+                <div />
+              )}
+              <div className="space-y-4 rounded-xl border border-border bg-card p-5 text-sm">
+                {fullAddress && (
+                  <a href={mapsLink} target="_blank" rel="noopener noreferrer"
+                    className="flex items-start gap-2 text-muted-foreground transition-colors hover:text-foreground">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{fullAddress}</span>
+                  </a>
+                )}
+                {tenant.phone && telHref && (
+                  <a href={telHref} className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground">
+                    <Phone className="h-4 w-4 shrink-0" />
+                    {tenant.phone}
+                  </a>
+                )}
+                {hours.length > 0 && <HoursToggle hours={hours} timezone={tenant.timezone ?? "America/Santiago"} />}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className="py-8 text-center text-xs text-muted-foreground">

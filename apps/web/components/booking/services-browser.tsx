@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Clock, Search } from "lucide-react";
 import { Button, Input, cn } from "@navaxa/ui";
@@ -58,38 +58,38 @@ export function ServicesBrowser({ slug, services }: { slug: string; services: Se
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-[220px_1fr]">
-      {/* Sidebar: buscador + categorías */}
-      <aside className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder="¿Qué servicio buscas?"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <nav className="flex gap-2 overflow-x-auto md:flex-col md:gap-0.5">
-          {["Todos", ...categories].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCat(cat)}
-              className={cn(
-                "shrink-0 rounded-md px-3 py-2 text-left text-sm transition-colors md:w-full",
-                activeCat === cat
-                  ? "bg-accent/15 font-medium text-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {cat}
-            </button>
-          ))}
-        </nav>
-      </aside>
+    <div className="space-y-5">
+      {/* Buscador centrado */}
+      <div className="relative mx-auto max-w-md">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          className="pl-8"
+          placeholder="¿Qué servicio buscas?"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+
+      {/* Categorías en chips horizontales */}
+      <nav className="flex flex-wrap justify-center gap-2">
+        {["Todos", ...categories].map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setActiveCat(cat)}
+            className={cn(
+              "rounded-full border px-4 py-1.5 text-sm transition-colors",
+              activeCat === cat
+                ? "border-foreground bg-foreground text-background"
+                : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+            )}
+          >
+            {cat}
+          </button>
+        ))}
+      </nav>
 
       {/* Lista de servicios por categoría */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {groups.length === 0 && (
           <p className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
             No encontramos servicios con esa búsqueda.
@@ -98,10 +98,10 @@ export function ServicesBrowser({ slug, services }: { slug: string; services: Se
         {groups.map(([cat, items]) => {
           const isCollapsed = collapsed.has(cat);
           return (
-            <div key={cat} className="overflow-hidden rounded-lg border border-border bg-card">
+            <div key={cat} className="space-y-3">
               <button
                 onClick={() => toggle(cat)}
-                className="flex w-full items-center justify-between px-5 py-4 text-left"
+                className="flex w-full items-center justify-between border-b border-border pb-2 text-left"
               >
                 <span className="font-medium">{cat}</span>
                 <ChevronDown
@@ -109,31 +109,67 @@ export function ServicesBrowser({ slug, services }: { slug: string; services: Se
                 />
               </button>
               {!isCollapsed && (
-                <div className="divide-y divide-border border-t border-border">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {items.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                      <div className="min-w-0">
-                        <p className="font-medium">{s.name}</p>
-                        {s.description && (
-                          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{s.description}</p>
-                        )}
-                        <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {formatDuration(s.durationMin)}
-                          <span className="mx-1">·</span>
-                          <span className="font-medium text-foreground">{formatCLP(s.price)}</span>
-                        </p>
-                      </div>
-                      <Button size="sm" asChild>
-                        <Link href={`/reservar/${slug}/agendar?service=${s.id}`}>Reservar</Link>
-                      </Button>
-                    </div>
+                    <ServiceCard key={s.id} service={s} slug={slug} />
                   ))}
                 </div>
               )}
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function ServiceCard({ service: s, slug }: { service: Service; slug: string }) {
+  const descRef = useRef<HTMLParagraphElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  // Solo se ofrece "Ver más" si la descripción realmente se recorta a 2 líneas.
+  useEffect(() => {
+    const el = descRef.current;
+    if (el) setOverflowing(el.scrollHeight > el.clientHeight + 1);
+  }, [s.description]);
+
+  return (
+    <div className="flex h-full flex-col rounded-lg border border-border bg-card p-4">
+      <p className="font-medium">{s.name}</p>
+      {s.description && (
+        <>
+          <p
+            ref={descRef}
+            className={cn(
+              "mt-1 text-xs leading-relaxed text-muted-foreground",
+              !expanded && "line-clamp-2",
+            )}
+          >
+            {s.description}
+          </p>
+          {overflowing && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="mt-1 self-start text-xs font-medium text-foreground hover:underline"
+            >
+              {expanded ? "Ver menos" : "Ver más"}
+            </button>
+          )}
+        </>
+      )}
+      <div className="mt-auto flex items-end justify-between gap-3 pt-3">
+        <div className="min-w-0">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {formatDuration(s.durationMin)}
+          </span>
+          <span className="mt-0.5 block font-medium tabular-nums">{formatCLP(s.price)}</span>
+        </div>
+        <Button size="sm" asChild>
+          <Link href={`/reservar/${slug}/agendar?service=${s.id}`}>Reservar</Link>
+        </Button>
       </div>
     </div>
   );
