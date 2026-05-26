@@ -238,6 +238,7 @@ async function main() {
   let totalHaircuts = 0;
   let totalAppts = 0;
   let imgIndex = 0;
+  const clients: { id: string }[] = [];
 
   for (let ci = 0; ci < clientDefs.length; ci++) {
     const c = clientDefs[ci]!;
@@ -265,6 +266,8 @@ async function main() {
         },
       },
     });
+
+    clients.push(client);
 
     // Historial de cortes (4 fotos por cliente)
     for (let i = 0; i < 4; i++) {
@@ -317,6 +320,66 @@ async function main() {
   }
   console.log(
     `  · ${clientDefs.length} clientes, ${totalHaircuts} cortes, ${totalAppts} citas próximas`,
+  );
+
+  // ===== Citas completadas históricas + comisiones =====
+  // 3 meses hacia atrás: el más antiguo queda liquidado (paid), los recientes pendientes.
+  // Permite que la página de Comisiones muestre datos al sembrar de cero.
+  const now = new Date();
+  let pastAppts = 0;
+  let commissionTotal = 0;
+  for (let monthsAgo = 3; monthsAgo >= 1; monthsAgo--) {
+    const year = now.getFullYear();
+    const month = now.getMonth() - monthsAgo;
+    const periodStart = new Date(year, month, 1);
+    const periodEnd = new Date(year, month + 1, 0, 23, 59, 59);
+    const paid = monthsAgo === 3;
+
+    for (let bi = 0; bi < barbers.length; bi++) {
+      const barber = barbers[bi]!.barber;
+      const count = 4 + ((bi + monthsAgo) % 3); // 4-6 citas por barbero/mes
+      for (let k = 0; k < count; k++) {
+        const client = clients[(bi + k + monthsAgo) % clients.length]!;
+        const service = services[(bi + k) % services.length]!;
+        const day = 2 + ((k * 5 + bi) % 26);
+        const hour = 10 + ((k + bi) % 8);
+        const startsAt = new Date(year, month, day, hour, 0, 0);
+        const endsAt = new Date(startsAt.getTime() + service.durationMin * 60_000);
+        const amount = Math.round(service.price * barber.commissionRate);
+
+        await prisma.appointment.create({
+          data: {
+            tenantId: tenant.id,
+            clientId: client.id,
+            barberId: barber.id,
+            startsAt,
+            endsAt,
+            totalPrice: service.price,
+            status: AppointmentStatus.COMPLETED,
+            source: "web",
+            services: { create: [{ serviceId: service.id, priceCharged: service.price }] },
+            commission: {
+              create: {
+                tenantId: tenant.id,
+                barberId: barber.id,
+                baseAmount: service.price,
+                rate: barber.commissionRate,
+                amount,
+                paid,
+                paidAt: paid ? periodEnd : null,
+                periodStart,
+                periodEnd,
+              },
+            },
+          },
+        });
+        pastAppts++;
+        commissionTotal += amount;
+      }
+    }
+  }
+  console.log(
+    `  · ${pastAppts} citas completadas + comisiones (CLP ${commissionTotal} en comisiones)`,
   );
 
   // ===== Campañas por defecto =====
