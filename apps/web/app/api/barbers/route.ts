@@ -68,6 +68,7 @@ export async function POST(req: Request) {
             bio: parsed.data.bio,
             commissionRate: parsed.data.commissionRate,
             specialties: parsed.data.specialties,
+            instagram: parsed.data.instagram,
             schedule: {
               create: [1, 2, 3, 4, 5, 6].map((wd) => ({
                 weekday: wd,

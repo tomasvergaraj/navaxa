@@ -61,6 +61,7 @@ export const barberCreateSchema = z.object({
   bio: z.string().max(500).optional(),
   commissionRate: z.coerce.number().min(0).max(1).default(0.4),
   specialties: z.array(z.string()).default([]),
+  instagram: z.string().max(80).optional(),
 });
 
 export const appointmentCreateSchema = z.object({

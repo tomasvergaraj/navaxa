@@ -83,6 +83,7 @@ async function main() {
       rate: 0.45,
       specialties: ["fade", "barba", "diseño"],
       bio: "Especialista en fades y diseños personalizados. 8 años de experiencia.",
+      instagram: "rodrigo.fades",
     },
     {
       email: "matias@donpepe.cl",
@@ -90,6 +91,7 @@ async function main() {
       rate: 0.4,
       specialties: ["clásico", "tijera"],
       bio: "Maestro del corte clásico a tijera. Formado en Buenos Aires.",
+      instagram: "matias.barber",
     },
     {
       email: "felipe@donpepe.cl",
@@ -97,6 +99,7 @@ async function main() {
       rate: 0.42,
       specialties: ["fade", "color"],
       bio: "Cortes modernos y aplicación de color. Llegó hace 2 años.",
+      instagram: "felipe.vega.hair",
     },
   ];
 
@@ -116,6 +119,7 @@ async function main() {
                 bio: b.bio,
                 commissionRate: b.rate,
                 specialties: b.specialties,
+                instagram: b.instagram,
                 schedule: {
                   create: [1, 2, 3, 4, 5, 6].map((wd) => ({
                     weekday: wd,

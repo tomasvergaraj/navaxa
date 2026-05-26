@@ -17,7 +17,7 @@ import {
 import { toast } from "sonner";
 import { TagsInput } from "@/components/ui/tags-input";
 
-const empty = { name: "", email: "", commissionRate: "40", bio: "", specialties: [] as string[] };
+const empty = { name: "", email: "", commissionRate: "40", bio: "", specialties: [] as string[], instagram: "" };
 
 export function NewBarberButton() {
   const router = useRouter();
@@ -45,6 +45,7 @@ export function NewBarberButton() {
           commissionRate: Number(form.commissionRate) / 100,
           bio: form.bio.trim() || undefined,
           specialties: form.specialties,
+          instagram: form.instagram.trim().replace(/^@/, "") || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -132,6 +133,18 @@ export function NewBarberButton() {
                   onChange={(specialties) => setForm({ ...form, specialties })}
                   placeholder="fade, barba, color… (Enter para agregar)"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="b-ig">Instagram (opcional)</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">@</span>
+                  <Input
+                    id="b-ig"
+                    value={form.instagram}
+                    placeholder="usuario"
+                    onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+                  />
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 El barbero recibirá un correo para crear su propia contraseña. No defines tú la clave.
