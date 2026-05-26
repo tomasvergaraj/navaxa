@@ -30,22 +30,24 @@ export function PeriodSelector({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {PRESETS.map((p) => (
-        <button
-          key={p.key}
-          onClick={() => router.push(`/reportes?range=${p.key}`)}
-          className={cn(
-            "rounded-full border px-3 py-1.5 text-sm transition-colors",
-            rangeKey === p.key
-              ? "border-foreground bg-foreground text-background"
-              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
-          )}
-        >
-          {p.label}
-        </button>
-      ))}
-      <div className="flex flex-1 flex-wrap items-center gap-1.5">
+    <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+      <div className="flex flex-wrap gap-2">
+        {PRESETS.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => router.push(`/reportes?range=${p.key}`)}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-sm transition-colors",
+              rangeKey === p.key
+                ? "border-foreground bg-foreground text-background"
+                : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+            )}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
         <Input
           type="date"
           value={customFrom}

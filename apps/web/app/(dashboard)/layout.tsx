@@ -33,7 +33,7 @@ export default async function DashboardLayout({
     <AuthSessionProvider>
       <div className="flex min-h-screen bg-background">
         <DashboardSidebar isBarber={!!barber} />
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <DashboardHeader isBarber={!!barber} />
           <SubscriptionBanner
             status={subscription?.status ?? null}

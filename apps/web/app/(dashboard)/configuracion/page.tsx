@@ -63,7 +63,7 @@ export default async function ConfiguracionPage({
       </header>
 
       <Tabs defaultValue={activeTab}>
-        <TabsList>
+        <TabsList className="flex w-full max-w-full justify-start overflow-x-auto">
           <TabsTrigger value="barberia">Barbería</TabsTrigger>
           <TabsTrigger value="servicios">Servicios</TabsTrigger>
           <TabsTrigger value="horarios">Horarios</TabsTrigger>

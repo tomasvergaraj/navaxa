@@ -149,7 +149,8 @@ export default async function MarketingPage() {
         </p>
       ) : (
         <Card className="overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[42rem] text-sm">
             <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 text-left font-medium">Cuándo</th>
@@ -191,6 +192,7 @@ export default async function MarketingPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
     </div>
