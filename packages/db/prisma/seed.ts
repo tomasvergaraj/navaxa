@@ -344,12 +344,14 @@ async function main() {
     "Atención de primera, mi barbero de confianza.",
     null,
   ];
-  for (let monthsAgo = 3; monthsAgo >= 1; monthsAgo--) {
+  // Incluye el mes en curso (monthsAgo=0) hasta hoy, para que Reportes "últimos 30 días" tenga datos.
+  for (let monthsAgo = 3; monthsAgo >= 0; monthsAgo--) {
     const year = now.getFullYear();
     const month = now.getMonth() - monthsAgo;
     const periodStart = new Date(year, month, 1);
     const periodEnd = new Date(year, month + 1, 0, 23, 59, 59);
     const paid = monthsAgo === 3;
+    const maxDay = monthsAgo === 0 ? now.getDate() : 28; // no crear citas "completadas" en el futuro
 
     for (let bi = 0; bi < barbers.length; bi++) {
       const barber = barbers[bi]!.barber;
@@ -358,6 +360,7 @@ async function main() {
         const client = clients[(bi + k + monthsAgo) % clients.length]!;
         const service = services[(bi + k) % services.length]!;
         const day = 2 + ((k * 5 + bi) % 26);
+        if (day > maxDay) continue;
         const hour = 10 + ((k + bi) % 8);
         const startsAt = new Date(year, month, day, hour, 0, 0);
         const endsAt = new Date(startsAt.getTime() + service.durationMin * 60_000);

@@ -10,6 +10,7 @@ import {
   Megaphone,
   Wallet,
   Star,
+  BarChart3,
   UserCircle,
   Settings,
   LogOut,
@@ -24,6 +25,7 @@ const baseNav = [
   { href: "/barberos", label: "Barberos", icon: Scissors },
   { href: "/comisiones", label: "Comisiones", icon: Wallet },
   { href: "/resenas", label: "Reseñas", icon: Star },
+  { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/marketing", label: "Marketing", icon: Megaphone },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
