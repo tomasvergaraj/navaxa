@@ -31,7 +31,7 @@ const envSchema = z.object({
 
   // AI
   ANTHROPIC_API_KEY: z.string().optional(),
-  AI_MODEL: z.string().default("claude-sonnet-4-5-20250929"),
+  AI_MODEL: z.string().default("claude-haiku-4-5"),
 
   // Cron
   CRON_SECRET: z.string().optional(),

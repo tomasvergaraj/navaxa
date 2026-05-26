@@ -1,6 +1,9 @@
 import { prisma } from "@navaxa/db";
 
-const MODEL = process.env.AI_MODEL ?? "claude-sonnet-4-5-20250929";
+// Cost: ~$0.007/call (Haiku 4.5, ~2.5k in + 0.8k out) → ~$7 USD a 1.000 calls/mes.
+// El system prompt (~100 tokens) está muy por debajo del mínimo cacheable de Haiku
+// (4096 tokens), así que prompt caching aquí no tendría efecto — no se aplica.
+const MODEL = process.env.AI_MODEL ?? "claude-haiku-4-5";
 
 export interface RecommendationOutput {
   suggestedStyle: string;
