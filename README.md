@@ -1,6 +1,10 @@
-# navaxa
+<p align="center">
+  <img src="docs/logo.svg" alt="navaxa" width="320">
+</p>
 
-> El sistema operativo para barberías que recuerdan a cada cliente.
+<p align="center">
+  <strong>El sistema operativo para barberías que recuerdan a cada cliente.</strong>
+</p>
 
 CRM visual con historial de cortes en imágenes, agenda con disponibilidad real, comisiones por barbero, automatizaciones por WhatsApp/email y recomendación de próximo corte con IA.
 
