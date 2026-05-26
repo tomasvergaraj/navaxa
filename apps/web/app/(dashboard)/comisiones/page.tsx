@@ -3,6 +3,7 @@ import { Wallet } from "lucide-react";
 import { scopedDb } from "@/lib/tenant";
 import { formatCLP } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { SettleButton } from "@/components/commissions/settle-button";
 
 export const dynamic = "force-dynamic";
@@ -111,22 +112,24 @@ export default async function ComisionesPage() {
 
   return (
     <div className="container max-w-5xl py-8">
-      <header className="mb-8">
-        <h1 className="font-display text-3xl font-medium tracking-tight">Comisiones</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Liquida a cada barbero el total de sus comisiones pendientes por mes.
-          {totalPending > 0 && (
-            <>
-              {" "}
-              Pendiente por pagar:{" "}
-              <span className="font-medium text-foreground tabular-nums">
-                {formatCLP(totalPending)}
-              </span>
-              .
-            </>
-          )}
-        </p>
-      </header>
+      <PageHeader
+        title="Comisiones"
+        subtitle={
+          <>
+            Liquida a cada barbero el total de sus comisiones pendientes por mes.
+            {totalPending > 0 && (
+              <>
+                {" "}
+                Pendiente por pagar:{" "}
+                <span className="font-medium text-foreground tabular-nums">
+                  {formatCLP(totalPending)}
+                </span>
+                .
+              </>
+            )}
+          </>
+        }
+      />
 
       {periodList.length === 0 ? (
         <EmptyState

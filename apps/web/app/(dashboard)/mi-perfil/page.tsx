@@ -1,6 +1,7 @@
 import { Scissors } from "lucide-react";
 import { getTenantContext, scopedDb } from "@/lib/tenant";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { BarberProfileForm } from "@/components/barbers/barber-profile-form";
 
 export const dynamic = "force-dynamic";
@@ -15,12 +16,10 @@ export default async function MiPerfilPage() {
 
   return (
     <div className="container max-w-2xl py-8">
-      <header className="mb-8">
-        <h1 className="font-display text-3xl font-medium tracking-tight">Mi perfil</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Edita la información que ven tus clientes en la página de reservas.
-        </p>
-      </header>
+      <PageHeader
+        title="Mi perfil"
+        subtitle="Edita la información que ven tus clientes en la página de reservas."
+      />
 
       {!barber ? (
         <EmptyState

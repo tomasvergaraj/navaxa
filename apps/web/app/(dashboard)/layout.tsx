@@ -34,7 +34,7 @@ export default async function DashboardLayout({
       <div className="flex min-h-screen bg-background">
         <DashboardSidebar isBarber={!!barber} />
         <div className="flex flex-1 flex-col">
-          <DashboardHeader />
+          <DashboardHeader isBarber={!!barber} />
           <SubscriptionBanner
             status={subscription?.status ?? null}
             trialEndsAt={tenant?.trialEndsAt ?? null}

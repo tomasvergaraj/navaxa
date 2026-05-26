@@ -45,13 +45,13 @@ export function PeriodSelector({
           {p.label}
         </button>
       ))}
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-1 flex-wrap items-center gap-1.5">
         <Input
           type="date"
           value={customFrom}
           max={customTo || undefined}
           onChange={(e) => setCustomFrom(e.target.value)}
-          className="h-9 w-[9.5rem]"
+          className="h-9 w-[9.5rem] flex-1 sm:flex-none"
         />
         <span className="text-muted-foreground">–</span>
         <Input
@@ -59,7 +59,7 @@ export function PeriodSelector({
           value={customTo}
           min={customFrom || undefined}
           onChange={(e) => setCustomTo(e.target.value)}
-          className="h-9 w-[9.5rem]"
+          className="h-9 w-[9.5rem] flex-1 sm:flex-none"
         />
         <Button
           variant={rangeKey === "custom" ? "default" : "outline"}

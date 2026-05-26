@@ -4,6 +4,7 @@ import { scopedDb } from "@/lib/tenant";
 import { formatDate } from "@/lib/format";
 import { Stars } from "@/components/ui/stars";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { HideReviewButton } from "@/components/reviews/hide-review-button";
 
 export const dynamic = "force-dynamic";
@@ -33,25 +34,25 @@ export default async function ResenasPage() {
 
   return (
     <div className="container max-w-3xl py-8">
-      <header className="mb-8 flex items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-medium tracking-tight">Reseñas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Lo que opinan tus clientes tras cada visita. Puedes ocultar una del público.
-          </p>
-        </div>
-        {visibleCount > 0 && (
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-1.5">
-              <Star className="h-5 w-5 fill-accent text-accent" />
-              <span className="font-display text-2xl font-medium tabular-nums">{avg.toFixed(1)}</span>
+      <PageHeader
+        title="Reseñas"
+        subtitle="Lo que opinan tus clientes tras cada visita. Puedes ocultar una del público."
+        action={
+          visibleCount > 0 ? (
+            <div className="text-right">
+              <div className="flex items-center justify-end gap-1.5">
+                <Star className="h-5 w-5 fill-accent text-accent" />
+                <span className="font-display text-2xl font-medium tabular-nums">
+                  {avg.toFixed(1)}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {visibleCount} pública{visibleCount === 1 ? "" : "s"}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {visibleCount} pública{visibleCount === 1 ? "" : "s"}
-            </p>
-          </div>
-        )}
-      </header>
+          ) : undefined
+        }
+      />
 
       {reviews.length === 0 ? (
         <EmptyState

@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { scopedDb, getTenantContext } from "@/lib/tenant";
 import { AppointmentStatus } from "@navaxa/db";
 import { StatsCard } from "@/components/stats-card";
+import { PageHeader } from "@/components/page-header";
 import { formatCLP } from "@/lib/format";
 import { parsePeriod, bucketRevenue, formatPeriodRange } from "@/lib/reports";
 import { PeriodSelector } from "@/components/reports/period-selector";
@@ -93,19 +94,19 @@ export default async function ReportesPage({
 
   return (
     <div className="container max-w-6xl py-8">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-medium tracking-tight">Reportes</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{formatPeriodRange(period)}</p>
-        </div>
-        <a
-          href={`/api/reports/export?${exportParams.toString()}`}
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
-          <Download className="h-4 w-4" />
-          Exportar CSV
-        </a>
-      </header>
+      <PageHeader
+        title="Reportes"
+        subtitle={formatPeriodRange(period)}
+        action={
+          <a
+            href={`/api/reports/export?${exportParams.toString()}`}
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <Download className="h-4 w-4" />
+            Exportar CSV
+          </a>
+        }
+      />
 
       <div className="mb-6">
         <PeriodSelector
@@ -115,7 +116,7 @@ export default async function ReportesPage({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <StatsCard label="Ingresos" value={formatCLP(revenue)} icon={DollarSign} />
         <StatsCard label="Cortes" value={String(completedCount)} icon={Scissors} />
         <StatsCard label="Ticket promedio" value={formatCLP(avgTicket)} icon={Receipt} />

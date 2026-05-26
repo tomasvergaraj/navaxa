@@ -14,6 +14,7 @@ import {
 } from "@navaxa/ui";
 import { signOut } from "next-auth/react";
 import { ThemeToggle } from "./theme-toggle";
+import { MobileNav } from "./mobile-nav";
 import Link from "next/link";
 
 function initials(name: string | undefined) {
@@ -25,15 +26,18 @@ function initials(name: string | undefined) {
     .join("");
 }
 
-export function DashboardHeader() {
+export function DashboardHeader({ isBarber = false }: { isBarber?: boolean }) {
   const { data: session } = useSession();
   const user = session?.user;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur md:px-6">
-      <Link href="/dashboard" className="md:hidden">
-        <Logo size={24} />
-      </Link>
+      <div className="flex items-center gap-1 md:hidden">
+        <MobileNav isBarber={isBarber} />
+        <Link href="/dashboard">
+          <Logo size={24} />
+        </Link>
+      </div>
       <div className="ml-auto flex items-center gap-2">
         <ThemeToggle />
         <DropdownMenu>

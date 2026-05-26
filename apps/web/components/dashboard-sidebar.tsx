@@ -2,39 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Calendar,
-  Users,
-  Scissors,
-  Megaphone,
-  Wallet,
-  Star,
-  BarChart3,
-  UserCircle,
-  Settings,
-  LogOut,
-} from "lucide-react";
+import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Logo, cn } from "@navaxa/ui";
-
-const baseNav = [
-  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { href: "/agenda", label: "Agenda", icon: Calendar },
-  { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/barberos", label: "Barberos", icon: Scissors },
-  { href: "/comisiones", label: "Comisiones", icon: Wallet },
-  { href: "/resenas", label: "Reseñas", icon: Star },
-  { href: "/reportes", label: "Reportes", icon: BarChart3 },
-  { href: "/marketing", label: "Marketing", icon: Megaphone },
-  { href: "/configuracion", label: "Configuración", icon: Settings },
-];
+import { getNavItems, isNavActive } from "./dashboard-nav";
 
 export function DashboardSidebar({ isBarber = false }: { isBarber?: boolean }) {
   const pathname = usePathname();
-  const nav = isBarber
-    ? [...baseNav, { href: "/mi-perfil", label: "Mi perfil", icon: UserCircle }]
-    : baseNav;
+  const nav = getNavItems(isBarber);
+
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card md:flex">
       <div className="flex h-16 items-center border-b border-border px-5">
@@ -45,10 +21,7 @@ export function DashboardSidebar({ isBarber = false }: { isBarber?: boolean }) {
       <nav className="flex-1 space-y-0.5 p-3">
         {nav.map((item) => {
           const Icon = item.icon;
-          const active =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
+          const active = isNavActive(pathname, item.href);
           return (
             <Link
               key={item.href}
