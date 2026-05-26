@@ -1,0 +1,68 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@navaxa/db";
+import { loadPaymentByToken } from "@/lib/payments";
+import { signManageToken } from "@/lib/public-booking";
+import { notifyAppointment } from "@/lib/appointment-notify";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * Confirma el pago del abono (proveedor mock). Con una pasarela real, este
+ * trabajo lo haría el webhook del proveedor; aquí lo dispara el botón "Pagar".
+ * Idempotente: si ya estaba pagado, devuelve ok con el token de gestión.
+ */
+export async function POST(req: Request, { params }: { params: { token: string } }) {
+  const limit = rateLimit(`pay:${clientIp(req)}`, 20, 10 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Demasiados intentos. Espera unos minutos." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+    );
+  }
+
+  const payment = await loadPaymentByToken(params.token);
+  if (!payment) return NextResponse.json({ error: "Pago no encontrado" }, { status: 404 });
+
+  // Ya pagado: idempotente.
+  if (payment.status === "PAID") {
+    return NextResponse.json({ ok: true, manageToken: signManageToken(payment.appointmentId) });
+  }
+
+  if (payment.status !== "PENDING") {
+    return NextResponse.json({ error: "Este pago ya no está vigente" }, { status: 409 });
+  }
+
+  // Expirado: liberar la hora.
+  if (payment.expiresAt < new Date()) {
+    await prisma.$transaction([
+      prisma.payment.update({ where: { id: payment.id }, data: { status: "EXPIRED" } }),
+      prisma.appointment.update({ where: { id: payment.appointmentId }, data: { status: "CANCELLED" } }),
+    ]);
+    return NextResponse.json({ error: "El tiempo para pagar expiró. Reserva de nuevo." }, { status: 410 });
+  }
+
+  // Marcar pagado y confirmar la cita (atómico, race-safe ante doble pago).
+  const claimed = await prisma.$transaction(async (tx) => {
+    const c = await tx.payment.updateMany({
+      where: { id: payment.id, status: "PENDING" },
+      data: { status: "PAID", paidAt: new Date() },
+    });
+    if (c.count === 0) return false;
+    await tx.appointment.update({
+      where: { id: payment.appointmentId },
+      data: { status: "SCHEDULED" },
+    });
+    return true;
+  });
+
+  // Perdió la carrera (ya estaba pagado por otra request): idempotente.
+  if (!claimed) {
+    return NextResponse.json({ ok: true, manageToken: signManageToken(payment.appointmentId) });
+  }
+
+  // Confirmación al cliente (no bloquea la respuesta si falla el envío).
+  await notifyAppointment("confirmed", payment.tenant, payment.appointment).catch(() => undefined);
+
+  return NextResponse.json({ ok: true, manageToken: signManageToken(payment.appointmentId) });
+}

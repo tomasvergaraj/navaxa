@@ -1,0 +1,484 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  Check,
+  ChevronLeft,
+  Clock,
+  Loader2,
+  Scissors,
+  User,
+  Users,
+  CalendarCheck,
+} from "lucide-react";
+import { Button, Input, Label, cn } from "@navaxa/ui";
+import { toast } from "sonner";
+import { formatCLP, formatDuration } from "@/lib/format";
+import { PhoneInput } from "@/components/ui/phone-input";
+
+interface Service {
+  id: string;
+  name: string;
+  description?: string | null;
+  durationMin: number;
+  price: number;
+  category?: string | null;
+}
+interface Barber {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+  specialties: string[];
+}
+interface Slot {
+  startsAt: string;
+  endsAt: string;
+  barberId: string;
+}
+interface BookResult {
+  appointmentId: string;
+  manageToken: string;
+  startsAt: string;
+  barberName: string;
+  totalPrice: number;
+}
+interface BookResponse extends Partial<BookResult> {
+  requiresPayment?: boolean;
+  checkoutUrl?: string;
+}
+
+type Step = 0 | 1 | 2 | 3 | 4;
+const STEPS = ["Servicio", "Barbero", "Hora", "Tus datos"];
+
+async function apiJson(path: string, init?: RequestInit) {
+  const res = await fetch(path, init);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = typeof data?.error === "string" ? data.error : "Algo salió mal. Intenta de nuevo.";
+    throw new Error(msg);
+  }
+  return data;
+}
+
+export function BookingWizard({
+  slug,
+  currency: _currency,
+  timezone,
+  presetServiceId,
+}: {
+  slug: string;
+  currency: string;
+  timezone: string;
+  presetServiceId?: string;
+}) {
+  const base = `/api/public/${slug}`;
+  const minStep: Step = presetServiceId ? 1 : 0;
+
+  const [step, setStep] = useState<Step>(minStep);
+  const [services, setServices] = useState<Service[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>(
+    presetServiceId ? [presetServiceId] : [],
+  );
+  const [barberChoice, setBarberChoice] = useState<string | "any" | null>(null);
+  const [day, setDay] = useState<Date | null>(null);
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slot, setSlot] = useState<Slot | null>(null);
+  const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", email: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<BookResult | null>(null);
+
+  // Carga inicial de servicios y barberos.
+  useEffect(() => {
+    apiJson(`${base}/services`)
+      .then((d) => setServices(d.services))
+      .catch((e) => toast.error(e.message));
+    apiJson(`${base}/barbers`)
+      .then((d) => setBarbers(d.barbers))
+      .catch((e) => toast.error(e.message));
+  }, [base]);
+
+  const fmtTime = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-CL", {
+        timeZone: timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+    [timezone],
+  );
+  const fmtDayLong = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-CL", {
+        timeZone: timezone,
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }),
+    [timezone],
+  );
+
+  const totals = useMemo(() => {
+    const chosen = services.filter((s) => selectedServices.includes(s.id));
+    return {
+      price: chosen.reduce((a, s) => a + s.price, 0),
+      duration: chosen.reduce((a, s) => a + s.durationMin, 0),
+      names: chosen.map((s) => s.name),
+    };
+  }, [services, selectedServices]);
+
+  // Próximos 14 días.
+  const days = useMemo(() => {
+    const out: Date[] = [];
+    const now = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(now);
+      d.setDate(now.getDate() + i);
+      d.setHours(12, 0, 0, 0);
+      out.push(d);
+    }
+    return out;
+  }, []);
+
+  // Selección única + autoavance al paso siguiente.
+  function selectService(id: string) {
+    setSelectedServices([id]);
+    setDay(null);
+    setSlots([]);
+    setSlot(null);
+    setStep(1);
+  }
+
+  function selectBarber(choice: string) {
+    setBarberChoice(choice);
+    setDay(null);
+    setSlots([]);
+    setSlot(null);
+    setStep(2);
+  }
+
+  async function loadSlots(forDay: Date) {
+    setDay(forDay);
+    setSlot(null);
+    setLoadingSlots(true);
+    try {
+      const iso = `${forDay.getFullYear()}-${String(forDay.getMonth() + 1).padStart(2, "0")}-${String(
+        forDay.getDate(),
+      ).padStart(2, "0")}T12:00:00.000Z`;
+      const d = await apiJson(`${base}/availability`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barberId: barberChoice, date: iso, serviceIds: selectedServices }),
+      });
+      setSlots(d.slots);
+    } catch (e) {
+      toast.error((e as Error).message);
+      setSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  }
+
+  async function submit() {
+    if (!slot) return;
+    setSubmitting(true);
+    try {
+      const d: BookResponse = await apiJson(`${base}/book`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          barberId: barberChoice,
+          startsAt: slot.startsAt,
+          serviceIds: selectedServices,
+          client: {
+            firstName: form.firstName.trim(),
+            lastName: form.lastName.trim(),
+            phone: form.phone.trim(),
+            email: form.email.trim(),
+          },
+        }),
+      });
+      // Si la barbería cobra abono, vamos al checkout en vez de confirmar acá.
+      if (d.requiresPayment && d.checkoutUrl) {
+        window.location.href = d.checkoutUrl;
+        return;
+      }
+      setResult(d as BookResult);
+      setStep(4);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ---- Pantalla de confirmación ----
+  if (step === 4 && result) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-8 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/15">
+          <CalendarCheck className="h-7 w-7 text-accent-foreground" />
+        </div>
+        <h2 className="font-display text-xl font-medium">¡Reserva confirmada!</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {fmtDayLong.format(new Date(result.startsAt))} a las {fmtTime.format(new Date(result.startsAt))} con{" "}
+          {result.barberName}.
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Te enviamos la confirmación. Total: <strong className="text-foreground">{formatCLP(result.totalPrice)}</strong>
+        </p>
+        <div className="mt-6 flex flex-col gap-2">
+          <Button asChild>
+            <Link href={`/reservar/gestion/${result.manageToken}`}>Ver o modificar mi reserva</Link>
+          </Button>
+          <Button variant="ghost" onClick={() => window.location.reload()}>
+            Agendar otra hora
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Stepper */}
+      <ol className="mb-6 flex items-center gap-2">
+        {STEPS.map((label, i) => (
+          <li key={label} className="flex flex-1 items-center gap-2">
+            <span
+              className={cn(
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium",
+                i < step
+                  ? "bg-accent/20 text-accent-foreground"
+                  : i === step
+                    ? "bg-foreground text-background"
+                    : "bg-muted text-muted-foreground",
+              )}
+            >
+              {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
+            </span>
+            <span className={cn("hidden text-xs sm:block", i === step ? "text-foreground" : "text-muted-foreground")}>
+              {label}
+            </span>
+            {i < STEPS.length - 1 && <span className="h-px flex-1 bg-border" />}
+          </li>
+        ))}
+      </ol>
+
+      <div className="rounded-lg border border-border bg-card p-5">
+        {/* Paso 1: servicios */}
+        {step === 0 && (
+          <div className="space-y-2">
+            <h2 className="mb-3 font-medium">¿Qué te vas a hacer?</h2>
+            {services.length === 0 && <p className="text-sm text-muted-foreground">Cargando servicios…</p>}
+            {services.map((s) => {
+              const active = selectedServices.includes(s.id);
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => selectService(s.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-md border p-3 text-left transition-colors",
+                    active ? "border-foreground bg-accent/10" : "border-border hover:bg-muted",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Scissors className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">{s.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatDuration(s.durationMin)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm">{formatCLP(s.price)}</span>
+                    <span
+                      className={cn(
+                        "flex h-5 w-5 items-center justify-center rounded-full border",
+                        active ? "border-foreground bg-foreground text-background" : "border-border",
+                      )}
+                    >
+                      {active && <Check className="h-3 w-3" />}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Paso 2: barbero */}
+        {step === 1 && (
+          <div className="space-y-2">
+            <h2 className="mb-3 font-medium">¿Con quién?</h2>
+            <button
+              onClick={() => selectBarber("any")}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors",
+                barberChoice === "any" ? "border-foreground bg-accent/10" : "border-border hover:bg-muted",
+              )}
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
+                <Users className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-sm font-medium">Cualquiera disponible</p>
+                <p className="text-xs text-muted-foreground">Te asignamos al primero libre</p>
+              </div>
+            </button>
+            {barbers.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => selectBarber(b.id)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors",
+                  barberChoice === b.id ? "border-foreground bg-accent/10" : "border-border hover:bg-muted",
+                )}
+              >
+                <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-muted">
+                  {b.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={b.avatarUrl} alt={b.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <User className="h-4 w-4" />
+                  )}
+                </span>
+                <div>
+                  <p className="text-sm font-medium">{b.name}</p>
+                  {b.specialties.length > 0 && (
+                    <p className="text-xs text-muted-foreground">{b.specialties.join(" · ")}</p>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Paso 3: fecha y hora */}
+        {step === 2 && (
+          <div>
+            <h2 className="mb-3 font-medium">Elige día y hora</h2>
+            <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1">
+              {days.map((d) => {
+                const active = day && d.toDateString() === day.toDateString();
+                return (
+                  <button
+                    key={d.toISOString()}
+                    onClick={() => loadSlots(d)}
+                    className={cn(
+                      "flex shrink-0 flex-col items-center rounded-md border px-3 py-2 transition-colors",
+                      active ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
+                    )}
+                  >
+                    <span className="text-[10px] uppercase">
+                      {new Intl.DateTimeFormat("es-CL", { timeZone: timezone, weekday: "short" }).format(d)}
+                    </span>
+                    <span className="text-sm font-medium">{d.getDate()}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {!day && <p className="text-sm text-muted-foreground">Selecciona un día para ver las horas.</p>}
+            {day && loadingSlots && (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Buscando horas…
+              </p>
+            )}
+            {day && !loadingSlots && slots.length === 0 && (
+              <p className="text-sm text-muted-foreground">No hay horas disponibles ese día. Prueba otro.</p>
+            )}
+            {day && !loadingSlots && slots.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {slots.map((s) => {
+                  const active = slot?.startsAt === s.startsAt;
+                  return (
+                    <button
+                      key={s.startsAt}
+                      onClick={() => {
+                        setSlot(s);
+                        setStep(3);
+                      }}
+                      className={cn(
+                        "rounded-md border py-2 text-sm transition-colors",
+                        active ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
+                      )}
+                    >
+                      {fmtTime.format(new Date(s.startsAt))}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Paso 4: datos */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <h2 className="font-medium">Tus datos</h2>
+            <div className="rounded-md bg-muted/50 p-3 text-sm">
+              <p className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                {slot && fmtDayLong.format(new Date(slot.startsAt))} · {slot && fmtTime.format(new Date(slot.startsAt))}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {totals.names.join(" + ")} · {formatDuration(totals.duration)} · {formatCLP(totals.price)}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="firstName">Nombre *</Label>
+                <Input
+                  id="firstName"
+                  value={form.firstName}
+                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="lastName">Apellido</Label>
+                <Input
+                  id="lastName"
+                  value={form.lastName}
+                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="phone">Teléfono (WhatsApp) *</Label>
+              <PhoneInput id="phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email (opcional)</Label>
+              <Input
+                id="email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Navegación */}
+      <div className="mt-4 flex items-center justify-between">
+        <Button
+          variant="ghost"
+          onClick={() => setStep((s) => (s > minStep ? ((s - 1) as Step) : s))}
+          disabled={step <= minStep}
+        >
+          <ChevronLeft className="h-4 w-4" /> Atrás
+        </Button>
+        {step === 3 && (
+          <Button onClick={submit} disabled={submitting || !form.firstName.trim() || !form.phone.trim()}>
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            Confirmar reserva
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}

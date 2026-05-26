@@ -1,0 +1,523 @@
+// =====================================
+// navaxa — Prisma schema
+// =====================================
+
+generator client {
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================
+// Tenancy & Identity
+// =====================
+
+model Tenant {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  plan        Plan      @default(FREE)
+  rut         String?
+  phone       String?
+  email       String?
+  address     String?
+  city        String?
+  timezone    String    @default("America/Santiago")
+  currency    String    @default("CLP")
+  locale      String    @default("es-CL")
+  logoUrl     String?
+  coverUrl    String?
+  description String?
+  instagram   String?
+  website     String?
+  active      Boolean   @default(true)
+  bookingEnabled   Boolean @default(true)
+  bookingNoticeMin Int     @default(0) // anticipación mínima (min) para reservar online
+  // Cobro de abono al reservar online.
+  paymentsEnabled  Boolean     @default(false)
+  depositType      DepositType @default(NONE)
+  depositValue     Int         @default(0) // CLP si FIXED; porcentaje 0-100 si PERCENT
+  trialEndsAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  users         User[]
+  clients       Client[]
+  services      Service[]
+  appointments  Appointment[]
+  barbers       Barber[]
+  notifications NotificationLog[]
+  campaigns     Campaign[]
+  haircuts      HaircutRecord[]
+  commissions   Commission[]
+  payments      Payment[]
+  subscription  Subscription?
+
+  @@map("tenants")
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+// Estado de facturación de la barbería (suscripción al SaaS).
+model Subscription {
+  id                String             @id @default(cuid())
+  tenantId          String             @unique
+  plan              Plan               @default(FREE)
+  status            SubscriptionStatus @default(TRIALING)
+  currentPeriodEnd  DateTime?          // fin del período pagado / de prueba
+  cancelAtPeriodEnd Boolean            @default(false)
+  provider          String             @default("mock")
+  providerRef       String?
+  lastPaymentAt     DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status, currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  TRIALING  // en período de prueba
+  ACTIVE    // plan pagado y vigente
+  PAST_DUE  // venció y no se pudo cobrar
+  CANCELED  // cancelada (volvió a FREE)
+}
+
+// Cómo se calcula el abono que paga el cliente al reservar online.
+enum DepositType {
+  NONE    // sin cobro
+  FIXED   // monto fijo en CLP (depositValue)
+  PERCENT // porcentaje del total (depositValue %); 100 = pago total
+}
+
+model User {
+  id            String    @id @default(cuid())
+  tenantId      String
+  email         String
+  passwordHash  String?
+  name          String
+  avatarUrl     String?
+  role          Role      @default(STAFF)
+  active        Boolean   @default(true)
+  lastLoginAt   DateTime?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  barber   Barber?
+  sessions Session[]
+  passwordTokens PasswordToken[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+// Token de un solo uso para invitación de barberos (definir clave) y
+// recuperación de contraseña. Se guarda solo el hash del token, nunca el valor en claro.
+model PasswordToken {
+  id        String               @id @default(cuid())
+  userId    String
+  tokenHash String               @unique
+  purpose   PasswordTokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_tokens")
+}
+
+enum PasswordTokenPurpose {
+  INVITE
+  RESET
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  BARBER
+  STAFF
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("sessions")
+}
+
+// =====================
+// Catalog
+// =====================
+
+model Service {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  price       Int      // CLP entero, sin decimales
+  durationMin Int
+  category    String?
+  color       String?  // hex para la agenda
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointments AppointmentService[]
+
+  @@index([tenantId])
+  @@map("services")
+}
+
+// =====================
+// Barbers
+// =====================
+
+model Barber {
+  id             String   @id @default(cuid())
+  tenantId       String
+  userId         String   @unique
+  bio            String?
+  avatarUrl      String?
+  commissionRate Float    @default(0.4)
+  specialties    String[]
+  instagram      String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schedule     BarberSchedule[]
+  timeOff      BarberTimeOff[]
+  appointments Appointment[]
+  commissions  Commission[]
+  haircuts     HaircutRecord[]
+
+  @@index([tenantId])
+  @@map("barbers")
+}
+
+model BarberSchedule {
+  id       String @id @default(cuid())
+  barberId String
+  weekday  Int    // 0=domingo, 6=sábado
+  startMin Int    // minutos desde 00:00
+  endMin   Int
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@unique([barberId, weekday, startMin])
+  @@map("barber_schedules")
+}
+
+model BarberTimeOff {
+  id       String   @id @default(cuid())
+  barberId String
+  startsAt DateTime
+  endsAt   DateTime
+  reason   String?
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barberId, startsAt])
+  @@map("barber_time_off")
+}
+
+// =====================
+// Clients & Visual CRM
+// =====================
+
+model Client {
+  id          String    @id @default(cuid())
+  tenantId    String
+  firstName   String
+  lastName    String?
+  phone       String?
+  email       String?
+  birthDate   DateTime?
+  rut         String?
+  notes       String?
+  tags        String[]
+  avatarUrl   String?
+  lastVisitAt DateTime?
+  totalVisits Int       @default(0)
+  totalSpent  Int       @default(0)
+  source      String?   // walkin, web, referral, instagram
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  haircuts        HaircutRecord[]
+  appointments    Appointment[]
+  preferences     ClientPreference?
+  recommendations AIRecommendation[]
+
+  @@index([tenantId, phone])
+  @@index([tenantId, lastVisitAt])
+  @@map("clients")
+}
+
+model ClientPreference {
+  id                String   @id @default(cuid())
+  clientId          String   @unique
+  preferredBarberId String?
+  hairType          String?  // straight | wavy | curly | coily
+  preferredStyle    String?
+  fadeType          String?  // low | mid | high | skin | taper | none
+  topLength         String?  // short | medium | long
+  beardStyle        String?
+  allergies         String?
+  notes             String?
+  updatedAt         DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_preferences")
+}
+
+model HaircutRecord {
+  id            String   @id @default(cuid())
+  tenantId      String
+  clientId      String
+  barberId      String?
+  appointmentId String?  @unique
+  imageUrl      String
+  thumbnailUrl  String?
+  notes         String?
+  rating        Int?     // 1-5
+  style         String?
+  performedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  barber Barber? @relation(fields: [barberId], references: [id], onDelete: SetNull)
+
+  @@index([clientId, performedAt])
+  @@index([tenantId])
+  @@map("haircut_records")
+}
+
+// =====================
+// Appointments / Booking
+// =====================
+
+model Appointment {
+  id           String            @id @default(cuid())
+  tenantId     String
+  clientId     String
+  barberId     String
+  startsAt     DateTime
+  endsAt       DateTime
+  status       AppointmentStatus @default(SCHEDULED)
+  totalPrice   Int
+  source       String?
+  notes        String?
+  cancelledAt  DateTime?
+  cancelReason String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  tenant     Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client     Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  barber     Barber               @relation(fields: [barberId], references: [id], onDelete: Restrict)
+  services   AppointmentService[]
+  commission Commission?
+  payment    Payment?
+
+  @@index([tenantId, startsAt])
+  @@index([barberId, startsAt])
+  @@index([clientId])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  PENDING_PAYMENT // reservada pero esperando el pago del abono
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+// Abono que paga el cliente al reservar online. Una cita tiene a lo sumo un pago.
+model Payment {
+  id            String        @id @default(cuid())
+  tenantId      String
+  appointmentId String        @unique
+  amount        Int           // CLP entero
+  currency      String        @default("CLP")
+  status        PaymentStatus @default(PENDING)
+  provider      String        @default("mock")
+  providerRef   String?       // id de la transacción en la pasarela
+  expiresAt     DateTime      // si no se paga antes, la cita se libera
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([status, expiresAt])
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+model AppointmentService {
+  id            String @id @default(cuid())
+  appointmentId String
+  serviceId     String
+  priceCharged  Int
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  service     Service     @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@unique([appointmentId, serviceId])
+  @@map("appointment_services")
+}
+
+// =====================
+// Commissions
+// =====================
+
+model Commission {
+  id            String    @id @default(cuid())
+  tenantId      String
+  barberId      String
+  appointmentId String    @unique
+  baseAmount    Int
+  rate          Float
+  amount        Int
+  paid          Boolean   @default(false)
+  paidAt        DateTime?
+  periodStart   DateTime
+  periodEnd     DateTime
+  createdAt     DateTime  @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  barber      Barber      @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, periodStart])
+  @@index([barberId, paid])
+  @@map("commissions")
+}
+
+// =====================
+// Notifications & Marketing
+// =====================
+
+model NotificationLog {
+  id           String              @id @default(cuid())
+  tenantId     String
+  channel      NotificationChannel
+  recipient    String
+  templateKey  String
+  payload      Json
+  status       NotificationStatus  @default(PENDING)
+  providerId   String?
+  errorMessage String?
+  sentAt       DateTime?
+  createdAt    DateTime            @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
+  @@map("notification_logs")
+}
+
+enum NotificationChannel {
+  EMAIL
+  WHATSAPP
+  SMS
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+model Campaign {
+  id          String              @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  trigger     CampaignTrigger
+  channel     NotificationChannel
+  templateKey String
+  active      Boolean             @default(true)
+  conditions  Json
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, active])
+  @@map("campaigns")
+}
+
+enum CampaignTrigger {
+  POST_VISIT
+  RECALL_INACTIVE
+  BIRTHDAY
+  APPOINTMENT_REMINDER
+  MANUAL
+}
+
+// =====================
+// AI Recommendations
+// =====================
+
+model AIRecommendation {
+  id             String    @id @default(cuid())
+  tenantId       String
+  clientId       String
+  generatedAt    DateTime  @default(now())
+  modelVersion   String
+  inputSummary   Json
+  recommendation Json
+  feedback       String?   // accepted | rejected | modified
+  feedbackAt     DateTime?
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, generatedAt])
+  @@map("ai_recommendations")
+}

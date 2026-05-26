@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /clientes/
+Disallow: /agenda/
+Disallow: /barberos/
+Disallow: /marketing/
+Disallow: /configuracion/
+
+Sitemap: https://navaxa.app/sitemap.xml

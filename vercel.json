@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/webhooks/notifications?job=reminders", "schedule": "*/15 * * * *" },
+    { "path": "/api/webhooks/notifications?job=reminders1h", "schedule": "*/15 * * * *" },
+    { "path": "/api/webhooks/notifications?job=recalls", "schedule": "0 10 * * *" }
+  ]
+}

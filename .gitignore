@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+.turbo
+dist
+build
+out
+*.tsbuildinfo
+
+# Environment
+.env
+.env*.local
+!.env.example
+
+# Overrides locales por máquina (p. ej. remapeo de puerto de Postgres en Windows)
+docker-compose.override.yml
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+.DS_Store
+*.swp
+
+# Prisma
+packages/db/prisma/migrations/dev.db*
+
+# Coverage
+coverage
+.nyc_output
+
+# Misc
+.cache
+.parcel-cache
+.eslintcache
+.prettiercache

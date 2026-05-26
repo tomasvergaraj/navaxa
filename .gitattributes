@@ -1,0 +1,10 @@
+# Normaliza saltos de línea a LF en el repo (consistencia entre Windows y el VPS Linux).
+* text=auto eol=lf
+
+# Binarios: no tocar.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

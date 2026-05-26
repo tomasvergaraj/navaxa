@@ -1,0 +1,53 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .next .turbo"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.27.0",
+    "@auth/prisma-adapter": "2.4.2",
+    "@aws-sdk/client-s3": "3.620.0",
+    "@aws-sdk/s3-request-presigner": "3.620.0",
+    "@hookform/resolvers": "3.9.0",
+    "@navaxa/config": "workspace:*",
+    "@navaxa/db": "workspace:*",
+    "@navaxa/ui": "workspace:*",
+    "@prisma/client": "5.18.0",
+    "@tanstack/react-query": "5.51.21",
+    "bcryptjs": "2.4.3",
+    "class-variance-authority": "0.7.0",
+    "clsx": "2.1.1",
+    "country-flag-icons": "^1.6.17",
+    "date-fns": "3.6.0",
+    "lucide-react": "0.424.0",
+    "next": "14.2.5",
+    "next-auth": "5.0.0-beta.20",
+    "next-themes": "0.3.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-hook-form": "7.52.2",
+    "sonner": "1.5.0",
+    "tailwind-merge": "2.4.0",
+    "tailwindcss-animate": "1.0.7",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
+    "@types/node": "20.14.13",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "autoprefixer": "10.4.20",
+    "eslint": "8.57.0",
+    "eslint-config-next": "14.2.5",
+    "postcss": "8.4.40",
+    "tailwindcss": "3.4.7",
+    "typescript": "5.5.4"
+  }
+}

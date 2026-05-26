@@ -1,0 +1,314 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { CalendarPlus, Check, Loader2, Search } from "lucide-react";
+import {
+  Button,
+  Input,
+  Label,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  cn,
+} from "@navaxa/ui";
+import { toast } from "sonner";
+import { formatCLP, formatDuration } from "@/lib/format";
+
+interface Service { id: string; name: string; durationMin: number; price: number }
+interface Barber { id: string; name: string }
+interface Slot { startsAt: string; endsAt: string }
+interface ClientLite { id: string; name: string }
+
+async function apiJson(path: string, init?: RequestInit) {
+  const res = await fetch(path, init);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "Algo salió mal");
+  return data;
+}
+
+export function NewAppointmentDialog({
+  presetClient,
+  label = "Nueva cita",
+}: {
+  presetClient?: ClientLite;
+  label?: string;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  const [services, setServices] = useState<Service[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [barberId, setBarberId] = useState("");
+  const [date, setDate] = useState("");
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slot, setSlot] = useState<Slot | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Cliente
+  const [client, setClient] = useState<ClientLite | null>(presetClient ?? null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ClientLite[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    apiJson("/api/services").then((d) => setServices(d.services)).catch(() => {});
+    apiJson("/api/barbers")
+      .then((d) => setBarbers(d.barbers.map((b: { id: string; user: { name: string } }) => ({ id: b.id, name: b.user.name }))))
+      .catch(() => {});
+  }, [open]);
+
+  // Búsqueda de clientes (debounce simple)
+  useEffect(() => {
+    if (presetClient || query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const d = await apiJson(`/api/clients?q=${encodeURIComponent(query.trim())}&take=6`);
+        setResults(
+          d.clients.map((c: { id: string; firstName: string; lastName: string | null }) => ({
+            id: c.id,
+            name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
+          })),
+        );
+      } catch {
+        setResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, presetClient]);
+
+  // Disponibilidad
+  useEffect(() => {
+    setSlot(null);
+    if (!barberId || !date || selectedServices.length === 0) {
+      setSlots([]);
+      return;
+    }
+    setLoadingSlots(true);
+    apiJson("/api/appointments/availability", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ barberId, date: `${date}T12:00:00.000Z`, serviceIds: selectedServices }),
+    })
+      .then((d) => setSlots(d.slots))
+      .catch((e) => {
+        toast.error(e.message);
+        setSlots([]);
+      })
+      .finally(() => setLoadingSlots(false));
+  }, [barberId, date, selectedServices]);
+
+  const totals = useMemo(() => {
+    const chosen = services.filter((s) => selectedServices.includes(s.id));
+    return {
+      price: chosen.reduce((a, s) => a + s.price, 0),
+      duration: chosen.reduce((a, s) => a + s.durationMin, 0),
+    };
+  }, [services, selectedServices]);
+
+  const fmtTime = (iso: string) =>
+    new Intl.DateTimeFormat("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
+
+  function toggleService(id: string) {
+    setSelectedServices((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  }
+
+  async function submit() {
+    if (!client || !slot) return;
+    setSubmitting(true);
+    try {
+      await apiJson("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: client.id,
+          barberId,
+          startsAt: slot.startsAt,
+          serviceIds: selectedServices,
+          source: "walkin",
+        }),
+      });
+      toast.success("Cita agendada");
+      setOpen(false);
+      reset();
+      router.refresh();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function reset() {
+    setSelectedServices([]);
+    setBarberId("");
+    setDate("");
+    setSlots([]);
+    setSlot(null);
+    setQuery("");
+    setResults([]);
+    if (!presetClient) setClient(null);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>
+        <CalendarPlus className="h-4 w-4" />
+        {label}
+      </Button>
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          setOpen(o);
+          if (!o) reset();
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{label}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Cliente */}
+            <div className="space-y-1.5">
+              <Label>Cliente</Label>
+              {client ? (
+                <div className="flex items-center justify-between rounded-md border border-border p-2.5 text-sm">
+                  <span className="font-medium">{client.name}</span>
+                  {!presetClient && (
+                    <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setClient(null)}>
+                      cambiar
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-8"
+                    placeholder="Buscar por nombre o teléfono…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  {results.length > 0 && (
+                    <div className="mt-1 rounded-md border border-border">
+                      {results.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            setClient(c);
+                            setQuery("");
+                            setResults([]);
+                          }}
+                          className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Servicios */}
+            <div className="space-y-1.5">
+              <Label>Servicios</Label>
+              <div className="space-y-1.5">
+                {services.map((s) => {
+                  const active = selectedServices.includes(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => toggleService(s.id)}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-md border p-2.5 text-left text-sm transition-colors",
+                        active ? "border-foreground bg-accent/10" : "border-border hover:bg-muted",
+                      )}
+                    >
+                      <span>{s.name} · {formatDuration(s.durationMin)}</span>
+                      <span className="flex items-center gap-2">
+                        {formatCLP(s.price)}
+                        <span className={cn("flex h-4 w-4 items-center justify-center rounded-full border", active ? "border-foreground bg-foreground text-background" : "border-border")}>
+                          {active && <Check className="h-3 w-3" />}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Barbero + fecha */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="a-barber">Barbero</Label>
+                <select
+                  id="a-barber"
+                  value={barberId}
+                  onChange={(e) => setBarberId(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Elegir…</option>
+                  {barbers.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="a-date">Fecha</Label>
+                <Input id="a-date" type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} />
+              </div>
+            </div>
+
+            {/* Horas */}
+            {barberId && date && selectedServices.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Hora ({formatDuration(totals.duration)} · {formatCLP(totals.price)})</Label>
+                {loadingSlots ? (
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Buscando horas…
+                  </p>
+                ) : slots.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No hay horas disponibles ese día.</p>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {slots.map((sl) => (
+                      <button
+                        key={sl.startsAt}
+                        onClick={() => setSlot(sl)}
+                        className={cn(
+                          "rounded-md border py-1.5 text-sm transition-colors",
+                          slot?.startsAt === sl.startsAt ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
+                        )}
+                      >
+                        {fmtTime(sl.startsAt)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={submit} disabled={submitting || !client || !slot}>
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Agendar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

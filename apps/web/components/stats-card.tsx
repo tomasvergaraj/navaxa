@@ -1,0 +1,37 @@
+import { Card } from "@navaxa/ui";
+import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
+
+interface StatsCardProps {
+  label: string;
+  value: string;
+  trend?: { value: string; positive?: boolean };
+  icon?: LucideIcon;
+  className?: string;
+}
+
+export function StatsCard({ label, value, trend, icon: Icon, className }: StatsCardProps) {
+  return (
+    <Card className={cn("p-5", className)}>
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
+        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+      </div>
+      <div className="mt-2 flex items-baseline justify-between gap-2">
+        <span className="text-2xl font-medium tracking-tight">{value}</span>
+        {trend && (
+          <span
+            className={cn(
+              "text-xs font-medium",
+              trend.positive ? "text-green-600" : "text-red-600",
+            )}
+          >
+            {trend.value}
+          </span>
+        )}
+      </div>
+    </Card>
+  );
+}
