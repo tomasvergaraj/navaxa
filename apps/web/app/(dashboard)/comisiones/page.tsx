@@ -10,6 +10,12 @@ export const dynamic = "force-dynamic";
 const MONTH_YEAR = new Intl.DateTimeFormat("es-CL", { month: "long", year: "numeric" });
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+const METHOD_LABEL: Record<string, string> = {
+  CASH: "efectivo",
+  TRANSFER: "transferencia",
+  OTHER: "otro",
+};
+
 type BarberAgg = {
   barberId: string;
   name: string;
@@ -17,6 +23,7 @@ type BarberAgg = {
   pendingCount: number;
   paidAmount: number;
   paidCount: number;
+  paidMethod: string | null;
 };
 
 type Period = {
@@ -34,7 +41,7 @@ export default async function ComisionesPage() {
 
   const [grouped, barbers] = await Promise.all([
     db.commission.groupBy({
-      by: ["periodStart", "barberId", "paid"],
+      by: ["periodStart", "barberId", "paid", "paymentMethod"],
       _sum: { amount: true },
       _count: true,
       orderBy: { periodStart: "desc" },
@@ -75,6 +82,7 @@ export default async function ComisionesPage() {
         pendingCount: 0,
         paidAmount: 0,
         paidCount: 0,
+        paidMethod: null,
       };
       period.barbers.push(agg);
     }
@@ -83,6 +91,7 @@ export default async function ComisionesPage() {
     if (row.paid) {
       agg.paidAmount += sum;
       agg.paidCount += row._count;
+      if (row.paymentMethod) agg.paidMethod = row.paymentMethod;
       period.paidTotal += sum;
     } else {
       agg.pendingAmount += sum;
@@ -183,6 +192,7 @@ export default async function ComisionesPage() {
                             <>
                               {" · "}pagado{" "}
                               <span className="tabular-nums">{formatCLP(b.paidAmount)}</span>
+                              {b.paidMethod && ` (${METHOD_LABEL[b.paidMethod] ?? b.paidMethod})`}
                             </>
                           )}
                         </p>

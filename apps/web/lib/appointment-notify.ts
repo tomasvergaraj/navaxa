@@ -1,11 +1,13 @@
-import { NotificationChannel } from "@navaxa/db";
+import { type Plan } from "@navaxa/db";
 import { sendNotification } from "@/lib/notifications";
+import { pickChannel } from "@/lib/notifications/channel";
 
 interface NotifyTenant {
   id: string;
   name: string;
   address?: string | null;
   timezone?: string | null;
+  plan: Plan;
 }
 
 interface NotifyAppointment {
@@ -31,25 +33,17 @@ function formatDateTime(date: Date, timezone?: string | null) {
   return { fecha, hora };
 }
 
-/** Elige canal según los datos de contacto del cliente (WhatsApp tiene prioridad). */
-function pickChannel(client: NotifyAppointment["client"]):
-  | { channel: NotificationChannel; recipient: string }
-  | null {
-  if (client.phone) return { channel: NotificationChannel.WHATSAPP, recipient: client.phone };
-  if (client.email) return { channel: NotificationChannel.EMAIL, recipient: client.email };
-  return null;
-}
-
 /**
  * Notifica al cliente la confirmación o cancelación de su cita.
  * No lanza: si falla el envío queda registrado en NotificationLog.
+ * WhatsApp se usa solo en planes que lo incluyen; si no, degrada a email.
  */
 export async function notifyAppointment(
   kind: "confirmed" | "cancelled",
   tenant: NotifyTenant,
   appointment: NotifyAppointment,
 ) {
-  const target = pickChannel(appointment.client);
+  const target = pickChannel(tenant.plan, appointment.client);
   if (!target) return { ok: false as const, error: "Cliente sin teléfono ni email" };
 
   const { fecha, hora } = formatDateTime(appointment.startsAt, tenant.timezone);

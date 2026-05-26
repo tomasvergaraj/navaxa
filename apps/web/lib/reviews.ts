@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
-import { prisma, NotificationChannel, type Plan } from "@navaxa/db";
+import { prisma } from "@navaxa/db";
 import { sendNotification } from "@/lib/notifications";
+import { pickChannel } from "@/lib/notifications/channel";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -42,19 +43,6 @@ export function buildReviewUrl(appointmentId: string): string {
   return `${APP_URL}/resena/${signReviewToken(appointmentId)}`;
 }
 
-/** WhatsApp solo en planes que lo incluyen (PRO/ENTERPRISE); el resto, email. */
-function pickReviewChannel(
-  plan: Plan,
-  client: { phone?: string | null; email?: string | null },
-): { channel: NotificationChannel; recipient: string } | null {
-  const waAllowed = plan === "PRO" || plan === "ENTERPRISE";
-  if (waAllowed && client.phone) {
-    return { channel: NotificationChannel.WHATSAPP, recipient: client.phone };
-  }
-  if (client.email) return { channel: NotificationChannel.EMAIL, recipient: client.email };
-  return null;
-}
-
 /**
  * Envía al cliente la invitación a reseñar tras completar su cita.
  * No lanza (los errores quedan en NotificationLog) e es idempotente por cita.
@@ -70,7 +58,7 @@ export async function sendReviewRequest(appointmentId: string, tenantId: string)
   });
   if (!appt) return { ok: false as const, error: "Cita no encontrada" };
 
-  const target = pickReviewChannel(appt.tenant.plan, appt.client);
+  const target = pickChannel(appt.tenant.plan, appt.client);
   if (!target) return { ok: false as const, error: "Cliente sin canal de contacto" };
 
   // Idempotencia: una sola invitación por cita.

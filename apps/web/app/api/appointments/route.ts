@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     // Confirmación al cliente (no bloquea la respuesta si falla el envío).
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, name: true, address: true, timezone: true },
+      select: { id: true, name: true, plan: true, address: true, timezone: true },
     });
     if (tenant) await notifyAppointment("confirmed", tenant, appt).catch(() => undefined);
 

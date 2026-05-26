@@ -13,6 +13,7 @@ export async function resolveTenantBySlug(slug: string) {
       id: true,
       slug: true,
       name: true,
+      plan: true,
       logoUrl: true,
       coverUrl: true,
       description: true,
@@ -138,7 +139,7 @@ export async function loadAppointmentByToken(token: string) {
     where: { id: appointmentId },
     include: {
       tenant: {
-        select: { id: true, name: true, slug: true, address: true, timezone: true, bookingNoticeMin: true },
+        select: { id: true, name: true, slug: true, plan: true, address: true, timezone: true, bookingNoticeMin: true },
       },
       barber: { include: { user: { select: { name: true } } } },
       client: { select: { firstName: true, phone: true, email: true } },

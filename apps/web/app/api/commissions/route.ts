@@ -9,6 +9,7 @@ const settleSchema = z.object({
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(0).max(11), // 0-11 (estilo Date de JS)
   paid: z.boolean(),
+  method: z.enum(["CASH", "TRANSFER", "OTHER"]).optional(), // método de pago al liquidar
 });
 
 /**
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
-    const { barberId, year, month, paid } = parsed.data;
+    const { barberId, year, month, paid, method } = parsed.data;
 
     const db = scopedDb();
     // El período es el mes calendario; se filtra por rango sobre periodStart
@@ -41,7 +42,11 @@ export async function POST(req: Request) {
         periodStart: { gte: periodGte, lt: periodLt },
         paid: !paid, // solo las que cambian de estado
       },
-      data: { paid, paidAt: paid ? new Date() : null },
+      data: {
+        paid,
+        paidAt: paid ? new Date() : null,
+        paymentMethod: paid ? (method ?? "CASH") : null,
+      },
     });
 
     return NextResponse.json({ updated: result.count });

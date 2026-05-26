@@ -11,6 +11,7 @@ import {
   signManageToken,
 } from "@/lib/public-booking";
 import { notifyAppointment } from "@/lib/appointment-notify";
+import { assertWithinPlanLimit, PlanLimitError } from "@/lib/plan-limits";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import {
   computeDeposit,
@@ -93,6 +94,22 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       await prisma.client.update({ where: { id: clientId }, data: patch });
     }
   } else {
+    // Cliente nuevo: respeta el tope de clientes del plan. Mensaje neutro al
+    // cliente final (no se le expone el límite interno de la barbería).
+    try {
+      await assertWithinPlanLimit(tenant.id, "clients");
+    } catch (e) {
+      if (e instanceof PlanLimitError) {
+        return NextResponse.json(
+          {
+            error:
+              "La barbería no puede tomar nuevas reservas en este momento. Escríbele directamente para agendar.",
+          },
+          { status: 409 },
+        );
+      }
+      throw e;
+    }
     const created = await prisma.client.create({
       data: {
         tenantId: tenant.id,

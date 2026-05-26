@@ -18,6 +18,7 @@ type Props = {
 export function SettleButton({ barberId, year, month, pendingAmount, paidAmount }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState<"pay" | "revert" | null>(null);
+  const [method, setMethod] = useState<"CASH" | "TRANSFER" | "OTHER">("CASH");
 
   async function settle(paid: boolean) {
     setLoading(paid ? "pay" : "revert");
@@ -25,7 +26,7 @@ export function SettleButton({ barberId, year, month, pendingAmount, paidAmount 
       const res = await fetch("/api/commissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ barberId, year, month, paid }),
+        body: JSON.stringify({ barberId, year, month, paid, ...(paid ? { method } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "No se pudo procesar");
@@ -41,10 +42,23 @@ export function SettleButton({ barberId, year, month, pendingAmount, paidAmount 
   return (
     <div className="flex items-center gap-2">
       {pendingAmount > 0 && (
-        <Button size="sm" onClick={() => settle(true)} disabled={loading !== null}>
-          {loading === "pay" ? <Loader2 className="animate-spin" /> : <Check />}
-          Liquidar {formatCLP(pendingAmount)}
-        </Button>
+        <>
+          <select
+            value={method}
+            onChange={(e) => setMethod(e.target.value as typeof method)}
+            disabled={loading !== null}
+            aria-label="Método de pago"
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="CASH">Efectivo</option>
+            <option value="TRANSFER">Transferencia</option>
+            <option value="OTHER">Otro</option>
+          </select>
+          <Button size="sm" onClick={() => settle(true)} disabled={loading !== null}>
+            {loading === "pay" ? <Loader2 className="animate-spin" /> : <Check />}
+            Liquidar {formatCLP(pendingAmount)}
+          </Button>
+        </>
       )}
       {paidAmount > 0 && (
         <Button

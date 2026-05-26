@@ -429,6 +429,7 @@ model Commission {
   amount        Int
   paid          Boolean   @default(false)
   paidAt        DateTime?
+  paymentMethod String?   // CASH | TRANSFER | OTHER (al liquidar)
   periodStart   DateTime
   periodEnd     DateTime
   createdAt     DateTime  @default(now())

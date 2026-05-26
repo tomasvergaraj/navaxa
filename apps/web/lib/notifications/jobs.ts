@@ -1,5 +1,6 @@
 import { prisma, NotificationChannel, AppointmentStatus, Plan } from "@navaxa/db";
 import { sendNotification } from "./index";
+import { pickChannel } from "./channel";
 import { addHours, addMinutes, subHours } from "date-fns";
 import { formatDate, formatTime } from "../format";
 
@@ -23,23 +24,29 @@ async function processReminders(templateKey: "reminder_24h" | "reminder_1h", hou
     include: {
       client: { select: { firstName: true, phone: true, email: true } },
       barber: { include: { user: { select: { name: true } } } },
-      tenant: { select: { name: true, address: true } },
+      tenant: { select: { name: true, address: true, plan: true } },
     },
   });
 
   const results: { appointmentId: string; ok: boolean }[] = [];
   for (const a of appts) {
-    if (!a.client.phone) continue;
-
     const campaign = await prisma.campaign.findFirst({
       where: { tenantId: a.tenantId, active: true, trigger: "APPOINTMENT_REMINDER", templateKey },
     });
     if (!campaign) continue;
 
+    // Canal según plan: WhatsApp solo PRO/ENTERPRISE; si no, degrada a email.
+    const target = pickChannel(
+      a.tenant.plan,
+      a.client,
+      campaign.channel === NotificationChannel.WHATSAPP,
+    );
+    if (!target) continue;
+
     const already = await prisma.notificationLog.findFirst({
       where: {
         tenantId: a.tenantId,
-        recipient: a.client.phone,
+        recipient: target.recipient,
         templateKey,
         createdAt: { gte: subHours(now, hoursAhead + 1) },
       },
@@ -48,8 +55,8 @@ async function processReminders(templateKey: "reminder_24h" | "reminder_1h", hou
 
     const r = await sendNotification({
       tenantId: a.tenantId,
-      channel: campaign.channel as NotificationChannel,
-      recipient: a.client.phone,
+      channel: target.channel,
+      recipient: target.recipient,
       templateKey,
       data: {
         firstName: a.client.firstName,
@@ -148,26 +155,32 @@ export async function processInactiveRecalls() {
       id: true,
       firstName: true,
       phone: true,
+      email: true,
       tenantId: true,
       lastVisitAt: true,
-      tenant: { select: { name: true, slug: true } },
+      tenant: { select: { name: true, slug: true, plan: true } },
     },
     take: 100,
   });
 
   let sent = 0;
   for (const c of clients) {
-    if (!c.phone) continue;
-
     const campaign = await prisma.campaign.findFirst({
       where: { tenantId: c.tenantId, active: true, trigger: "RECALL_INACTIVE" },
     });
     if (!campaign) continue;
 
+    const target = pickChannel(
+      c.tenant.plan,
+      c,
+      campaign.channel === NotificationChannel.WHATSAPP,
+    );
+    if (!target) continue;
+
     const already = await prisma.notificationLog.findFirst({
       where: {
         tenantId: c.tenantId,
-        recipient: c.phone,
+        recipient: target.recipient,
         templateKey: "recall_30d",
         createdAt: { gte: subHours(new Date(), 60 * 24) },
       },
@@ -176,8 +189,8 @@ export async function processInactiveRecalls() {
 
     await sendNotification({
       tenantId: c.tenantId,
-      channel: campaign.channel as NotificationChannel,
-      recipient: c.phone,
+      channel: target.channel,
+      recipient: target.recipient,
       templateKey: "recall_30d",
       data: {
         firstName: c.firstName,

@@ -120,7 +120,7 @@ export async function loadPaymentByToken(token: string) {
     where: { id: paymentId },
     include: {
       tenant: {
-        select: { id: true, name: true, slug: true, address: true, timezone: true, currency: true },
+        select: { id: true, name: true, slug: true, plan: true, address: true, timezone: true, currency: true },
       },
       appointment: {
         include: {
