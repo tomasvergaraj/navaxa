@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, Role, PasswordTokenPurpose, NotificationChannel } from "@navaxa/db";
 import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { assertWithinPlanLimit, PlanLimitError } from "@/lib/plan-limits";
 import { barberCreateSchema } from "@/lib/validators";
 import { createPasswordToken, buildSetPasswordUrl } from "@/lib/password-tokens";
 import { sendNotification } from "@/lib/notifications";
@@ -39,6 +40,8 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
+
+    await assertWithinPlanLimit(tenantId, "barbers");
 
     const db = scopedDb();
     const email = parsed.data.email.toLowerCase().trim();
@@ -99,6 +102,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ barber: created, inviteUrl }, { status: 201 });
   } catch (e) {
     if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
+    if (e instanceof PlanLimitError)
+      return NextResponse.json({ error: e.message, code: e.code }, { status: e.status });
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 }

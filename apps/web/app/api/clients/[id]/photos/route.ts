@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { assertWithinPlanLimit, PlanLimitError } from "@/lib/plan-limits";
 import { storage } from "@/lib/storage";
 import { haircutPhotoMetaSchema } from "@/lib/validators";
 
@@ -34,6 +35,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: meta.error.flatten() }, { status: 400 });
     }
 
+    // Antes de subir: si ya está en el tope de fotos del plan, rechazar sin gastar storage.
+    await assertWithinPlanLimit(tenantId, "photos");
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = file.type.split("/")[1]?.split("+")[0] ?? "jpg";
     const { url } = await storage.upload({
@@ -57,6 +61,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ record }, { status: 201 });
   } catch (e) {
     if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
+    if (e instanceof PlanLimitError)
+      return NextResponse.json({ error: e.message, code: e.code }, { status: e.status });
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 }

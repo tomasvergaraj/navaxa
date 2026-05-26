@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { scopedDb, TenantError } from "@/lib/tenant";
+import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { assertWithinPlanLimit, PlanLimitError } from "@/lib/plan-limits";
 import { clientCreateSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +59,8 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
+    const { tenantId } = getTenantContext();
+    await assertWithinPlanLimit(tenantId, "clients");
     const db = scopedDb();
     const { tags, birthDate, ...rest } = parsed.data;
     const cleaned = Object.fromEntries(
@@ -73,6 +76,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ client }, { status: 201 });
   } catch (e) {
     if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
+    if (e instanceof PlanLimitError)
+      return NextResponse.json({ error: e.message, code: e.code }, { status: e.status });
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 }
