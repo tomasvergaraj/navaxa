@@ -1,0 +1,30 @@
+# Dependencias e artefactos de build (el Dockerfile los reconstruye)
+node_modules
+**/node_modules
+.next
+**/.next
+.turbo
+**/.turbo
+
+# Secretos y entorno local — NUNCA al contexto/imagen
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Git y meta
+.git
+.gitignore
+.gitattributes
+.claude
+**/*.log
+
+# Compose / docker (no se necesitan dentro del build)
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Editor / SO
+.vscode
+.idea
+.DS_Store

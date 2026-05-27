@@ -7,8 +7,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-navaxa}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-navaxa}
       POSTGRES_DB: ${POSTGRES_DB:-navaxa}
-    ports:
-      - "5432:5432"
+    # Sin puerto al host: `web` lo alcanza por la red interna (postgres:5432) y el admin
+    # se hace con `docker compose exec postgres psql`. (El dev local usa el override → 55432.)
     volumes:
       - navaxa_pg:/var/lib/postgresql/data
     healthcheck:
@@ -21,6 +21,9 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        # NEXT_PUBLIC_* se hornea en build → debe ser el dominio real de producción.
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://navaxa.cl}
     container_name: navaxa-web
     restart: unless-stopped
     depends_on:
@@ -28,14 +31,26 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
+      # La app habla con Postgres por la red interna de compose (override del .env).
       DATABASE_URL: postgresql://${POSTGRES_USER:-navaxa}:${POSTGRES_PASSWORD:-navaxa}@postgres:5432/${POSTGRES_DB:-navaxa}?schema=public
       NODE_ENV: production
       HOSTNAME: "0.0.0.0"
       PORT: "3000"
       # Scheduler interno de notificaciones (instancia única en VPS).
       INTERNAL_CRON: "true"
+    # Solo en localhost; Caddy lo frontea públicamente por la red interna (web:3000).
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "require('http').get('http://127.0.0.1:3000/',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
 
   caddy:
     image: caddy:2-alpine
@@ -49,7 +64,8 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     profiles: ["prod"]
 
 volumes:
