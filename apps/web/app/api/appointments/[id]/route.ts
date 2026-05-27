@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { scopedDb, getTenantContext } from "@/lib/tenant";
 import { apiError } from "@/lib/api-errors";
-import { completeAppointment } from "@/lib/booking";
+import { completeAppointment, rescheduleAppointment } from "@/lib/booking";
 import { sendReviewRequest } from "@/lib/reviews";
 import { AppointmentStatus } from "@navaxa/db";
 
@@ -12,6 +12,9 @@ const updateSchema = z.object({
   status: z.nativeEnum(AppointmentStatus).optional(),
   notes: z.string().max(500).optional(),
   cancelReason: z.string().max(200).optional(),
+  // Reagendar (drag & drop en la agenda): nuevo inicio y, opcional, otro barbero.
+  startsAt: z.string().datetime().optional(),
+  barberId: z.string().cuid().optional(),
 });
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
@@ -44,6 +47,17 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       const result = await completeAppointment(params.id, tenantId);
       // Invitación a reseñar (idempotente; no bloquea la respuesta si falla).
       await sendReviewRequest(params.id, tenantId).catch(() => {});
+      return NextResponse.json({ appointment: result });
+    }
+
+    // Reagendar: conserva duración, valida solape y pertenencia del barbero destino.
+    if (parsed.data.startsAt) {
+      const result = await rescheduleAppointment(
+        params.id,
+        tenantId,
+        new Date(parsed.data.startsAt),
+        parsed.data.barberId,
+      );
       return NextResponse.json({ appointment: result });
     }
 

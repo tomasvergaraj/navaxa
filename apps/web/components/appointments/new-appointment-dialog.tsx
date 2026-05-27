@@ -32,12 +32,32 @@ async function apiJson(path: string, init?: RequestInit) {
 export function NewAppointmentDialog({
   presetClient,
   label = "Nueva cita",
+  open: controlledOpen,
+  onOpenChange,
+  presetBarberId,
+  presetDate,
+  presetStartIso,
+  hideTrigger = false,
 }: {
   presetClient?: ClientLite;
   label?: string;
+  /** Modo controlado (p.ej. abierto desde la grilla de agenda). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Prefill al abrir: barbero, fecha (YYYY-MM-DD) y hora sugerida (ISO). */
+  presetBarberId?: string;
+  presetDate?: string;
+  presetStartIso?: string;
+  hideTrigger?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (o: boolean) => {
+    onOpenChange?.(o);
+    if (!isControlled) setInternalOpen(o);
+  };
 
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
@@ -61,6 +81,13 @@ export function NewAppointmentDialog({
       .then((d) => setBarbers(d.barbers.map((b: { id: string; user: { name: string } }) => ({ id: b.id, name: b.user.name }))))
       .catch(() => {});
   }, [open]);
+
+  // Prefill al abrir desde la grilla (click en un hueco): barbero + fecha.
+  useEffect(() => {
+    if (!open) return;
+    if (presetBarberId) setBarberId(presetBarberId);
+    if (presetDate) setDate(presetDate);
+  }, [open, presetBarberId, presetDate]);
 
   // Búsqueda de clientes (debounce simple)
   useEffect(() => {
@@ -97,13 +124,25 @@ export function NewAppointmentDialog({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ barberId, date: `${date}T12:00:00.000Z`, serviceIds: selectedServices }),
     })
-      .then((d) => setSlots(d.slots))
+      .then((d) => {
+        setSlots(d.slots);
+        // Si vino una hora sugerida (click en la grilla), preselecciona el slot más cercano.
+        if (presetStartIso && d.slots.length > 0) {
+          const target = new Date(presetStartIso).getTime();
+          const nearest = (d.slots as Slot[]).reduce((best, s) =>
+            Math.abs(new Date(s.startsAt).getTime() - target) < Math.abs(new Date(best.startsAt).getTime() - target)
+              ? s
+              : best,
+          );
+          setSlot(nearest);
+        }
+      })
       .catch((e) => {
         toast.error(e.message);
         setSlots([]);
       })
       .finally(() => setLoadingSlots(false));
-  }, [barberId, date, selectedServices]);
+  }, [barberId, date, selectedServices, presetStartIso]);
 
   const totals = useMemo(() => {
     const chosen = services.filter((s) => selectedServices.includes(s.id));
@@ -161,10 +200,12 @@ export function NewAppointmentDialog({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <CalendarPlus className="h-4 w-4" />
-        {label}
-      </Button>
+      {!hideTrigger && (
+        <Button onClick={() => setOpen(true)}>
+          <CalendarPlus className="h-4 w-4" />
+          {label}
+        </Button>
+      )}
       <Dialog
         open={open}
         onOpenChange={(o) => {

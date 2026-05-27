@@ -174,14 +174,17 @@ export async function createAppointment(input: CreateAppointmentInput) {
 }
 
 /**
- * Reagenda una cita a un nuevo inicio, preservando su duración y validando
- * que no haya solape con otra cita activa del mismo barbero (race-safe en tx).
- * Solo permite reagendar citas aún vigentes (SCHEDULED / CONFIRMED).
+ * Reagenda una cita a un nuevo inicio (y opcionalmente a otro barbero),
+ * preservando su duración y validando que no haya solape con otra cita activa
+ * del barbero destino (race-safe en tx). Solo permite reagendar citas aún
+ * vigentes (SCHEDULED / CONFIRMED). `newBarberId` habilita el drag entre
+ * columnas en la grilla de agenda; si se omite, conserva el barbero actual.
  */
 export async function rescheduleAppointment(
   appointmentId: string,
   tenantId: string,
   newStart: Date,
+  newBarberId?: string,
 ) {
   return prisma.$transaction(async (tx) => {
     const appt = await tx.appointment.findFirst({
@@ -195,12 +198,21 @@ export async function rescheduleAppointment(
       throw new Error("La cita no se puede reagendar");
     }
 
+    const barberId = newBarberId ?? appt.barberId;
+    if (newBarberId && newBarberId !== appt.barberId) {
+      const barber = await tx.barber.findFirst({
+        where: { id: newBarberId, tenantId, active: true },
+        select: { id: true },
+      });
+      if (!barber) throw new Error("Barbero no encontrado");
+    }
+
     const durationMin = Math.round((+appt.endsAt - +appt.startsAt) / 60000);
     const endsAt = addMinutes(newStart, durationMin);
 
     const overlap = await tx.appointment.findFirst({
       where: {
-        barberId: appt.barberId,
+        barberId,
         id: { not: appt.id },
         status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
         startsAt: { lt: endsAt },
@@ -212,7 +224,7 @@ export async function rescheduleAppointment(
 
     return tx.appointment.update({
       where: { id: appt.id },
-      data: { startsAt: newStart, endsAt },
+      data: { startsAt: newStart, endsAt, ...(newBarberId ? { barberId } : {}) },
       include: {
         client: true,
         barber: { include: { user: true } },
