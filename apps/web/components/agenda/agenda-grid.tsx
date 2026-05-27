@@ -123,12 +123,14 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
     return () => clearInterval(t);
   }, [isToday, dayStartMs]);
 
-  // Al montar: hacer scroll a "ahora" (o al inicio de la grilla).
+  // Al montar: hacer scroll a "ahora" (o al inicio de la grilla). Calcula "ahora"
+  // en vivo: el estado nowMin aún es null en el primer render (lo setea otro efecto).
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const target = isToday && nowMin != null && nowMin > startMin ? nowMin : startMin;
-    el.scrollTop = Math.max(0, (target - startMin) * PX_PER_MIN - 80);
+    const liveNow = (Date.now() - dayStartMs) / 60000;
+    const target = isToday && liveNow > startMin && liveNow < endMin ? liveNow : startMin;
+    el.scrollTop = Math.max(0, (target - startMin) * PX_PER_MIN + TOP_PAD - 80);
     // solo al montar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
