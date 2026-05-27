@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { apiError } from "@/lib/api-errors";
 import { completeAppointment } from "@/lib/booking";
 import { sendReviewRequest } from "@/lib/reviews";
 import { AppointmentStatus } from "@navaxa/db";
@@ -27,8 +28,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     if (!appt) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     return NextResponse.json({ appointment: appt });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 
@@ -58,8 +58,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     });
     return NextResponse.json({ appointment: updated });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 
@@ -72,7 +71,6 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

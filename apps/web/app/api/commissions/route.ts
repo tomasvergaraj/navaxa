@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { scopedDb } from "@/lib/tenant";
+import { apiError, requireManager } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,7 @@ const settleSchema = z.object({
  */
 export async function POST(req: Request) {
   try {
-    const { role } = getTenantContext();
-    if (role !== "OWNER" && role !== "ADMIN") {
-      return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
-    }
+    requireManager();
 
     const parsed = settleSchema.safeParse(await req.json());
     if (!parsed.success) {
@@ -51,7 +49,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ updated: result.count });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

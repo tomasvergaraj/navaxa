@@ -1,6 +1,6 @@
-import crypto from "node:crypto";
 import { Plan } from "@navaxa/db";
 import { PLANS } from "@navaxa/config";
+import { signToken, verifyToken, TOKEN_TTL } from "@/lib/signed-token";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -31,41 +31,13 @@ export function addMonths(date: Date, months: number): Date {
 
 // ---- Token de checkout de plan (stateless, HMAC) ----
 // Codifica tenantId + plan; solo el dueño autenticado puede generarlo.
-// token = b64url("tenantId:plan").b64url(hmac("bill:tenantId:plan"))
-
-function billingSecret(): string {
-  const s = process.env.AUTH_SECRET;
-  if (!s) throw new Error("AUTH_SECRET no configurado");
-  return s;
-}
-
-function b64url(buf: Buffer | string): string {
-  return Buffer.from(buf).toString("base64url");
-}
-
 export function signBillingToken(tenantId: string, plan: PaidPlan): string {
-  const payload = `${tenantId}:${plan}`;
-  const sig = crypto.createHmac("sha256", billingSecret()).update(`bill:${payload}`).digest();
-  return `${b64url(payload)}.${b64url(sig)}`;
+  return signToken("bill", `${tenantId}:${plan}`, TOKEN_TTL.bill);
 }
 
 export function verifyBillingToken(token: string): { tenantId: string; plan: PaidPlan } | null {
-  const parts = token.split(".");
-  if (parts.length !== 2) return null;
-  let payload: string;
-  try {
-    payload = Buffer.from(parts[0], "base64url").toString("utf8");
-  } catch {
-    return null;
-  }
-  const expected = (() => {
-    const sig = crypto.createHmac("sha256", billingSecret()).update(`bill:${payload}`).digest();
-    return `${b64url(payload)}.${b64url(sig)}`;
-  })();
-  const a = Buffer.from(token);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
-
+  const payload = verifyToken("bill", token);
+  if (payload === null) return null;
   const idx = payload.lastIndexOf(":");
   if (idx < 0) return null;
   const tenantId = payload.slice(0, idx);

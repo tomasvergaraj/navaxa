@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getTenantContext, TenantError } from "@/lib/tenant";
+import { getTenantContext } from "@/lib/tenant";
+import { apiError } from "@/lib/api-errors";
 import { availabilityQuerySchema } from "@/lib/validators";
 import { getAvailableSlots } from "@/lib/booking";
 import { prisma } from "@navaxa/db";
@@ -37,7 +38,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ slots, durationMin });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

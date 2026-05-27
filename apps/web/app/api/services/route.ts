@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { scopedDb } from "@/lib/tenant";
+import { apiError, requireManager } from "@/lib/api-errors";
 import { serviceCreateSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
@@ -13,17 +14,13 @@ export async function GET() {
     });
     return NextResponse.json({ services });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const { tenantId, role } = getTenantContext();
-    if (role !== "OWNER" && role !== "ADMIN") {
-      return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
-    }
+    const { tenantId } = requireManager();
     const parsed = serviceCreateSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -32,7 +29,6 @@ export async function POST(req: Request) {
     const service = await db.service.create({ data: { ...parsed.data, tenantId } });
     return NextResponse.json({ service }, { status: 201 });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

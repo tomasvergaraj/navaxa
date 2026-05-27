@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { format } from "date-fns";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { scopedDb } from "@/lib/tenant";
+import { requireManager, apiError } from "@/lib/api-errors";
 import { parsePeriod } from "@/lib/reports";
 import { APPOINTMENT_STATUS_LABELS } from "@navaxa/config";
 
@@ -17,10 +18,7 @@ function csvRow(cells: (string | number)[]): string {
 
 export async function GET(req: Request) {
   try {
-    const { role } = getTenantContext();
-    if (role !== "OWNER" && role !== "ADMIN") {
-      return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
-    }
+    requireManager();
 
     const { searchParams } = new URL(req.url);
     const period = parsePeriod({
@@ -33,6 +31,7 @@ export async function GET(req: Request) {
     const appts = await db.appointment.findMany({
       where: { startsAt: { gte: period.from, lte: period.to } },
       orderBy: { startsAt: "asc" },
+      take: 5000, // tope defensivo para exportes muy grandes
       select: {
         startsAt: true,
         totalPrice: true,
@@ -68,7 +67,6 @@ export async function GET(req: Request) {
       },
     });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

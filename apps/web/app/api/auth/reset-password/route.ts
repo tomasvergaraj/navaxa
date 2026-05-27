@@ -3,22 +3,27 @@ import bcrypt from "bcryptjs";
 import { resetPasswordSchema } from "@/lib/validators";
 import { validatePasswordToken, consumePasswordToken } from "@/lib/password-tokens";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 
 /** Valida un token (sin consumirlo) para que la página muestre el contexto. */
 export async function GET(req: Request) {
-  const token = new URL(req.url).searchParams.get("token") ?? "";
-  const valid = await validatePasswordToken(token);
-  if (!valid) {
-    return NextResponse.json({ valid: false }, { status: 404 });
+  try {
+    const token = new URL(req.url).searchParams.get("token") ?? "";
+    const valid = await validatePasswordToken(token);
+    if (!valid) {
+      return NextResponse.json({ valid: false }, { status: 404 });
+    }
+    return NextResponse.json({
+      valid: true,
+      purpose: valid.purpose,
+      name: valid.userName,
+      email: valid.userEmail,
+    });
+  } catch (e) {
+    return apiError(e);
   }
-  return NextResponse.json({
-    valid: true,
-    purpose: valid.purpose,
-    name: valid.userName,
-    email: valid.userEmail,
-  });
 }
 
 /** Fija la nueva contraseña a partir del token (invitación o recuperación). */
@@ -31,19 +36,23 @@ export async function POST(req: Request) {
     );
   }
 
-  const parsed = resetPasswordSchema.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
-  }
+  try {
+    const parsed = resetPasswordSchema.safeParse(await req.json().catch(() => ({})));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+    }
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 10);
-  const done = await consumePasswordToken(parsed.data.token, passwordHash);
-  if (!done) {
-    return NextResponse.json(
-      { error: "El enlace es inválido o expiró. Solicita uno nuevo." },
-      { status: 400 },
-    );
-  }
+    const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+    const done = await consumePasswordToken(parsed.data.token, passwordHash);
+    if (!done) {
+      return NextResponse.json(
+        { error: "El enlace es inválido o expiró. Solicita uno nuevo." },
+        { status: 400 },
+      );
+    }
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return apiError(e);
+  }
 }

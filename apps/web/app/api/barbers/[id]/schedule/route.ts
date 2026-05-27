@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { scopedDb } from "@/lib/tenant";
+import { apiError, requireManager } from "@/lib/api-errors";
 import { scheduleSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
@@ -8,10 +9,7 @@ export const dynamic = "force-dynamic";
 // Reemplaza el horario semanal completo del barbero por el conjunto de ventanas recibido.
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { role } = getTenantContext();
-    if (role !== "OWNER" && role !== "ADMIN") {
-      return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
-    }
+    requireManager();
     const parsed = scheduleSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -41,7 +39,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     });
     return NextResponse.json({ schedule });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

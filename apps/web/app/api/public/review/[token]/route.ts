@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma, AppointmentStatus } from "@navaxa/db";
 import { verifyReviewToken } from "@/lib/reviews";
+import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,6 @@ export async function POST(req: Request, { params }: { params: { token: string }
 
     return NextResponse.json({ ok: true, id: review.id });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

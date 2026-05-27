@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { apiError } from "@/lib/api-errors";
 import { AppointmentStatus } from "@navaxa/db";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, subDays } from "date-fns";
 
@@ -104,7 +105,6 @@ export async function GET() {
       barberPerformance,
     });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

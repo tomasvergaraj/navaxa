@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, DepositType } from "@navaxa/db";
-import { getTenantContext, TenantError } from "@/lib/tenant";
+import { apiError, requireManager } from "@/lib/api-errors";
 import { tenantUpdateSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
@@ -8,10 +8,7 @@ export const dynamic = "force-dynamic";
 // Tenant no lleva columna tenantId (su id ES el tenant) → se usa prisma directo, no scopedDb.
 export async function PATCH(req: Request) {
   try {
-    const { tenantId, role } = getTenantContext();
-    if (role !== "OWNER" && role !== "ADMIN") {
-      return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
-    }
+    const { tenantId } = requireManager();
     const parsed = tenantUpdateSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -47,7 +44,6 @@ export async function PATCH(req: Request) {
     });
     return NextResponse.json({ tenant });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

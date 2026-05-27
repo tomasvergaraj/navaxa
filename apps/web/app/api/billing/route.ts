@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, Plan } from "@navaxa/db";
-import { getTenantContext, TenantError } from "@/lib/tenant";
+import { apiError, requireManager } from "@/lib/api-errors";
 import { isPaidPlan, signBillingToken, buildBillingCheckoutUrl } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +13,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   try {
-    const { tenantId, role } = getTenantContext();
-    if (role !== "OWNER" && role !== "ADMIN") {
-      return NextResponse.json({ error: "Solo el dueño puede gestionar el plan" }, { status: 403 });
-    }
+    const { tenantId } = requireManager();
 
     const body = (await req.json().catch(() => ({}))) as { action?: string; plan?: string };
 
@@ -60,7 +57,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ error: "Acción desconocida" }, { status: 400 });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

@@ -10,7 +10,9 @@ const credentialsSchema = z.object({
 });
 
 export const authConfig: NextAuthConfig = {
-  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 30 },
+  // 7 días: acota la ventana en que un JWT conserva rol/tenant/estado obsoletos
+  // (p.ej. usuario desactivado) sin revalidar contra BD en cada request.
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7 },
   secret: process.env.AUTH_SECRET,
   pages: { signIn: "/login", error: "/login" },
   trustHost: true,

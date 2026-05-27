@@ -1,21 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
 import { resolveTenantBySlug } from "@/lib/public-booking";
+import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {
-  const tenant = await resolveTenantBySlug(params.slug);
-  if (!tenant) return NextResponse.json({ error: "Barbería no encontrada" }, { status: 404 });
+  try {
+    const tenant = await resolveTenantBySlug(params.slug);
+    if (!tenant) return NextResponse.json({ error: "Barbería no encontrada" }, { status: 404 });
 
-  const services = await prisma.service.findMany({
-    where: { tenantId: tenant.id, active: true },
-    select: { id: true, name: true, description: true, durationMin: true, price: true, category: true },
-    orderBy: [{ category: "asc" }, { name: "asc" }],
-  });
+    const services = await prisma.service.findMany({
+      where: { tenantId: tenant.id, active: true },
+      select: { id: true, name: true, description: true, durationMin: true, price: true, category: true },
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+    });
 
-  return NextResponse.json({
-    tenant: { name: tenant.name, currency: tenant.currency },
-    services,
-  });
+    return NextResponse.json({
+      tenant: { name: tenant.name, currency: tenant.currency },
+      services,
+    });
+  } catch (e) {
+    return apiError(e);
+  }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-errors";
 import {
   processReminders24h,
   processReminders1h,
@@ -18,12 +19,15 @@ export const maxDuration = 60;
  *   { "crons": [{ "path": "/api/webhooks/notifications?job=reminders", "schedule": "*\/15 * * * *" }] }
  */
 export async function POST(req: Request) {
+  // Fail-closed: sin CRON_SECRET configurado el endpoint NO se ejecuta (antes,
+  // si faltaba el secreto, cualquiera podía disparar los jobs → costo de WhatsApp).
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+  if (!secret) {
+    return NextResponse.json({ error: "Cron no configurado" }, { status: 503 });
+  }
+  const auth = req.headers.get("authorization");
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -52,7 +56,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ error: "Job desconocido" }, { status: 400 });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 

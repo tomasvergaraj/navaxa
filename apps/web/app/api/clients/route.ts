@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
-import { assertWithinPlanLimit, PlanLimitError } from "@/lib/plan-limits";
+import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { apiError } from "@/lib/api-errors";
+import { assertWithinPlanLimit } from "@/lib/plan-limits";
 import { clientCreateSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
@@ -48,8 +49,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ clients, total });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 
@@ -75,9 +75,6 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ client }, { status: 201 });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    if (e instanceof PlanLimitError)
-      return NextResponse.json({ error: e.message, code: e.code }, { status: e.status });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

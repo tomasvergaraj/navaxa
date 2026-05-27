@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma, Role, PasswordTokenPurpose, NotificationChannel } from "@navaxa/db";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
-import { assertWithinPlanLimit, PlanLimitError } from "@/lib/plan-limits";
+import { scopedDb } from "@/lib/tenant";
+import { apiError, requireManager } from "@/lib/api-errors";
+import { assertWithinPlanLimit } from "@/lib/plan-limits";
 import { barberCreateSchema } from "@/lib/validators";
 import { createPasswordToken, buildSetPasswordUrl } from "@/lib/password-tokens";
 import { sendNotification } from "@/lib/notifications";
@@ -24,17 +25,13 @@ export async function GET() {
     });
     return NextResponse.json({ barbers });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const { tenantId, role } = getTenantContext();
-    if (role !== "OWNER" && role !== "ADMIN") {
-      return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
-    }
+    const { tenantId } = requireManager();
 
     const parsed = barberCreateSchema.safeParse(await req.json());
     if (!parsed.success) {
@@ -102,9 +99,6 @@ export async function POST(req: Request) {
     // (útil sobre todo en dev, donde el email es mock).
     return NextResponse.json({ barber: created, inviteUrl }, { status: 201 });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    if (e instanceof PlanLimitError)
-      return NextResponse.json({ error: e.message, code: e.code }, { status: e.status });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

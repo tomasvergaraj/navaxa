@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, Role } from "@navaxa/db";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { scopedDb } from "@/lib/tenant";
+import { apiError, requireManager } from "@/lib/api-errors";
 import { teamUpdateSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
@@ -9,10 +10,7 @@ const PRIVILEGED = new Set<Role>([Role.OWNER, Role.ADMIN]);
 
 export async function PATCH(req: Request, { params }: { params: { userId: string } }) {
   try {
-    const ctx = getTenantContext();
-    if (ctx.role !== "OWNER" && ctx.role !== "ADMIN") {
-      return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
-    }
+    const ctx = requireManager();
     if (params.userId === ctx.userId) {
       return NextResponse.json({ error: "No puedes modificar tu propia cuenta" }, { status: 400 });
     }
@@ -62,7 +60,6 @@ export async function PATCH(req: Request, { params }: { params: { userId: string
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

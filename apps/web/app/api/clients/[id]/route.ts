@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { scopedDb, TenantError } from "@/lib/tenant";
+import { scopedDb } from "@/lib/tenant";
+import { apiError } from "@/lib/api-errors";
 import { clientUpdateSchema, clientPreferenceSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
@@ -28,8 +29,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     if (!client) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     return NextResponse.json({ client });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 
@@ -70,8 +70,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     return NextResponse.json({ client: updated });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 
@@ -81,7 +80,6 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     await db.client.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

@@ -1,5 +1,5 @@
-import crypto from "node:crypto";
 import { DepositType, prisma } from "@navaxa/db";
+import { signToken, verifyToken, TOKEN_TTL } from "@/lib/signed-token";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -29,38 +29,14 @@ export function computeDeposit(
 }
 
 // ---- Token de pago (stateless, HMAC) ----
-// Mismo patrón que el token de gestión, pero con prefijo propio para que un
-// token no sirva en el otro flujo. token = b64url(paymentId).b64url(hmac("pay:"+id))
-
-function paymentSecret(): string {
-  const s = process.env.AUTH_SECRET;
-  if (!s) throw new Error("AUTH_SECRET no configurado");
-  return s;
-}
-
-function b64url(buf: Buffer | string): string {
-  return Buffer.from(buf).toString("base64url");
-}
-
+// El Payment.expiresAt (PAYMENT_TTL_MIN) es el guard real del checkout; el TTL
+// del token solo acota el enlace.
 export function signPaymentToken(paymentId: string): string {
-  const sig = crypto.createHmac("sha256", paymentSecret()).update(`pay:${paymentId}`).digest();
-  return `${b64url(paymentId)}.${b64url(sig)}`;
+  return signToken("pay", paymentId, TOKEN_TTL.pay);
 }
 
 export function verifyPaymentToken(token: string): string | null {
-  const parts = token.split(".");
-  if (parts.length !== 2) return null;
-  let paymentId: string;
-  try {
-    paymentId = Buffer.from(parts[0], "base64url").toString("utf8");
-  } catch {
-    return null;
-  }
-  const expected = signPaymentToken(paymentId);
-  const a = Buffer.from(token);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
-  return paymentId;
+  return verifyToken("pay", token);
 }
 
 // ---- Abstracción de pasarela ----
@@ -101,11 +77,6 @@ const mockProvider: PaymentProvider = {
 export function getPaymentProvider(): PaymentProvider {
   // Cuando exista una pasarela real, seleccionar por env PAYMENT_PROVIDER.
   return mockProvider;
-}
-
-/** URL del checkout mock para un token dado. */
-export function buildCheckoutUrl(token: string): string {
-  return `${APP_URL}/pagar/${token}`;
 }
 
 /**

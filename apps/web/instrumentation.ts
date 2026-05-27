@@ -5,6 +5,14 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  // Valida las variables de entorno al arrancar el servidor: falla rápido si
+  // AUTH_SECRET falta o es < 16 chars (la firma HMAC/JWT quedaría débil), o si
+  // DATABASE_URL no es válida. Sin esto, getEnv() nunca se ejecutaba y el guard
+  // de fortaleza era inerte.
+  const { getEnv } = await import("@navaxa/config");
+  getEnv();
+
   if (process.env.INTERNAL_CRON !== "true") return;
 
   const g = globalThis as unknown as { __navaxaCronStarted?: boolean };

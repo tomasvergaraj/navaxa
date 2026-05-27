@@ -1,6 +1,6 @@
-import crypto from "node:crypto";
 import { prisma } from "@navaxa/db";
 import { getAvailableSlots, type Slot } from "@/lib/booking";
+import { signToken, verifyToken, TOKEN_TTL } from "@/lib/signed-token";
 
 /**
  * Resuelve una barbería por su slug para el flujo público de reservas.
@@ -94,41 +94,12 @@ export async function getPublicHours(tenantId: string): Promise<DayHours[]> {
 }
 
 // ---- Token de gestión (stateless, sin login) ----
-// token = base64url(appointmentId).base64url(hmacSHA256(appointmentId))
-
-function manageSecret(): string {
-  const s = process.env.AUTH_SECRET;
-  if (!s) throw new Error("AUTH_SECRET no configurado");
-  return s;
-}
-
-function b64url(buf: Buffer | string): string {
-  return Buffer.from(buf).toString("base64url");
-}
-
 export function signManageToken(appointmentId: string): string {
-  const sig = crypto
-    .createHmac("sha256", manageSecret())
-    .update(appointmentId)
-    .digest();
-  return `${b64url(appointmentId)}.${b64url(sig)}`;
+  return signToken("manage", appointmentId, TOKEN_TTL.manage);
 }
 
 export function verifyManageToken(token: string): string | null {
-  const parts = token.split(".");
-  if (parts.length !== 2) return null;
-  let appointmentId: string;
-  try {
-    appointmentId = Buffer.from(parts[0], "base64url").toString("utf8");
-  } catch {
-    return null;
-  }
-  const expected = signManageToken(appointmentId);
-  // comparación en tiempo constante sobre el token completo
-  const a = Buffer.from(token);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
-  return appointmentId;
+  return verifyToken("manage", token);
 }
 
 /** Carga una cita a partir de su token de gestión. Devuelve null si el token es inválido o la cita no existe. */

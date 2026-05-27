@@ -25,9 +25,18 @@ export function rateLimit(key: string, limit: number, windowMs: number): { ok: b
   return { ok: true, retryAfter: 0 };
 }
 
-/** Extrae una IP aproximada del request (detrás de proxy/Caddy/Vercel). */
+/**
+ * IP del cliente detrás del reverse proxy. Caddy AÑADE la IP que observa al FINAL
+ * de X-Forwarded-For, por lo que tomamos el ÚLTIMO valor: el primero lo puede
+ * falsificar el cliente (enviando su propio XFF) para evadir el rate-limit.
+ * Asume un único proxy de confianza (deploy = VPS de instancia única); con más
+ * saltos habría que hacer configurable cuántos descartar.
+ */
 export function clientIp(req: Request): string {
   const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim();
+  if (xff) {
+    const parts = xff.split(",").map((s) => s.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
   return req.headers.get("x-real-ip") ?? "unknown";
 }

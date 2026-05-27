@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
+import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     if (!barber) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     return NextResponse.json({ barber });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 
@@ -65,7 +65,6 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     });
     return NextResponse.json({ barber: updated });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
-import { getTenantContext, TenantError } from "@/lib/tenant";
+import { requireManager, apiError } from "@/lib/api-errors";
 import { storage } from "@/lib/storage";
+import { compressImage } from "@/lib/images";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +10,8 @@ const MAX_BYTES = 6 * 1024 * 1024; // 6 MB
 
 export async function POST(req: Request) {
   try {
-    const { tenantId, role } = getTenantContext();
-    if (role !== "OWNER" && role !== "ADMIN") {
-      return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
-    }
+    const { tenantId } = requireManager();
+
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {
@@ -25,13 +24,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Solo se aceptan imágenes" }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.type.split("/")[1]?.split("+")[0] ?? "jpg";
+    // Portada: lado mayor un poco más amplio que el resto (banner horizontal).
+    const img = await compressImage(Buffer.from(await file.arrayBuffer()), 2000);
     const { url } = await storage.upload({
-      buffer,
-      contentType: file.type,
+      buffer: img.main,
+      contentType: img.contentType,
       prefix: `covers/${tenantId}`,
-      extension: ext,
+      extension: img.extension,
     });
 
     const tenant = await prisma.tenant.update({
@@ -41,21 +40,16 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ coverUrl: tenant.coverUrl });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 
 export async function DELETE() {
   try {
-    const { tenantId, role } = getTenantContext();
-    if (role !== "OWNER" && role !== "ADMIN") {
-      return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
-    }
+    const { tenantId } = requireManager();
     await prisma.tenant.update({ where: { id: tenantId }, data: { coverUrl: null } });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }

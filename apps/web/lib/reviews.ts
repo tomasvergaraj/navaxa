@@ -1,42 +1,17 @@
-import crypto from "node:crypto";
 import { prisma } from "@navaxa/db";
 import { sendNotification } from "@/lib/notifications";
 import { pickChannel } from "@/lib/notifications/channel";
+import { signToken, verifyToken, TOKEN_TTL } from "@/lib/signed-token";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 // ---- Token de reseña (stateless, HMAC) ----
-// token = b64url(appointmentId).b64url(hmac("review:appointmentId"))
-
-function reviewSecret(): string {
-  const s = process.env.AUTH_SECRET;
-  if (!s) throw new Error("AUTH_SECRET no configurado");
-  return s;
-}
-
-function b64url(buf: Buffer | string): string {
-  return Buffer.from(buf).toString("base64url");
-}
-
 export function signReviewToken(appointmentId: string): string {
-  const sig = crypto.createHmac("sha256", reviewSecret()).update(`review:${appointmentId}`).digest();
-  return `${b64url(appointmentId)}.${b64url(sig)}`;
+  return signToken("review", appointmentId, TOKEN_TTL.review);
 }
 
 export function verifyReviewToken(token: string): string | null {
-  const parts = token.split(".");
-  if (parts.length !== 2) return null;
-  let appointmentId: string;
-  try {
-    appointmentId = Buffer.from(parts[0], "base64url").toString("utf8");
-  } catch {
-    return null;
-  }
-  const expected = signReviewToken(appointmentId);
-  const a = Buffer.from(token);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
-  return appointmentId;
+  return verifyToken("review", token);
 }
 
 export function buildReviewUrl(appointmentId: string): string {

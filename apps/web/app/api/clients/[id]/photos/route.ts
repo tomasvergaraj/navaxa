@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { scopedDb, getTenantContext, TenantError } from "@/lib/tenant";
-import { assertWithinPlanLimit, PlanLimitError } from "@/lib/plan-limits";
+import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { apiError } from "@/lib/api-errors";
+import { assertWithinPlanLimit } from "@/lib/plan-limits";
 import { storage } from "@/lib/storage";
+import { compressImageWithThumb } from "@/lib/images";
 import { haircutPhotoMetaSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
@@ -35,23 +37,37 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: meta.error.flatten() }, { status: 400 });
     }
 
+    // Si se asocia un barbero, debe ser del tenant (scopedDb inyecta tenantId).
+    if (meta.data.barberId) {
+      const barber = await db.barber.findFirst({
+        where: { id: meta.data.barberId },
+        select: { id: true },
+      });
+      if (!barber) return NextResponse.json({ error: "Barbero no encontrado" }, { status: 400 });
+    }
+
     // Antes de subir: si ya está en el tope de fotos del plan, rechazar sin gastar storage.
     await assertWithinPlanLimit(tenantId, "photos");
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.type.split("/")[1]?.split("+")[0] ?? "jpg";
-    const { url } = await storage.upload({
-      buffer,
-      contentType: file.type,
-      prefix: `haircuts/${tenantId}/${params.id}`,
-      extension: ext,
-    });
+    // Comprimir + thumbnail antes de subir (COSTS.md): el original puede pesar varios MB.
+    const img = await compressImageWithThumb(Buffer.from(await file.arrayBuffer()));
+    const prefix = `haircuts/${tenantId}/${params.id}`;
+    const [main, thumb] = await Promise.all([
+      storage.upload({ buffer: img.main, contentType: img.contentType, prefix, extension: img.extension }),
+      storage.upload({
+        buffer: img.thumb,
+        contentType: img.contentType,
+        prefix: `${prefix}/thumb`,
+        extension: img.extension,
+      }),
+    ]);
 
     const record = await db.haircutRecord.create({
       data: {
         clientId: params.id,
         barberId: meta.data.barberId,
-        imageUrl: url,
+        imageUrl: main.url,
+        thumbnailUrl: thumb.url,
         notes: meta.data.notes,
         style: meta.data.style,
         rating: meta.data.rating,
@@ -60,10 +76,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     return NextResponse.json({ record }, { status: 201 });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    if (e instanceof PlanLimitError)
-      return NextResponse.json({ error: e.message, code: e.code }, { status: e.status });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
 
@@ -73,10 +86,10 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     const records = await db.haircutRecord.findMany({
       where: { clientId: params.id },
       orderBy: { performedAt: "desc" },
+      take: 200,
     });
     return NextResponse.json({ records });
   } catch (e) {
-    if (e instanceof TenantError) return NextResponse.json({ error: e.message }, { status: 401 });
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiError(e);
   }
 }
