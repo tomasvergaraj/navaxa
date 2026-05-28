@@ -22,7 +22,10 @@ class ResendEmailProvider implements ChannelProvider {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "navaxa <contacto@navaxa.cl>",
+        // navaxa.cl es solo para envío automatizado; toda atención al cliente
+        // se canaliza a contacto@nexosoftware.cl vía reply_to.
+        from: "navaxa <no-reply@navaxa.cl>",
+        reply_to: "contacto@nexosoftware.cl",
         to,
         subject: subject ?? "navaxa",
         text: body,
