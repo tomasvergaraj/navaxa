@@ -313,10 +313,11 @@ model HaircutRecord {
   imageUrl      String
   thumbnailUrl  String?
   notes         String?
-  rating        Int?     // 1-5
+  rating        Int?      // 1-5; lo deja el cliente vía link público (/foto/[token])
+  ratedAt       DateTime? // cuándo el cliente envió el rating
   style         String?
-  performedAt   DateTime @default(now())
-  createdAt     DateTime @default(now())
+  performedAt   DateTime  @default(now())
+  createdAt     DateTime  @default(now())
 
   tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   client Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)

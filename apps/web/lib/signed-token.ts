@@ -70,6 +70,8 @@ export const TOKEN_TTL = {
   manage: 180 * 24 * 60 * 60,
   /** Invitación a reseñar: las reseñas se dejan poco después de la cita. */
   review: 90 * 24 * 60 * 60,
+  /** Rating de foto de corte: ventana corta, lo abre el cliente en el momento. */
+  haircutRate: 30 * 24 * 60 * 60,
   /** Checkout de abono: el Payment.expiresAt (20 min) es el guard real. */
   pay: 24 * 60 * 60,
   /** Checkout de plan: el dueño lo usa de inmediato (además atado a sesión). */

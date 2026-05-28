@@ -45,25 +45,31 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!exists) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
     const { birthDate, tags, ...rest } = parsed.data;
-    const data = Object.fromEntries(
-      Object.entries(rest).filter(([_, v]) => v !== "" && v !== undefined),
+    // Solo descartamos `undefined` (= no enviado). String vacío y array vacío
+    // son intencionales: el usuario quiso vaciar el campo.
+    const data: Record<string, unknown> = Object.fromEntries(
+      Object.entries(rest).filter(([_, v]) => v !== undefined),
     );
-    if (birthDate) (data as any).birthDate = new Date(birthDate);
-    if (tags) (data as any).tags = tags;
+    if (birthDate !== undefined) data.birthDate = birthDate ? new Date(birthDate) : null;
+    if (tags !== undefined) data.tags = tags;
 
     const updated = await db.client.update({
       where: { id: params.id },
       data: data as any,
     });
 
-    // Update de preferencias si vienen
+    // Update de preferencias si vienen. null en un campo = limpiar; undefined = no tocar.
     if (body.preferences) {
       const pp = clientPreferenceSchema.safeParse(body.preferences);
       if (pp.success) {
+        const updateData = Object.fromEntries(
+          Object.entries(pp.data).filter(([_, v]) => v !== undefined),
+        );
+        // En create, los null son válidos (todas las columnas son nullable).
         await db.clientPreference.upsert({
           where: { clientId: params.id },
-          create: { clientId: params.id, ...pp.data },
-          update: pp.data,
+          create: { clientId: params.id, ...updateData },
+          update: updateData,
         });
       }
     }

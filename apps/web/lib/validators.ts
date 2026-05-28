@@ -30,15 +30,17 @@ export const clientCreateSchema = z.object({
 
 export const clientUpdateSchema = clientCreateSchema.partial();
 
+// null = limpiar el campo, undefined = no tocar. La UI (edit-client-dialog)
+// manda null cuando el usuario eligió "—" en un select previamente seteado.
 export const clientPreferenceSchema = z.object({
-  hairType: z.enum(["straight", "wavy", "curly", "coily"]).optional(),
-  preferredStyle: z.string().max(80).optional(),
-  fadeType: z.enum(["low", "mid", "high", "skin", "taper", "none"]).optional(),
-  topLength: z.enum(["short", "medium", "long"]).optional(),
-  beardStyle: z.string().max(80).optional(),
-  allergies: z.string().max(500).optional(),
-  notes: z.string().max(500).optional(),
-  preferredBarberId: z.string().cuid().optional(),
+  hairType: z.enum(["straight", "wavy", "curly", "coily"]).nullable().optional(),
+  preferredStyle: z.string().max(80).nullable().optional(),
+  fadeType: z.enum(["low", "mid", "high", "skin", "taper", "none"]).nullable().optional(),
+  topLength: z.enum(["short", "medium", "long"]).nullable().optional(),
+  beardStyle: z.string().max(80).nullable().optional(),
+  allergies: z.string().max(500).nullable().optional(),
+  notes: z.string().max(500).nullable().optional(),
+  preferredBarberId: z.string().cuid().nullable().optional(),
 });
 
 export const serviceCreateSchema = z.object({
@@ -76,8 +78,11 @@ export const appointmentCreateSchema = z.object({
 export const haircutPhotoMetaSchema = z.object({
   notes: z.string().max(500).optional(),
   style: z.string().max(80).optional(),
-  rating: z.coerce.number().int().min(1).max(5).optional(),
   barberId: z.string().cuid().optional(),
+});
+
+export const haircutRatingSchema = z.object({
+  rating: z.number().int().min(1).max(5),
 });
 
 export const availabilityQuerySchema = z.object({

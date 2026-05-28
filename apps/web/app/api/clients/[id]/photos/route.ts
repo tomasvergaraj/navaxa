@@ -5,6 +5,7 @@ import { assertWithinPlanLimit } from "@/lib/plan-limits";
 import { storage } from "@/lib/storage";
 import { compressImageWithThumb } from "@/lib/images";
 import { haircutPhotoMetaSchema } from "@/lib/validators";
+import { buildHaircutRatingUrl, sendHaircutRatingRequest } from "@/lib/haircut-rating";
 
 export const dynamic = "force-dynamic";
 
@@ -70,11 +71,17 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         thumbnailUrl: thumb.url,
         notes: meta.data.notes,
         style: meta.data.style,
-        rating: meta.data.rating,
       } as any,
     });
 
-    return NextResponse.json({ record }, { status: 201 });
+    // Link público de un solo toque para que el cliente deje su rating del corte.
+    const ratingUrl = buildHaircutRatingUrl(record.id);
+
+    // Fire-and-forget: si el plan permite WhatsApp y el cliente tiene canal,
+    // el helper lo manda; si no, no rompe el upload. Errores quedan en NotificationLog.
+    void sendHaircutRatingRequest(record.id, tenantId).catch(() => {});
+
+    return NextResponse.json({ record, ratingUrl }, { status: 201 });
   } catch (e) {
     return apiError(e);
   }

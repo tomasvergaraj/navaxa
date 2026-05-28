@@ -7,6 +7,7 @@ import { NewAppointmentDialog } from "@/components/appointments/new-appointment-
 import { scopedDb } from "@/lib/tenant";
 import { AIRecommendationCard } from "@/components/ai-recommendation-card";
 import { UploadPhotoDialog } from "@/components/upload-photo-dialog";
+import { EditClientDialog } from "@/components/clients/edit-client-dialog";
 import {
   formatCLP,
   formatDateShort,
@@ -102,8 +103,21 @@ export default async function ClientePage({ params }: PageProps) {
           )}
         </div>
 
-        <div className="flex gap-2">
-          <UploadPhotoDialog clientId={client.id} barbers={barbersList} />
+        <div className="flex flex-wrap gap-2">
+          <EditClientDialog
+            clientId={client.id}
+            initial={{
+              tags: client.tags,
+              notes: client.notes ?? "",
+              preferences: client.preferences,
+            }}
+            barbers={barbersList}
+          />
+          <UploadPhotoDialog
+            clientId={client.id}
+            clientPhone={client.phone}
+            barbers={barbersList}
+          />
           <NewAppointmentDialog presetClient={{ id: client.id, name: fullName }} label="Agendar hora" />
         </div>
       </header>

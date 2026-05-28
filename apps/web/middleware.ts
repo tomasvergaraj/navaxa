@@ -17,6 +17,7 @@ const PUBLIC_PREFIXES = [
   "/api/webhooks/",
   "/reservar/", // storefront público de reservas (sin login)
   "/resena/", // dejar reseña por token (sin login)
+  "/foto/", // calificar foto de corte por token (sin login)
   "/pagar/", // checkout de abono (sin login)
   "/api/public/", // API pública de reservas y pagos
 ];
