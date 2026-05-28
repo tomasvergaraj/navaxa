@@ -2,9 +2,11 @@ import Link from "next/link";
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@navaxa/ui";
 import { loadPaymentByToken } from "@/lib/payments";
+import { webpayFormUrl } from "@/lib/webpay";
 import { signManageToken } from "@/lib/public-booking";
 import { formatCLP } from "@/lib/format";
 import { PaymentCheckout } from "./payment-checkout";
+import { WebpayCheckout } from "./webpay-checkout";
 
 export const dynamic = "force-dynamic";
 
@@ -102,15 +104,26 @@ export default async function PagarPage({ params }: { params: { token: string } 
         <span className="font-display text-2xl font-medium">{formatCLP(payment.amount)}</span>
       </div>
 
-      <PaymentCheckout
-        token={params.token}
-        slug={tenant.slug}
-        amountLabel={formatCLP(payment.amount)}
-      />
-
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        Pago de demostración (mock). No se cobra dinero real.
-      </p>
+      {payment.provider === "webpay" && payment.providerRef ? (
+        <WebpayCheckout
+          token={params.token}
+          slug={tenant.slug}
+          amountLabel={formatCLP(payment.amount)}
+          formAction={webpayFormUrl()}
+          webpayToken={payment.providerRef}
+        />
+      ) : (
+        <>
+          <PaymentCheckout
+            token={params.token}
+            slug={tenant.slug}
+            amountLabel={formatCLP(payment.amount)}
+          />
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Pago de demostración (mock). No se cobra dinero real.
+          </p>
+        </>
+      )}
     </Shell>
   );
 }

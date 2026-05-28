@@ -18,6 +18,7 @@ const PUBLIC_PREFIXES = [
   "/reservar/", // storefront público de reservas (sin login)
   "/resena/", // dejar reseña por token (sin login)
   "/foto/", // calificar foto de corte por token (sin login)
+  "/api/billing/webpay/", // return URL de Webpay para SaaS: viene cross-site sin cookies
   "/pagar/", // checkout de abono (sin login)
   "/api/public/", // API pública de reservas y pagos
 ];

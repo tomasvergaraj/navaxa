@@ -1,5 +1,6 @@
 import { DepositType, prisma } from "@navaxa/db";
 import { signToken, verifyToken, TOKEN_TTL } from "@/lib/signed-token";
+import { createWebpayTransaction } from "@/lib/webpay";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -74,8 +75,34 @@ const mockProvider: PaymentProvider = {
   },
 };
 
+/**
+ * Webpay Plus (Transbank). createCheckout llama a Transbank y guarda el
+ * `token_ws` retornado en Payment.providerRef. El cliente sigue viendo
+ * `/pagar/[token]` (resumen) y al apretar "Pagar" su browser hace POST al
+ * formulario de Webpay con ese token (ver page.tsx). El commit ocurre cuando
+ * Transbank redirige al return_url tras el pago.
+ */
+const webpayProvider: PaymentProvider = {
+  name: "webpay",
+  async createCheckout({ paymentId, token, amount }) {
+    const buyOrder = `nx_${paymentId}`.slice(0, 26);
+    const sessionId = paymentId.slice(0, 61);
+    const created = await createWebpayTransaction({
+      buy_order: buyOrder,
+      session_id: sessionId,
+      amount,
+      return_url: `${APP_URL}/api/public/webpay/return`,
+    });
+    return {
+      providerRef: created.token,
+      checkoutUrl: `${APP_URL}/pagar/${token}`,
+    };
+  },
+};
+
 export function getPaymentProvider(): PaymentProvider {
-  // Cuando exista una pasarela real, seleccionar por env PAYMENT_PROVIDER.
+  const p = (process.env.PAYMENT_PROVIDER ?? "mock").toLowerCase();
+  if (p === "webpay") return webpayProvider;
   return mockProvider;
 }
 
