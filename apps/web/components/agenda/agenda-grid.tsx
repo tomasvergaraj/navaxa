@@ -10,6 +10,7 @@ import { APPOINTMENT_STATUS_LABELS } from "@navaxa/config";
 import type { GridBlock, GridColumn } from "@/lib/agenda";
 import { formatCLP } from "@/lib/format";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
+import { AppointmentDetailDialog } from "@/components/agenda/appointment-detail-dialog";
 
 // Escala y layout (rendering, lado cliente). PX_PER_MIN coincide con lib/agenda.
 const PX_PER_MIN = 2;
@@ -97,6 +98,9 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
   // Quick-create
   const [createOpen, setCreateOpen] = useState(false);
   const [preset, setPreset] = useState<{ barberId: string; startIso: string } | null>(null);
+
+  // Detalle/edición de una cita: click (o tap) sobre un bloque.
+  const [detailBlock, setDetailBlock] = useState<GridBlock | null>(null);
 
   const hours = useMemo(() => {
     const out: number[] = [];
@@ -248,9 +252,17 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
     setTimeout(() => {
       suppressClickRef.current = false;
     }, 0);
-    if (d.ghostStartMin === d.originStartMin && d.ghostBarberId === d.originBarberId) return;
+    if (d.ghostStartMin === d.originStartMin && d.ghostBarberId === d.originBarberId) {
+      // No hubo movimiento real: tratamos el gesto como un "click" sobre el bloque
+      // y abrimos el detalle. (Mouse: preventDefault en pointerdown ya impide el
+      // click nativo, así que esta es la única ruta. Touch sin long-press no llega
+      // a activateDrag y abre detalle vía onClick del bloque.)
+      const b = blockById.get(d.id);
+      if (b) setDetailBlock(b);
+      return;
+    }
     void reschedule(d.id, d.ghostStartMin, d.durationMin, d.ghostBarberId);
-  }, [onPointerMove, preventTouchScroll, reschedule]);
+  }, [onPointerMove, preventTouchScroll, reschedule, blockById]);
 
   const activateDrag = useCallback(
     (block: GridBlock, clientX: number, clientY: number, isTouch: boolean) => {
@@ -448,7 +460,13 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
                           role="button"
                           tabIndex={0}
                           title={tooltip}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            // Bloquea el click-en-hueco del padre y, si no veníamos de un
+                            // drag (suppressClickRef se setea al soltar), abre el detalle.
+                            e.stopPropagation();
+                            if (suppressClickRef.current) return;
+                            setDetailBlock(b);
+                          }}
                           onPointerDown={(e) => beginDrag(b, e)}
                           className={cn(
                             "absolute left-0.5 right-0.5 overflow-hidden rounded-md border border-l-4 border-border px-1.5 py-1 text-xs select-none",
@@ -530,6 +548,9 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
         presetDate={dateStr}
         presetStartIso={preset?.startIso}
       />
+
+      {/* Detalle de cita (click sobre un bloque). */}
+      <AppointmentDetailDialog block={detailBlock} onClose={() => setDetailBlock(null)} />
     </div>
   );
 }

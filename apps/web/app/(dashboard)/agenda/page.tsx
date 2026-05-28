@@ -137,7 +137,7 @@ async function renderDay(
         status: true,
         totalPrice: true,
         notes: true,
-        client: { select: { firstName: true, lastName: true } },
+        client: { select: { id: true, firstName: true, lastName: true } },
         services: { select: { service: { select: { name: true, color: true } } } },
       },
     }),

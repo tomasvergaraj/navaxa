@@ -42,16 +42,19 @@ export interface RawAppointment {
   status: AppointmentStatus;
   totalPrice: number;
   notes: string | null;
-  client: { firstName: string; lastName: string | null };
+  client: { id: string; firstName: string; lastName: string | null };
   services: { service: { name: string; color: string | null } }[];
 }
 
 export interface GridBlock {
   id: string;
+  clientId: string;
   barberId: string;
+  barberName: string;
   startMin: number;
   endMin: number;
   startsAtIso: string;
+  endsAtIso: string;
   status: AppointmentStatus;
   clientName: string;
   serviceNames: string[];
@@ -109,13 +112,17 @@ export function buildDayGrid(
   }
   for (const wins of winByBarber.values()) wins.sort((a, b) => a.startMin - b.startMin);
 
+  const barberNameById = new Map(barbers.map((b) => [b.id, b.name]));
   for (const a of appointments) {
     blocksByBarber.get(a.barberId)?.push({
       id: a.id,
+      clientId: a.client.id,
       barberId: a.barberId,
+      barberName: barberNameById.get(a.barberId) ?? "",
       startMin: minutesSinceMidnight(a.startsAt, dayStart),
       endMin: minutesSinceMidnight(a.endsAt, dayStart),
       startsAtIso: a.startsAt.toISOString(),
+      endsAtIso: a.endsAt.toISOString(),
       status: a.status,
       clientName: `${a.client.firstName} ${a.client.lastName ?? ""}`.trim(),
       serviceNames: a.services.map((s) => s.service.name),
