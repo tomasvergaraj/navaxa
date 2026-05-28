@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getTenantContext, TenantError, type TenantContext } from "@/lib/tenant";
+import { PlatformAdminError } from "@/lib/platform";
 import { PlanLimitError } from "@/lib/plan-limits";
 
 /**
@@ -27,6 +28,9 @@ export class ApiError extends Error {
  */
 export function apiError(e: unknown): NextResponse {
   if (e instanceof TenantError) {
+    return NextResponse.json({ error: e.message }, { status: e.status });
+  }
+  if (e instanceof PlatformAdminError) {
     return NextResponse.json({ error: e.message }, { status: e.status });
   }
   if (e instanceof PlanLimitError) {

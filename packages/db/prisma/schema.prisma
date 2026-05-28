@@ -112,6 +112,9 @@ model User {
   avatarUrl     String?
   role          Role      @default(STAFF)
   active        Boolean   @default(true)
+  // Operador de la plataforma navaxa (fuera del scope tenant): da acceso a /admin.
+  // Se promueve por SUPER_ADMIN_EMAILS al login, no se setea desde UI.
+  platformAdmin Boolean   @default(false)
   lastLoginAt   DateTime?
   emailVerified DateTime?
   createdAt     DateTime  @default(now())

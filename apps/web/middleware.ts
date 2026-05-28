@@ -68,11 +68,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Panel super admin: gateado fuera del scope de tenant.
+  const isAdminPath = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
+  if (isAdminPath && !token.platformAdmin) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
   // Propagar contexto en headers internos
   const headers = new Headers(req.headers);
   headers.set("x-tenant-id", String(token.tenantId ?? ""));
   headers.set("x-user-id", String(token.sub ?? ""));
   headers.set("x-user-role", String(token.role ?? "STAFF"));
+  headers.set("x-platform-admin", token.platformAdmin ? "1" : "0");
 
   return NextResponse.next({ request: { headers } });
 }
