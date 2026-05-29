@@ -26,7 +26,10 @@ export async function GET(_req: Request, { params }: { params: { token: string }
         services: appt.services.map((s) => ({ name: s.service.name, price: s.service.price })),
         slug: appt.tenant.slug,
         shopName: appt.tenant.name,
+        address: appt.tenant.address ?? null,
         timezone: appt.tenant.timezone ?? "America/Santiago",
+        // Abono: monto y estado (para mostrar abono pagado + saldo en el local).
+        deposit: appt.payment ? { amount: appt.payment.amount, status: appt.payment.status } : null,
       },
     });
   } catch (e) {

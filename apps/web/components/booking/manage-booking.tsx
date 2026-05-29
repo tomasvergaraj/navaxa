@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, Loader2, MapPin, Scissors, User, X } from "lucide-react";
+import { CalendarClock, CalendarPlus, Loader2, MapPin, Scissors, User, Wallet, X } from "lucide-react";
 import { Button, cn } from "@navaxa/ui";
 import { toast } from "sonner";
 import { formatCLP } from "@/lib/format";
@@ -21,7 +21,9 @@ interface Appointment {
   services: { name: string; price: number }[];
   slug: string;
   shopName: string;
+  address: string | null;
   timezone: string;
+  deposit: { amount: number; status: string } | null;
 }
 interface Slot {
   startsAt: string;
@@ -46,6 +48,48 @@ async function apiJson(path: string, init?: RequestInit) {
     throw new Error(msg);
   }
   return data;
+}
+
+// ---- Agregar al calendario ----
+// ISO (UTC) → formato compacto iCal: 20260529T140000Z
+function toICSDate(iso: string): string {
+  return iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+function calendarTitle(a: Appointment): string {
+  return `${a.services.map((s) => s.name).join(" + ")} — ${a.shopName}`;
+}
+function googleCalUrl(a: Appointment): string {
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: calendarTitle(a),
+    dates: `${toICSDate(a.startsAt)}/${toICSDate(a.endsAt)}`,
+    details: `Reserva con ${a.barberName}`,
+    location: a.address ?? a.shopName,
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+function downloadICS(a: Appointment) {
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//navaxa//reserva//ES",
+    "BEGIN:VEVENT",
+    `UID:${a.id}@navaxa.cl`,
+    `DTSTART:${toICSDate(a.startsAt)}`,
+    `DTEND:${toICSDate(a.endsAt)}`,
+    `SUMMARY:${calendarTitle(a)}`,
+    `DESCRIPTION:Reserva con ${a.barberName}`,
+    `LOCATION:${(a.address ?? a.shopName).replace(/\n/g, " ")}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "reserva.ics";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export function ManageBooking({ token }: { token: string }) {
@@ -206,7 +250,8 @@ export function ManageBooking({ token }: { token: string }) {
           <p className="flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-muted-foreground" />
             <span className="capitalize">{fmt.dayLong.format(new Date(appt.startsAt))}</span> ·{" "}
-            {fmt.time.format(new Date(appt.startsAt))}
+            {fmt.time.format(new Date(appt.startsAt))}–{fmt.time.format(new Date(appt.endsAt))}{" "}
+            <span className="text-muted-foreground">({appt.durationMin} min)</span>
           </p>
           <p className="flex items-center gap-2">
             <User className="h-4 w-4 text-muted-foreground" />
@@ -216,7 +261,63 @@ export function ManageBooking({ token }: { token: string }) {
             <Scissors className="h-4 w-4 text-muted-foreground" />
             {appt.services.map((s) => s.name).join(" + ")} · {formatCLP(appt.totalPrice)}
           </p>
+          {appt.address && (
+            <p className="flex items-start gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(appt.address)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="underline-offset-2 hover:underline"
+              >
+                {appt.address}
+              </a>
+            </p>
+          )}
         </div>
+
+        {appt.address && (
+          <iframe
+            title={`Mapa de ${appt.shopName}`}
+            className="mt-4 h-44 w-full rounded-md border border-border"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            src={`https://www.google.com/maps?q=${encodeURIComponent(appt.address)}&output=embed`}
+          />
+        )}
+
+        {appt.deposit && appt.deposit.status === "PAID" && (
+          <div className="mt-4 flex items-start gap-2 rounded-md bg-muted/50 p-3 text-sm">
+            <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <span>
+              Abono pagado <strong>{formatCLP(appt.deposit.amount)}</strong>
+              {appt.totalPrice > appt.deposit.amount && (
+                <>
+                  {" · "}Saldo <strong>{formatCLP(appt.totalPrice - appt.deposit.amount)}</strong> en la barbería
+                </>
+              )}
+            </span>
+          </div>
+        )}
+
+        {appt.status !== "CANCELLED" && new Date(appt.startsAt) > new Date() && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+            <a
+              href={googleCalUrl(appt)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              <CalendarPlus className="h-4 w-4" /> Google Calendar
+            </a>
+            <button
+              onClick={() => downloadICS(appt)}
+              className="inline-flex items-center gap-1.5 text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              <CalendarPlus className="h-4 w-4" /> Descargar .ics
+            </button>
+          </div>
+        )}
 
         {canModify && !rescheduling && (
           <div className="mt-6 flex gap-2">
