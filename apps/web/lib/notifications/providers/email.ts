@@ -1,4 +1,5 @@
 import type { ChannelProvider } from "../index";
+import { renderEmailHtml } from "../email-layout";
 
 const provider = process.env.NOTIF_EMAIL_PROVIDER ?? "mock";
 
@@ -28,7 +29,9 @@ class ResendEmailProvider implements ChannelProvider {
         reply_to: "contacto@nexosoftware.cl",
         to,
         subject: subject ?? "navaxa",
+        // text como fallback (clientes sin HTML / antispam) + html con la marca.
         text: body,
+        html: renderEmailHtml(subject ?? "navaxa", body),
       }),
     });
     if (!res.ok) {
