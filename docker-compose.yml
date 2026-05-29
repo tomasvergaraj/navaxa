@@ -36,6 +36,10 @@ services:
       NODE_ENV: production
       HOSTNAME: "0.0.0.0"
       PORT: "3000"
+      # La generación de slots (date-fns) usa la TZ del proceso, y los horarios de
+      # barbero son wall-clock de Chile; el display ya fuerza America/Santiago. Sin
+      # esto el proceso corre en UTC y los slots quedan corridos 4h (app Chile-only).
+      TZ: "America/Santiago"
       # Scheduler interno de notificaciones (instancia única en VPS).
       INTERNAL_CRON: "true"
     # Solo en localhost; Caddy lo frontea públicamente por la red interna (web:3000).
