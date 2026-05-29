@@ -9,6 +9,11 @@ export interface ChannelProvider {
     subject?: string;
     body: string;
     mediaUrl?: string;
+    // WhatsApp (Meta Cloud API) manda por template aprobado, no texto libre:
+    // necesita la key + las variables crudas para armar los `components`.
+    // Email/mock los ignoran y usan `body` ya renderizado.
+    templateKey?: TemplateKey;
+    data?: Record<string, string | number>;
   }): Promise<{ providerId: string }>;
 }
 
@@ -45,6 +50,8 @@ export async function sendNotification(input: SendInput) {
       to: input.recipient,
       subject: rendered.subject,
       body: rendered.body,
+      templateKey: input.templateKey,
+      data: input.data,
     });
 
     await prisma.notificationLog.update({

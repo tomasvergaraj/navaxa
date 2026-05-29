@@ -45,3 +45,7 @@ coverage
 .parcel-cache
 .eslintcache
 .prettiercache
+
+# Dumps de respaldo manuales (data prod, nunca commitear)
+backup-*.sql
+*.dump

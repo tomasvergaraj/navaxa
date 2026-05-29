@@ -103,8 +103,9 @@ Dos categorías:
   `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_PUBLIC_URL=https://cdn.navaxa.cl`.
   Apunta el DNS de `cdn.navaxa.cl` al bucket (custom domain de R2). La compresión + thumbnail
   (sharp) ya está lista y se activa al subir.
-- **WhatsApp (Twilio/Meta):** `NOTIF_WHATSAPP_PROVIDER=twilio|meta` + credenciales. Feature de
-  plan PRO/ENTERPRISE. Las plantillas deben aprobarse como **Utility** en Meta (no Marketing).
+- **WhatsApp (Meta Cloud API):** `NOTIF_WHATSAPP_PROVIDER=meta` + `WHATSAPP_PHONE_NUMBER_ID` +
+  `WHATSAPP_ACCESS_TOKEN`. Feature de plan PRO/ENTERPRISE. Las plantillas deben aprobarse como
+  **Utility** en Meta (no Marketing) — textos y orden de variables en `docs/whatsapp-templates.md`.
 - **IA:** `ANTHROPIC_API_KEY=...` (gateado a PRO/ENTERPRISE; default modelo Haiku).
 
 Tras cambiar `.env`: `docker compose up -d` (recrea el contenedor). Si tocaste
