@@ -6,7 +6,15 @@ import { Button } from "@navaxa/ui";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-export function PlanCheckout({ token, priceLabel }: { token: string; priceLabel: string }) {
+export function PlanCheckout({
+  token,
+  priceLabel,
+  priceSuffix = "/mes",
+}: {
+  token: string;
+  priceLabel: string;
+  priceSuffix?: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +39,7 @@ export function PlanCheckout({ token, priceLabel }: { token: string; priceLabel:
     <div className="mt-6 space-y-2">
       <Button className="w-full" onClick={pay} disabled={loading}>
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        Pagar {priceLabel}/mes
+        Pagar {priceLabel}{priceSuffix}
       </Button>
       <Button
         variant="ghost"

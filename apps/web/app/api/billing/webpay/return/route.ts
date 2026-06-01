@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma, Plan, SubscriptionStatus } from "@navaxa/db";
+import { prisma, Plan, SubscriptionStatus, BillingInterval } from "@navaxa/db";
 import { commitWebpayTransaction } from "@/lib/webpay";
-import { addMonths, isPaidPlan, signBillingToken } from "@/lib/billing";
+import { addMonths, isPaidPlan, isBillingInterval, periodMonths, signBillingToken } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
@@ -35,12 +35,14 @@ async function handle(req: Request): Promise<Response> {
     return NextResponse.redirect(`${APP_URL}/configuracion?tab=plan&error=rechazado`, 303);
   }
 
-  // session_id = `${tenantId}:${plan}` (lo armamos en /facturar/[token]/page.tsx).
-  const [tenantId, planStr] = (result.session_id ?? "").split(":");
+  // session_id = `${tenantId}:${plan}:${interval}` (lo armamos en /facturar/[token]/page.tsx).
+  const [tenantId, planStr, intervalStr] = (result.session_id ?? "").split(":");
   if (!tenantId || !isPaidPlan(planStr)) {
     return NextResponse.redirect(`${APP_URL}/configuracion?tab=plan&error=session`, 303);
   }
   const plan = planStr as Plan;
+  // Intervalo: si falta o es inválido (tokens viejos), cae a mensual.
+  const interval: BillingInterval = isBillingInterval(intervalStr ?? "") ? (intervalStr as BillingInterval) : "MONTHLY";
 
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });
   if (!tenant) {
@@ -48,7 +50,7 @@ async function handle(req: Request): Promise<Response> {
   }
 
   const now = new Date();
-  const periodEnd = addMonths(now, 1);
+  const periodEnd = addMonths(now, periodMonths(interval));
 
   await prisma.$transaction([
     prisma.subscription.upsert({
@@ -58,6 +60,7 @@ async function handle(req: Request): Promise<Response> {
         plan,
         status: SubscriptionStatus.ACTIVE,
         currentPeriodEnd: periodEnd,
+        billingInterval: interval,
         lastPaymentAt: now,
         provider: "webpay",
         providerRef: tokenWs,
@@ -66,6 +69,7 @@ async function handle(req: Request): Promise<Response> {
         plan,
         status: SubscriptionStatus.ACTIVE,
         currentPeriodEnd: periodEnd,
+        billingInterval: interval,
         lastPaymentAt: now,
         cancelAtPeriodEnd: false,
         provider: "webpay",
@@ -77,7 +81,7 @@ async function handle(req: Request): Promise<Response> {
 
   // Vuelve a /facturar/[token]?ok=1: la página renderiza el screen de éxito.
   // planStr ya pasó isPaidPlan, así que signBillingToken (que espera PaidPlan) compila.
-  const billingToken = signBillingToken(tenantId, planStr);
+  const billingToken = signBillingToken(tenantId, planStr, interval);
   return NextResponse.redirect(`${APP_URL}/facturar/${billingToken}?ok=1`, 303);
 }
 

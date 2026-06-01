@@ -77,6 +77,7 @@ model Subscription {
   status            SubscriptionStatus @default(TRIALING)
   currentPeriodEnd  DateTime?          // fin del período pagado / de prueba
   cancelAtPeriodEnd Boolean            @default(false)
+  billingInterval   BillingInterval    @default(MONTHLY) // mensual o anual
   provider          String             @default("mock")
   providerRef       String?
   lastPaymentAt     DateTime?
@@ -94,6 +95,11 @@ enum SubscriptionStatus {
   ACTIVE    // plan pagado y vigente
   PAST_DUE  // venció y no se pudo cobrar
   CANCELED  // cancelada (volvió a FREE)
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
 }
 
 // Cómo se calcula el abono que paga el cliente al reservar online.

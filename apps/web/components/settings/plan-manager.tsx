@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { Card, Badge, Button, cn } from "@navaxa/ui";
 import { toast } from "sonner";
 import { Check, Loader2 } from "lucide-react";
-import { PLANS } from "@navaxa/config";
+import { PLANS, ANNUAL_MONTHS_CHARGED } from "@navaxa/config";
 import { formatCLP } from "@/lib/format";
 
 type Plan = "FREE" | "STARTER" | "PRO" | "ENTERPRISE";
 type Status = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED";
+type Interval = "MONTHLY" | "ANNUAL";
 
 interface Props {
   currentPlan: Plan;
@@ -27,6 +28,7 @@ function fmtDate(iso: string | null): string {
 export function PlanManager({ currentPlan, trialEndsAt, subscription }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  const [interval, setBillingInterval] = useState<Interval>("MONTHLY");
 
   const status = subscription?.status;
   const periodEnd = subscription?.currentPeriodEnd ?? null;
@@ -56,7 +58,8 @@ export function PlanManager({ currentPlan, trialEndsAt, subscription }: Props) {
     }
   }
 
-  const changePlan = (plan: Plan) => action({ action: "checkout", plan }, `pay-${plan}`);
+  const changePlan = (plan: Plan) =>
+    action({ action: "checkout", plan, interval }, `pay-${plan}`);
   const cancel = () => action({ action: "cancel" }, "cancel");
   const reactivate = () => action({ action: "reactivate" }, "reactivate");
 
@@ -111,6 +114,32 @@ export function PlanManager({ currentPlan, trialEndsAt, subscription }: Props) {
         </div>
       </Card>
 
+      {/* Selector mensual / anual */}
+      <div className="flex items-center justify-center">
+        <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1 text-sm">
+          <button
+            type="button"
+            onClick={() => setBillingInterval("MONTHLY")}
+            className={cn(
+              "rounded-md px-4 py-1.5 font-medium transition-colors",
+              interval === "MONTHLY" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Mensual
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingInterval("ANNUAL")}
+            className={cn(
+              "rounded-md px-4 py-1.5 font-medium transition-colors",
+              interval === "ANNUAL" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Anual <span className="text-brand-brass">2 meses gratis</span>
+          </button>
+        </div>
+      </div>
+
       {/* Planes disponibles */}
       <div className="grid gap-4 md:grid-cols-3">
         {PAID.map((plan) => {
@@ -128,10 +157,24 @@ export function PlanManager({ currentPlan, trialEndsAt, subscription }: Props) {
                 </Badge>
               )}
               <h3 className="font-display text-lg font-medium">{p.name}</h3>
-              <p className="mt-1">
-                <span className="font-display text-2xl font-medium">{formatCLP(p.priceClp)}</span>
-                <span className="text-sm text-muted-foreground">/mes</span>
-              </p>
+              {interval === "ANNUAL" ? (
+                <div className="mt-1">
+                  <p>
+                    <span className="font-display text-2xl font-medium">
+                      {formatCLP(p.priceClp * ANNUAL_MONTHS_CHARGED)}
+                    </span>
+                    <span className="text-sm text-muted-foreground">/año</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    ≈ {formatCLP(Math.round((p.priceClp * ANNUAL_MONTHS_CHARGED) / 12))}/mes
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-1">
+                  <span className="font-display text-2xl font-medium">{formatCLP(p.priceClp)}</span>
+                  <span className="text-sm text-muted-foreground">/mes</span>
+                </p>
+              )}
               <ul className="mt-4 flex-1 space-y-1.5 text-sm text-muted-foreground">
                 {p.features.map((f) => (
                   <li key={f} className="flex gap-2">

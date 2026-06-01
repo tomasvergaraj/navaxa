@@ -1,20 +1,18 @@
 import Link from "next/link";
-import { Button, Logo, Card, Badge, cn } from "@navaxa/ui";
+import { Button, Logo, Badge, cn } from "@navaxa/ui";
 import {
   Sparkles,
   Calendar,
   Image as ImageIcon,
   TrendingUp,
   MessageSquare,
-  Check,
   ArrowRight,
   Users,
   ChevronDown,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Reveal } from "@/components/marketing/reveal";
-import { PLANS } from "@navaxa/config";
-import { formatCLP } from "@/lib/format";
+import { PricingPlans } from "@/components/marketing/pricing-plans";
 
 const FEATURES = [
   {
@@ -185,51 +183,7 @@ export default function MarketingPage() {
             </p>
           </Reveal>
 
-          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
-            {[PLANS.STARTER, PLANS.PRO, PLANS.ENTERPRISE].map((plan, i) => {
-              const popular = "popular" in plan && plan.popular;
-              return (
-                <Reveal key={plan.id} delay={i * 80} className="h-full">
-                  <Card
-                    className={cn(
-                      "relative h-full p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
-                      popular
-                        ? "border-2 border-brand-brass shadow-md"
-                        : "hover:border-brand-brass/40",
-                    )}
-                  >
-                    {popular && (
-                      <Badge variant="brand" className="absolute -top-2 right-6">
-                        Más popular
-                      </Badge>
-                    )}
-                    <h3 className="font-display text-lg font-medium">{plan.name}</h3>
-                    <div className="mt-3 flex items-baseline gap-1">
-                      <span className="text-3xl font-medium tracking-tight">
-                        {formatCLP(plan.priceClp)}
-                      </span>
-                      <span className="text-sm text-muted-foreground">/mes</span>
-                    </div>
-                    <ul className="mt-6 space-y-2 text-sm">
-                      {plan.features.map((f) => (
-                        <li key={f} className="flex items-start gap-2">
-                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-brass" />
-                          <span>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      variant={popular ? "default" : "outline"}
-                      className="mt-6 w-full"
-                      asChild
-                    >
-                      <Link href="/registro">Empezar</Link>
-                    </Button>
-                  </Card>
-                </Reveal>
-              );
-            })}
-          </div>
+          <PricingPlans />
         </div>
       </section>
 

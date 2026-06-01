@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
 import { apiError, requireManager } from "@/lib/api-errors";
-import { verifyBillingToken, addMonths } from "@/lib/billing";
+import { verifyBillingToken, addMonths, periodMonths } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export async function POST(_req: Request, { params }: { params: { token: string 
     }
 
     const now = new Date();
-    const periodEnd = addMonths(now, 1);
+    const periodEnd = addMonths(now, periodMonths(parsed.interval));
 
     await prisma.$transaction([
       prisma.subscription.upsert({
@@ -30,6 +30,7 @@ export async function POST(_req: Request, { params }: { params: { token: string 
           plan: parsed.plan,
           status: "ACTIVE",
           currentPeriodEnd: periodEnd,
+          billingInterval: parsed.interval,
           lastPaymentAt: now,
           provider: "mock",
           providerRef: `mock_sub_${tenantId}`,
@@ -38,6 +39,7 @@ export async function POST(_req: Request, { params }: { params: { token: string 
           plan: parsed.plan,
           status: "ACTIVE",
           currentPeriodEnd: periodEnd,
+          billingInterval: parsed.interval,
           lastPaymentAt: now,
           cancelAtPeriodEnd: false,
           provider: "mock",

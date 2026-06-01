@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, Plan } from "@navaxa/db";
 import { apiError, requireManager } from "@/lib/api-errors";
-import { isPaidPlan, signBillingToken, buildBillingCheckoutUrl } from "@/lib/billing";
+import { isPaidPlan, isBillingInterval, signBillingToken, buildBillingCheckoutUrl } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
@@ -15,14 +15,19 @@ export async function POST(req: Request) {
   try {
     const { tenantId } = requireManager();
 
-    const body = (await req.json().catch(() => ({}))) as { action?: string; plan?: string };
+    const body = (await req.json().catch(() => ({}))) as {
+      action?: string;
+      plan?: string;
+      interval?: string;
+    };
 
     if (body.action === "checkout") {
       const plan = body.plan ?? "";
       if (!isPaidPlan(plan)) {
         return NextResponse.json({ error: "Plan inválido" }, { status: 400 });
       }
-      const token = signBillingToken(tenantId, plan);
+      const interval = isBillingInterval(body.interval ?? "") ? (body.interval as "MONTHLY" | "ANNUAL") : "MONTHLY";
+      const token = signBillingToken(tenantId, plan, interval);
       return NextResponse.json({ checkoutUrl: buildBillingCheckoutUrl(token) });
     }
 

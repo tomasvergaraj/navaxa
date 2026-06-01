@@ -15,6 +15,17 @@ export const BRAND_COLORS = {
   info: "#2563EB",
 } as const;
 
+/**
+ * Meses que se cobran al pagar anual (en vez de 12) → 2 meses gratis ≈ 17% off.
+ * El precio anual de cada plan = priceClp (mensual) × ANNUAL_MONTHS_CHARGED.
+ */
+export const ANNUAL_MONTHS_CHARGED = 10;
+
+/** Precio anual de un plan a partir de su precio mensual. */
+export function annualPriceClp(monthlyClp: number): number {
+  return monthlyClp * ANNUAL_MONTHS_CHARGED;
+}
+
 export const PLANS = {
   FREE: {
     id: "FREE",

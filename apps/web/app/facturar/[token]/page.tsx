@@ -46,9 +46,11 @@ export default async function FacturarPage({
     );
   }
 
-  const price = planPriceClp(parsed.plan);
+  const price = planPriceClp(parsed.plan, parsed.interval);
   const features = PLANS[parsed.plan].features;
   const provider = (process.env.PAYMENT_PROVIDER ?? "mock").toLowerCase();
+  const annual = parsed.interval === "ANNUAL";
+  const priceSuffix = annual ? "/año" : "/mes";
 
   // Vuelta exitosa desde Webpay (o desde el flow mock al activar): pantalla de
   // confirmación con resumen y atajo a la configuración.
@@ -59,8 +61,8 @@ export default async function FacturarPage({
         <h1 className="mt-4 font-display text-xl font-medium">¡Plan activado!</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Quedaste en plan <strong className="text-foreground">{planName(parsed.plan)}</strong> por{" "}
-          <strong className="text-foreground">{formatCLP(price)}/mes</strong>. La próxima
-          renovación se cobra en 30 días.
+          <strong className="text-foreground">{formatCLP(price)}{priceSuffix}</strong>. La próxima
+          renovación se cobra en {annual ? "12 meses" : "30 días"}.
         </p>
         <Button asChild className="mt-6 w-full">
           <Link href="/configuracion?tab=plan">Ver mi suscripción</Link>
@@ -80,7 +82,7 @@ export default async function FacturarPage({
   if (provider === "webpay") {
     try {
       const buyOrder = `nx_bill_${parsed.tenantId}`.slice(0, 26);
-      const sessionId = `${parsed.tenantId}:${parsed.plan}`.slice(0, 61);
+      const sessionId = `${parsed.tenantId}:${parsed.plan}:${parsed.interval}`.slice(0, 61);
       const created = await createWebpayTransaction({
         buy_order: buyOrder,
         session_id: sessionId,
@@ -102,7 +104,12 @@ export default async function FacturarPage({
 
       <div className="mt-4 flex items-baseline gap-1 border-b border-border pb-4">
         <span className="font-display text-3xl font-medium">{formatCLP(price)}</span>
-        <span className="text-sm text-muted-foreground">/mes</span>
+        <span className="text-sm text-muted-foreground">{priceSuffix}</span>
+        {annual && (
+          <span className="ml-2 rounded-full bg-brand-brass/15 px-2 py-0.5 text-xs font-medium text-brand-brass">
+            2 meses gratis
+          </span>
+        )}
       </div>
 
       <ul className="mt-4 space-y-1.5 text-sm text-muted-foreground">
@@ -116,6 +123,7 @@ export default async function FacturarPage({
           <>
             <WebpayPlanCheckout
               priceLabel={formatCLP(price)}
+              priceSuffix={priceSuffix}
               formAction={webpayFormUrl()}
               webpayToken={webpay.token}
             />
@@ -133,7 +141,7 @@ export default async function FacturarPage({
         )
       ) : (
         <>
-          <PlanCheckout token={params.token} priceLabel={formatCLP(price)} />
+          <PlanCheckout token={params.token} priceLabel={formatCLP(price)} priceSuffix={priceSuffix} />
           <p className="mt-4 text-center text-xs text-muted-foreground">
             Pago de demostración (mock). No se cobra dinero real.
           </p>

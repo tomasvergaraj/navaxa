@@ -7,10 +7,12 @@ import { Loader2 } from "lucide-react";
 
 export function WebpayPlanCheckout({
   priceLabel,
+  priceSuffix = "/mes",
   formAction,
   webpayToken,
 }: {
   priceLabel: string;
+  priceSuffix?: string;
   formAction: string;
   webpayToken: string;
 }) {
@@ -28,7 +30,7 @@ export function WebpayPlanCheckout({
         <input type="hidden" name="token_ws" value={webpayToken} />
         <Button type="submit" className="w-full" disabled={loading !== null}>
           {loading === "pay" && <Loader2 className="h-4 w-4 animate-spin" />}
-          Pagar {priceLabel}/mes con Webpay
+          Pagar {priceLabel}{priceSuffix} con Webpay
         </Button>
       </form>
       <Button

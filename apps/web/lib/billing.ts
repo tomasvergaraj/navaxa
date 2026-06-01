@@ -1,5 +1,5 @@
-import { Plan } from "@navaxa/db";
-import { PLANS } from "@navaxa/config";
+import { Plan, BillingInterval } from "@navaxa/db";
+import { PLANS, ANNUAL_MONTHS_CHARGED } from "@navaxa/config";
 import { signToken, verifyToken, TOKEN_TTL } from "@/lib/signed-token";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -12,8 +12,19 @@ export function isPaidPlan(plan: string): plan is PaidPlan {
   return (PAID_PLANS as readonly string[]).includes(plan);
 }
 
-export function planPriceClp(plan: Plan): number {
-  return PLANS[plan].priceClp;
+export function isBillingInterval(v: string): v is BillingInterval {
+  return v === "MONTHLY" || v === "ANNUAL";
+}
+
+/** Precio a cobrar según intervalo: anual = mensual × ANNUAL_MONTHS_CHARGED (2 meses gratis). */
+export function planPriceClp(plan: Plan, interval: BillingInterval = "MONTHLY"): number {
+  const monthly = PLANS[plan].priceClp;
+  return interval === "ANNUAL" ? monthly * ANNUAL_MONTHS_CHARGED : monthly;
+}
+
+/** Meses que dura el período pagado según intervalo. */
+export function periodMonths(interval: BillingInterval): number {
+  return interval === "ANNUAL" ? 12 : 1;
 }
 
 export function planName(plan: Plan): string {
@@ -30,20 +41,28 @@ export function addMonths(date: Date, months: number): Date {
 }
 
 // ---- Token de checkout de plan (stateless, HMAC) ----
-// Codifica tenantId + plan; solo el dueño autenticado puede generarlo.
-export function signBillingToken(tenantId: string, plan: PaidPlan): string {
-  return signToken("bill", `${tenantId}:${plan}`, TOKEN_TTL.bill);
+// Codifica tenantId + plan + intervalo; solo el dueño autenticado puede generarlo.
+export function signBillingToken(
+  tenantId: string,
+  plan: PaidPlan,
+  interval: BillingInterval = "MONTHLY",
+): string {
+  return signToken("bill", `${tenantId}:${plan}:${interval}`, TOKEN_TTL.bill);
 }
 
-export function verifyBillingToken(token: string): { tenantId: string; plan: PaidPlan } | null {
+export function verifyBillingToken(
+  token: string,
+): { tenantId: string; plan: PaidPlan; interval: BillingInterval } | null {
   const payload = verifyToken("bill", token);
   if (payload === null) return null;
-  const idx = payload.lastIndexOf(":");
-  if (idx < 0) return null;
-  const tenantId = payload.slice(0, idx);
-  const plan = payload.slice(idx + 1);
+  // tenantId (cuid, sin ":") : plan : interval. Tokens viejos sin interval → MONTHLY.
+  const parts = payload.split(":");
+  if (parts.length < 2) return null;
+  const [tenantId, plan, intervalStr] = parts;
   if (!tenantId || !isPaidPlan(plan)) return null;
-  return { tenantId, plan };
+  const interval: BillingInterval =
+    intervalStr && isBillingInterval(intervalStr) ? intervalStr : "MONTHLY";
+  return { tenantId, plan, interval };
 }
 
 export function buildBillingCheckoutUrl(token: string): string {
