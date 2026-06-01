@@ -87,9 +87,7 @@ export default function MarketingPage() {
             <a href="#faq" className="hover:text-foreground">Preguntas</a>
           </nav>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <div className="hidden sm:block">
-              <ThemeToggle />
-            </div>
+            <ThemeToggle />
             <Button variant="ghost" asChild>
               <Link href="/login">
                 <span className="sm:hidden">Entrar</span>
