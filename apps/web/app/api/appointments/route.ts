@@ -24,9 +24,14 @@ export async function GET(req: Request) {
     }
     if (barberId) where.barberId = barberId;
 
+    // Tope defensivo: sin rango from/to esto traería TODAS las citas del tenant.
+    // La agenda siempre pasa rango; el cap evita un findMany sin límite.
+    const take = Math.min(Number(searchParams.get("take") ?? 1000), 2000);
+
     const appointments = await db.appointment.findMany({
       where,
       orderBy: { startsAt: "asc" },
+      take,
       include: {
         client: { select: { id: true, firstName: true, lastName: true, phone: true } },
         barber: { include: { user: { select: { name: true } } } },

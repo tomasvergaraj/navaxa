@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { apiError } from "@/lib/api-errors";
 import {
   processReminders24h,
@@ -25,8 +26,11 @@ export async function POST(req: Request) {
   if (!secret) {
     return NextResponse.json({ error: "Cron no configurado" }, { status: 503 });
   }
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${secret}`) {
+  const auth = req.headers.get("authorization") ?? "";
+  const expected = `Bearer ${secret}`;
+  const a = Buffer.from(auth);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

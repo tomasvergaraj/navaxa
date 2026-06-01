@@ -95,6 +95,13 @@ export interface CreateAppointmentInput {
  */
 export async function createAppointment(input: CreateAppointmentInput) {
   return prisma.$transaction(async (tx) => {
+    // Lock de exclusión por barbero durante la tx: serializa reservas concurrentes
+    // del mismo barbero. Sin esto, el isolation default (READ COMMITTED) deja que
+    // dos tx simultáneas pasen ambas el chequeo de solape (un SELECT que no
+    // encuentra nada NO toma lock) y doble-reserven el mismo slot. El lock se
+    // libera solo al COMMIT/ROLLBACK. classid fijo = namespace de la app.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('navaxa:booking'), hashtext(${input.barberId}))`;
+
     const services = await tx.service.findMany({
       where: {
         id: { in: input.serviceIds },
@@ -199,6 +206,9 @@ export async function rescheduleAppointment(
     }
 
     const barberId = newBarberId ?? appt.barberId;
+    // Mismo lock de exclusión por barbero que createAppointment: serializa el
+    // chequeo de solape + update contra reservas/reagendas concurrentes.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('navaxa:booking'), hashtext(${barberId}))`;
     if (newBarberId && newBarberId !== appt.barberId) {
       const barber = await tx.barber.findFirst({
         where: { id: newBarberId, tenantId, active: true },
