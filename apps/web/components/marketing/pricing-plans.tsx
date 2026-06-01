@@ -7,8 +7,7 @@ import { Check } from "lucide-react";
 import { PLANS, ANNUAL_MONTHS_CHARGED } from "@navaxa/config";
 import { formatCLP } from "@/lib/format";
 import { Reveal } from "./reveal";
-
-type Interval = "MONTHLY" | "ANNUAL";
+import { IntervalToggle, type Interval } from "@/components/billing/interval-toggle";
 
 const PLAN_LIST = [PLANS.STARTER, PLANS.PRO, PLANS.ENTERPRISE];
 
@@ -20,31 +19,7 @@ export function PricingPlans() {
     <>
       {/* Selector mensual / anual */}
       <Reveal className="mb-10 flex justify-center">
-        <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1 text-sm">
-          <button
-            type="button"
-            onClick={() => setInterval("MONTHLY")}
-            className={cn(
-              "rounded-md px-4 py-1.5 font-medium transition-colors",
-              !annual ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            Mensual
-          </button>
-          <button
-            type="button"
-            onClick={() => setInterval("ANNUAL")}
-            className={cn(
-              "flex items-center gap-1.5 rounded-md px-4 py-1.5 font-medium transition-colors",
-              annual ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            Anual
-            <span className="rounded-full bg-brand-brass/15 px-1.5 py-0.5 text-xs text-brand-brass">
-              2 meses gratis
-            </span>
-          </button>
-        </div>
+        <IntervalToggle value={interval} onChange={setInterval} />
       </Reveal>
 
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
@@ -67,7 +42,7 @@ export function PricingPlans() {
                 <h3 className="font-display text-lg font-medium">{plan.name}</h3>
 
                 {annual ? (
-                  <div className="mt-3">
+                  <div key="annual" className="mt-3 animate-in fade-in duration-300">
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-medium tracking-tight">{formatCLP(yearPrice)}</span>
                       <span className="text-sm text-muted-foreground">/año</span>
@@ -77,7 +52,7 @@ export function PricingPlans() {
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-3 flex items-baseline gap-1">
+                  <div key="monthly" className="mt-3 flex items-baseline gap-1 animate-in fade-in duration-300">
                     <span className="text-3xl font-medium tracking-tight">{formatCLP(plan.priceClp)}</span>
                     <span className="text-sm text-muted-foreground">/mes</span>
                   </div>

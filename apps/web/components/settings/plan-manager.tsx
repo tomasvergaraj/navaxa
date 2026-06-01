@@ -7,10 +7,10 @@ import { toast } from "sonner";
 import { Check, Loader2 } from "lucide-react";
 import { PLANS, ANNUAL_MONTHS_CHARGED } from "@navaxa/config";
 import { formatCLP } from "@/lib/format";
+import { IntervalToggle, type Interval } from "@/components/billing/interval-toggle";
 
 type Plan = "FREE" | "STARTER" | "PRO" | "ENTERPRISE";
 type Status = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED";
-type Interval = "MONTHLY" | "ANNUAL";
 
 interface Props {
   currentPlan: Plan;
@@ -116,28 +116,7 @@ export function PlanManager({ currentPlan, trialEndsAt, subscription }: Props) {
 
       {/* Selector mensual / anual */}
       <div className="flex items-center justify-center">
-        <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1 text-sm">
-          <button
-            type="button"
-            onClick={() => setBillingInterval("MONTHLY")}
-            className={cn(
-              "rounded-md px-4 py-1.5 font-medium transition-colors",
-              interval === "MONTHLY" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            Mensual
-          </button>
-          <button
-            type="button"
-            onClick={() => setBillingInterval("ANNUAL")}
-            className={cn(
-              "rounded-md px-4 py-1.5 font-medium transition-colors",
-              interval === "ANNUAL" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            Anual <span className="text-brand-brass">2 meses gratis</span>
-          </button>
-        </div>
+        <IntervalToggle value={interval} onChange={setBillingInterval} />
       </div>
 
       {/* Planes disponibles */}
@@ -158,7 +137,7 @@ export function PlanManager({ currentPlan, trialEndsAt, subscription }: Props) {
               )}
               <h3 className="font-display text-lg font-medium">{p.name}</h3>
               {interval === "ANNUAL" ? (
-                <div className="mt-1">
+                <div key="annual" className="mt-1 animate-in fade-in duration-300">
                   <p>
                     <span className="font-display text-2xl font-medium">
                       {formatCLP(p.priceClp * ANNUAL_MONTHS_CHARGED)}
@@ -166,11 +145,11 @@ export function PlanManager({ currentPlan, trialEndsAt, subscription }: Props) {
                     <span className="text-sm text-muted-foreground">/año</span>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    ≈ {formatCLP(Math.round((p.priceClp * ANNUAL_MONTHS_CHARGED) / 12))}/mes
+                    ≈ {formatCLP(Math.round((p.priceClp * ANNUAL_MONTHS_CHARGED) / 12))}/mes · 2 meses gratis
                   </p>
                 </div>
               ) : (
-                <p className="mt-1">
+                <p key="monthly" className="mt-1 animate-in fade-in duration-300">
                   <span className="font-display text-2xl font-medium">{formatCLP(p.priceClp)}</span>
                   <span className="text-sm text-muted-foreground">/mes</span>
                 </p>
