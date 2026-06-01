@@ -20,11 +20,11 @@ export function IntervalToggle({
   const annual = value === "ANNUAL";
   return (
     <div className="relative flex w-full max-w-xs rounded-full border border-border bg-muted/50 p-1 text-sm">
-      {/* Pastilla deslizante */}
+      {/* Pastilla deslizante (color foreground → fuerte contraste y se adapta al tema) */}
       <span
         aria-hidden
         className={cn(
-          "absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-background shadow-sm ring-1 ring-border transition-transform duration-300 ease-out motion-reduce:transition-none",
+          "absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-foreground shadow-md transition-transform duration-300 ease-out motion-reduce:transition-none",
           annual && "translate-x-full",
         )}
       />
@@ -34,7 +34,7 @@ export function IntervalToggle({
         aria-pressed={!annual}
         className={cn(
           "relative z-10 flex-1 rounded-full px-4 py-1.5 transition-colors duration-200",
-          !annual ? "font-semibold text-foreground" : "font-medium text-muted-foreground hover:text-foreground",
+          !annual ? "font-semibold text-background" : "font-medium text-muted-foreground hover:text-foreground",
         )}
       >
         Mensual
@@ -45,7 +45,7 @@ export function IntervalToggle({
         aria-pressed={annual}
         className={cn(
           "relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-1.5 transition-colors duration-200",
-          annual ? "font-semibold text-foreground" : "font-medium text-muted-foreground hover:text-foreground",
+          annual ? "font-semibold text-background" : "font-medium text-muted-foreground hover:text-foreground",
         )}
       >
         Anual
