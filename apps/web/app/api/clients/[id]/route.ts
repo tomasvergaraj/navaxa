@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { scopedDb } from "@/lib/tenant";
-import { apiError } from "@/lib/api-errors";
+import { apiError, requireManager } from "@/lib/api-errors";
 import { clientUpdateSchema, clientPreferenceSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +82,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
   try {
+    requireManager(); // Borrar clientes es acción de gestión; un barbero no puede.
     const db = scopedDb();
     await db.client.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });

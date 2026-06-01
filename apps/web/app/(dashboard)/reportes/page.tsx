@@ -1,7 +1,8 @@
 import { Card } from "@navaxa/ui";
 import { Download, DollarSign, Scissors, Receipt, UserX, UserPlus } from "lucide-react";
 import { format } from "date-fns";
-import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { scopedDb } from "@/lib/tenant";
+import { requireManagerPage } from "@/lib/page-guards";
 import { AppointmentStatus } from "@navaxa/db";
 import { StatsCard } from "@/components/stats-card";
 import { PageHeader } from "@/components/page-header";
@@ -18,7 +19,7 @@ export default async function ReportesPage({
   searchParams: { range?: string; from?: string; to?: string };
 }) {
   const period = parsePeriod(searchParams);
-  const { tenantId } = getTenantContext();
+  const { tenantId } = requireManagerPage();
   const db = scopedDb();
   const range = { gte: period.from, lte: period.to };
 

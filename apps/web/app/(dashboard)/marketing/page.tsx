@@ -8,6 +8,7 @@ import {
   Send,
 } from "lucide-react";
 import { scopedDb } from "@/lib/tenant";
+import { requireManagerPage } from "@/lib/page-guards";
 import {
   CampaignTrigger,
   NotificationChannel,
@@ -41,6 +42,7 @@ const CHANNEL_LABEL: Record<NotificationChannel, string> = {
 };
 
 export default async function MarketingPage() {
+  requireManagerPage();
   const db = scopedDb();
   const last30 = subDays(new Date(), 30);
 

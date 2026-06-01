@@ -5,6 +5,7 @@ import { NewAppointmentDialog } from "@/components/appointments/new-appointment-
 import { AgendaGrid } from "@/components/agenda/agenda-grid";
 import { AgendaWeek } from "@/components/agenda/agenda-week";
 import { scopedDb } from "@/lib/tenant";
+import { viewerScope } from "@/lib/page-guards";
 import { prisma, AppointmentStatus } from "@navaxa/db";
 import {
   startOfDay,
@@ -37,8 +38,14 @@ export default async function AgendaPage({ searchParams }: PageProps) {
   const todayYmd = ymd(new Date());
 
   const db = scopedDb();
+  // BARBER/STAFF ven solo su propia columna (política "solo lo suyo"). Gestión
+  // ve la agenda completa del local.
+  const { isManager, barberId } = await viewerScope();
   const barbersRaw = await db.barber.findMany({
-    where: { active: true },
+    where: {
+      active: true,
+      ...(isManager ? {} : { id: barberId ?? "__none__" }),
+    },
     include: { user: { select: { name: true } } },
     orderBy: { createdAt: "asc" },
   });

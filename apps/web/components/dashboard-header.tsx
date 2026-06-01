@@ -26,14 +26,20 @@ function initials(name: string | undefined) {
     .join("");
 }
 
-export function DashboardHeader({ isBarber = false }: { isBarber?: boolean }) {
+export function DashboardHeader({
+  isBarber = false,
+  isManager = false,
+}: {
+  isBarber?: boolean;
+  isManager?: boolean;
+}) {
   const { data: session } = useSession();
   const user = session?.user;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur md:px-6">
       <div className="flex items-center gap-1 md:hidden">
-        <MobileNav isBarber={isBarber} />
+        <MobileNav isBarber={isBarber} isManager={isManager} />
         <Link href="/dashboard">
           <Logo size={24} />
         </Link>
@@ -56,9 +62,11 @@ export function DashboardHeader({ isBarber = false }: { isBarber?: boolean }) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/configuracion">Configuración</Link>
-            </DropdownMenuItem>
+            {isManager && (
+              <DropdownMenuItem asChild>
+                <Link href="/configuracion">Configuración</Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
               Cerrar sesión
             </DropdownMenuItem>

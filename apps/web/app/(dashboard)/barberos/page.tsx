@@ -3,7 +3,8 @@ import { UserPlus } from "lucide-react";
 import { NewBarberButton } from "@/components/barbers/new-barber-button";
 import { BarberAvatar } from "@/components/barbers/barber-avatar";
 import { EditBarberButton } from "@/components/barbers/edit-barber-button";
-import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { scopedDb } from "@/lib/tenant";
+import { requireManagerPage } from "@/lib/page-guards";
 import { AppointmentStatus } from "@navaxa/db";
 import { subDays } from "date-fns";
 import { formatCLP, formatRelative } from "@/lib/format";
@@ -12,7 +13,7 @@ import { EmptyState } from "@/components/empty-state";
 export const dynamic = "force-dynamic";
 
 export default async function BarberosPage() {
-  const { role } = getTenantContext();
+  const { role } = requireManagerPage();
   const canManage = role === "OWNER" || role === "ADMIN";
   const db = scopedDb();
   const last30 = subDays(new Date(), 30);

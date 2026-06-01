@@ -9,11 +9,17 @@ import { signOut } from "next-auth/react";
 import { Logo, cn } from "@navaxa/ui";
 import { getNavItems, isNavActive } from "./dashboard-nav";
 
-export function MobileNav({ isBarber = false }: { isBarber?: boolean }) {
+export function MobileNav({
+  isBarber = false,
+  isManager = false,
+}: {
+  isBarber?: boolean;
+  isManager?: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const nav = getNavItems(isBarber);
+  const nav = getNavItems({ isBarber, isManager });
 
   useEffect(() => setMounted(true), []);
 

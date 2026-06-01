@@ -1,5 +1,6 @@
 import { Card, Tabs, TabsList, TabsTrigger, TabsContent } from "@navaxa/ui";
-import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { scopedDb } from "@/lib/tenant";
+import { requireManagerPage } from "@/lib/page-guards";
 import { prisma } from "@navaxa/db";
 import { BookingLinkCard } from "@/components/booking/booking-link-card";
 import { TenantSettingsForm } from "@/components/settings/tenant-settings-form";
@@ -18,7 +19,7 @@ export default async function ConfiguracionPage({
 }: {
   searchParams: { tab?: string };
 }) {
-  const { tenantId, userId } = getTenantContext();
+  const { tenantId, userId } = requireManagerPage();
   const db = scopedDb();
   const activeTab = searchParams.tab && TABS.includes(searchParams.tab) ? searchParams.tab : "barberia";
 

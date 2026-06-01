@@ -3,6 +3,7 @@ import { Card, Badge, Input } from "@navaxa/ui";
 import { Search, Users } from "lucide-react";
 import { NewClientButton } from "@/components/clients/new-client-button";
 import { scopedDb } from "@/lib/tenant";
+import { viewerScope } from "@/lib/page-guards";
 import { EmptyState } from "@/components/empty-state";
 import { formatCLP, formatRelative } from "@/lib/format";
 
@@ -15,17 +16,25 @@ interface PageProps {
 export default async function ClientesPage({ searchParams }: PageProps) {
   const db = scopedDb();
   const q = searchParams.q?.trim();
+  // BARBER/STAFF: solo clientes que atendió (con cita propia). Gestión: todos.
+  const { isManager, barberId } = await viewerScope();
+  const ownFilter = isManager
+    ? {}
+    : { appointments: { some: { barberId: barberId ?? "__none__" } } };
 
   const clients = await db.client.findMany({
-    where: q
-      ? {
-          OR: [
-            { firstName: { contains: q, mode: "insensitive" } },
-            { lastName: { contains: q, mode: "insensitive" } },
-            { phone: { contains: q } },
-          ],
-        }
-      : undefined,
+    where: {
+      ...ownFilter,
+      ...(q
+        ? {
+            OR: [
+              { firstName: { contains: q, mode: "insensitive" as const } },
+              { lastName: { contains: q, mode: "insensitive" as const } },
+              { phone: { contains: q } },
+            ],
+          }
+        : {}),
+    },
     orderBy: { lastVisitAt: { sort: "desc", nulls: "last" } },
     take: 100,
     include: { _count: { select: { haircuts: true } } },

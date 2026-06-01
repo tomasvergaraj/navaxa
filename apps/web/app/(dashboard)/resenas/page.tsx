@@ -1,6 +1,7 @@
 import { Card } from "@navaxa/ui";
 import { Star } from "lucide-react";
 import { scopedDb } from "@/lib/tenant";
+import { requireManagerPage } from "@/lib/page-guards";
 import { formatDate } from "@/lib/format";
 import { Stars } from "@/components/ui/stars";
 import { EmptyState } from "@/components/empty-state";
@@ -10,6 +11,7 @@ import { HideReviewButton } from "@/components/reviews/hide-review-button";
 export const dynamic = "force-dynamic";
 
 export default async function ResenasPage() {
+  requireManagerPage();
   const db = scopedDb();
 
   const [reviews, agg] = await Promise.all([

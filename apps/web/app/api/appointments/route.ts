@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
 import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { viewerScope } from "@/lib/page-guards";
 import { apiError } from "@/lib/api-errors";
 import { appointmentCreateSchema } from "@/lib/validators";
 import { createAppointment } from "@/lib/booking";
@@ -23,6 +24,10 @@ export async function GET(req: Request) {
       if (to) where.startsAt.lte = new Date(to);
     }
     if (barberId) where.barberId = barberId;
+
+    // BARBER/STAFF: forzar solo sus citas, ignorando el filtro pedido.
+    const { isManager, barberId: ownBarberId } = await viewerScope();
+    if (!isManager) where.barberId = ownBarberId ?? "__none__";
 
     // Tope defensivo: sin rango from/to esto traería TODAS las citas del tenant.
     // La agenda siempre pasa rango; el cap evita un findMany sin límite.

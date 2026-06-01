@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { viewerScope } from "@/lib/page-guards";
 import { apiError } from "@/lib/api-errors";
 import { assertWithinPlanLimit } from "@/lib/plan-limits";
 import { clientCreateSchema } from "@/lib/validators";
@@ -14,16 +15,25 @@ export async function GET(req: Request) {
     const take = Math.min(Number(searchParams.get("take") ?? 50), 100);
     const skip = Math.max(0, Number(searchParams.get("skip") ?? 0));
 
-    const where = q
-      ? {
-          OR: [
-            { firstName: { contains: q, mode: "insensitive" as const } },
-            { lastName: { contains: q, mode: "insensitive" as const } },
-            { phone: { contains: q } },
-            { email: { contains: q, mode: "insensitive" as const } },
-          ],
-        }
-      : undefined;
+    // BARBER/STAFF: solo clientes que atendió (con cita propia). Gestión: todos.
+    const { isManager, barberId } = await viewerScope();
+    const ownFilter = isManager
+      ? {}
+      : { appointments: { some: { barberId: barberId ?? "__none__" } } };
+
+    const where = {
+      ...ownFilter,
+      ...(q
+        ? {
+            OR: [
+              { firstName: { contains: q, mode: "insensitive" as const } },
+              { lastName: { contains: q, mode: "insensitive" as const } },
+              { phone: { contains: q } },
+              { email: { contains: q, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    };
 
     const [clients, total] = await Promise.all([
       db.client.findMany({

@@ -9,6 +9,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { scopedDb } from "@/lib/tenant";
+import { viewerScope } from "@/lib/page-guards";
 import { auth } from "@/lib/auth";
 import { AppointmentStatus } from "@navaxa/db";
 import { StatsCard } from "@/components/stats-card";
@@ -27,6 +28,9 @@ export const dynamic = "force-dynamic";
 export default async function DashboardHome() {
   const session = await auth();
   const db = scopedDb();
+  // BARBER/STAFF ven solo lo suyo y sin métricas financieras del local (política
+  // de roles). Gestión (OWNER/ADMIN) ve el panel completo.
+  const { isManager, barberId } = await viewerScope();
 
   const now = new Date();
   const monthStart = startOfMonth(now);
@@ -35,38 +39,28 @@ export default async function DashboardHome() {
   const dayEnd = endOfDay(now);
   const last30 = subDays(now, 30);
 
-  const [
-    todayAppts,
-    monthRevenue,
-    monthAppts,
-    activeClients,
-    newClients30,
-    upcoming,
-    barberStats,
-  ] = await Promise.all([
+  // Filtro de barbero para vistas propias: si no es gestión y no tiene barbero
+  // asociado (p. ej. STAFF), se fuerza un id imposible para no filtrar nada.
+  const ownScope = isManager ? {} : { barberId: barberId ?? "__none__" };
+
+  const [todayAppts, monthAppts, upcoming] = await Promise.all([
     db.appointment.count({
       where: {
+        ...ownScope,
         startsAt: { gte: dayStart, lte: dayEnd },
         status: { notIn: [AppointmentStatus.CANCELLED] },
       },
     }),
-    db.appointment.aggregate({
-      where: {
-        startsAt: { gte: monthStart, lte: monthEnd },
-        status: AppointmentStatus.COMPLETED,
-      },
-      _sum: { totalPrice: true },
-    }),
     db.appointment.count({
       where: {
+        ...ownScope,
         startsAt: { gte: monthStart, lte: monthEnd },
         status: AppointmentStatus.COMPLETED,
       },
     }),
-    db.client.count({ where: { totalVisits: { gt: 0 } } }),
-    db.client.count({ where: { createdAt: { gte: last30 } } }),
     db.appointment.findMany({
       where: {
+        ...ownScope,
         startsAt: { gte: now },
         status: {
           in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED],
@@ -80,22 +74,37 @@ export default async function DashboardHome() {
         services: { include: { service: { select: { name: true } } } },
       },
     }),
-    db.barber.findMany({
-      where: { active: true },
-      select: {
-        id: true,
-        user: { select: { name: true } },
-        commissionRate: true,
-        appointments: {
+  ]);
+
+  // Métricas financieras / de negocio: solo gestión.
+  const [monthRevenue, activeClients, newClients30, barberStats] = isManager
+    ? await Promise.all([
+        db.appointment.aggregate({
           where: {
-            startsAt: { gte: last30 },
+            startsAt: { gte: monthStart, lte: monthEnd },
             status: AppointmentStatus.COMPLETED,
           },
-          select: { totalPrice: true },
-        },
-      },
-    }),
-  ]);
+          _sum: { totalPrice: true },
+        }),
+        db.client.count({ where: { totalVisits: { gt: 0 } } }),
+        db.client.count({ where: { createdAt: { gte: last30 } } }),
+        db.barber.findMany({
+          where: { active: true },
+          select: {
+            id: true,
+            user: { select: { name: true } },
+            commissionRate: true,
+            appointments: {
+              where: {
+                startsAt: { gte: last30 },
+                status: AppointmentStatus.COMPLETED,
+              },
+              select: { totalPrice: true },
+            },
+          },
+        }),
+      ])
+    : [null, 0, 0, [] as never[]];
 
   return (
     <div className="container max-w-7xl py-8">
@@ -111,24 +120,28 @@ export default async function DashboardHome() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatsCard label="Hoy" value={String(todayAppts)} icon={Calendar} />
         <StatsCard
-          label="Ingresos del mes"
-          value={formatCLP(monthRevenue._sum.totalPrice ?? 0)}
-          icon={DollarSign}
-        />
-        <StatsCard
           label="Cortes del mes"
           value={String(monthAppts)}
           icon={TrendingUp}
         />
-        <StatsCard
-          label="Clientes activos"
-          value={String(activeClients)}
-          trend={{ value: `+${newClients30} este mes`, positive: true }}
-          icon={Users}
-        />
+        {isManager && (
+          <>
+            <StatsCard
+              label="Ingresos del mes"
+              value={formatCLP(monthRevenue?._sum.totalPrice ?? 0)}
+              icon={DollarSign}
+            />
+            <StatsCard
+              label="Clientes activos"
+              value={String(activeClients)}
+              trend={{ value: `+${newClients30} este mes`, positive: true }}
+              icon={Users}
+            />
+          </>
+        )}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className={`mt-8 grid grid-cols-1 gap-6 ${isManager ? "lg:grid-cols-[1.4fr_1fr]" : ""}`}>
         {/* Próximas citas */}
         <Card>
           <div className="flex items-center justify-between border-b border-border p-5">
@@ -183,7 +196,8 @@ export default async function DashboardHome() {
           </div>
         </Card>
 
-        {/* Ranking barberos */}
+        {/* Ranking barberos — solo gestión */}
+        {isManager && (
         <Card>
           <div className="border-b border-border p-5">
             <h2 className="font-medium">Ranking del mes</h2>
@@ -233,6 +247,7 @@ export default async function DashboardHome() {
             )}
           </div>
         </Card>
+        )}
       </div>
     </div>
   );

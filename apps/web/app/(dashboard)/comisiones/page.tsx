@@ -1,6 +1,7 @@
 import { Card, Badge } from "@navaxa/ui";
 import { Wallet } from "lucide-react";
 import { scopedDb } from "@/lib/tenant";
+import { requireManagerPage } from "@/lib/page-guards";
 import { formatCLP } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
@@ -38,6 +39,7 @@ type Period = {
 };
 
 export default async function ComisionesPage() {
+  requireManagerPage();
   const db = scopedDb();
 
   const [grouped, barbers] = await Promise.all([

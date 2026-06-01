@@ -5,6 +5,7 @@ import { AuthSessionProvider } from "@/components/session-provider";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { SubscriptionBanner } from "@/components/subscription-banner";
+import { isManagerRole } from "@/lib/page-guards";
 
 export default async function DashboardLayout({
   children,
@@ -29,12 +30,14 @@ export default async function DashboardLayout({
     }),
   ]);
 
+  const isManager = isManagerRole((session.user.role ?? "STAFF") as "OWNER" | "ADMIN" | "BARBER" | "STAFF");
+
   return (
     <AuthSessionProvider>
       <div className="flex h-dvh overflow-hidden bg-background">
-        <DashboardSidebar isBarber={!!barber} />
+        <DashboardSidebar isBarber={!!barber} isManager={isManager} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <DashboardHeader isBarber={!!barber} />
+          <DashboardHeader isBarber={!!barber} isManager={isManager} />
           <SubscriptionBanner
             status={subscription?.status ?? null}
             trialEndsAt={tenant?.trialEndsAt ?? null}

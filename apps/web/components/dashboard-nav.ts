@@ -30,11 +30,34 @@ const BASE_NAV: NavItem[] = [
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
-/** Ítems de navegación del dashboard; agrega "Mi perfil" si el usuario es barbero. */
-export function getNavItems(isBarber: boolean): NavItem[] {
+/**
+ * Ítems solo para gestión (OWNER/ADMIN): finanzas, equipo y configuración. Un
+ * barbero no debe verlos (las páginas además redirigen vía requireManagerPage).
+ */
+const MANAGER_ONLY = new Set([
+  "/barberos",
+  "/comisiones",
+  "/resenas",
+  "/reportes",
+  "/marketing",
+  "/configuracion",
+]);
+
+/**
+ * Ítems de navegación según rol. Gestión ve todo; barbero/staff solo Inicio,
+ * Agenda y Clientes (+ "Mi perfil" si es barbero).
+ */
+export function getNavItems({
+  isBarber = false,
+  isManager = false,
+}: {
+  isBarber?: boolean;
+  isManager?: boolean;
+}): NavItem[] {
+  const base = isManager ? BASE_NAV : BASE_NAV.filter((i) => !MANAGER_ONLY.has(i.href));
   return isBarber
-    ? [...BASE_NAV, { href: "/mi-perfil", label: "Mi perfil", icon: UserCircle }]
-    : BASE_NAV;
+    ? [...base, { href: "/mi-perfil", label: "Mi perfil", icon: UserCircle }]
+    : base;
 }
 
 export function isNavActive(pathname: string, href: string): boolean {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { scopedDb, getTenantContext } from "@/lib/tenant";
-import { apiError } from "@/lib/api-errors";
+import { scopedDb } from "@/lib/tenant";
+import { apiError, requireManager } from "@/lib/api-errors";
 import { AppointmentStatus } from "@navaxa/db";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, subDays } from "date-fns";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { tenantId } = getTenantContext();
+    const { tenantId } = requireManager();
     const db = scopedDb();
     const now = new Date();
     const monthStart = startOfMonth(now);
