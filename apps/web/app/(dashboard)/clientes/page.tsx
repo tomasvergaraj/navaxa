@@ -16,11 +16,12 @@ interface PageProps {
 export default async function ClientesPage({ searchParams }: PageProps) {
   const db = scopedDb();
   const q = searchParams.q?.trim();
-  // BARBER/STAFF: solo clientes que atendió (con cita propia). Gestión: todos.
-  const { isManager, barberId } = await viewerScope();
-  const ownFilter = isManager
-    ? {}
-    : { appointments: { some: { barberId: barberId ?? "__none__" } } };
+  // Solo el BARBER ve únicamente sus clientes atendidos. Gestión y recepción
+  // (STAFF) ven todos los clientes del local.
+  const { ownOnly, barberId } = await viewerScope();
+  const ownFilter = ownOnly
+    ? { appointments: { some: { barberId: barberId ?? "__none__" } } }
+    : {};
 
   const clients = await db.client.findMany({
     where: {

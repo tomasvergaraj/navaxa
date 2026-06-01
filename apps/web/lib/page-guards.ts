@@ -28,17 +28,24 @@ export async function currentBarberId(userId: string): Promise<string | null> {
 }
 
 /**
- * Ámbito del que mira: rol + si es gestión + su barberId (solo si NO es gestión).
- * Los handlers usan esto para forzar "solo lo suyo" a barberos/staff sin tener
- * que reimplementar la lógica de rol en cada ruta.
+ * Ámbito del que mira, en 3 niveles:
+ *  - **gestión** (OWNER/ADMIN): `isManager` → ve finanzas/config y toda la operación.
+ *  - **recepción** (STAFF): no es gestión ni barbero → ve TODA la agenda/clientes
+ *    del local (para agendar/registrar) pero NO finanzas/config (lo bloquea
+ *    requireManager*). `ownOnly=false`, `barberId=null`.
+ *  - **barbero** (BARBER): `ownOnly=true` → solo su propia agenda/clientes.
+ *
+ * Así "solo lo suyo" aplica únicamente a BARBER; STAFF no queda con la app vacía.
  */
 export async function viewerScope(): Promise<{
   ctx: TenantContext;
   isManager: boolean;
+  ownOnly: boolean;
   barberId: string | null;
 }> {
   const ctx = getTenantContext();
   const isManager = isManagerRole(ctx.role);
-  const barberId = isManager ? null : await currentBarberId(ctx.userId);
-  return { ctx, isManager, barberId };
+  const ownOnly = ctx.role === "BARBER";
+  const barberId = ownOnly ? await currentBarberId(ctx.userId) : null;
+  return { ctx, isManager, ownOnly, barberId };
 }

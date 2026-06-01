@@ -28,9 +28,9 @@ export const dynamic = "force-dynamic";
 export default async function DashboardHome() {
   const session = await auth();
   const db = scopedDb();
-  // BARBER/STAFF ven solo lo suyo y sin métricas financieras del local (política
-  // de roles). Gestión (OWNER/ADMIN) ve el panel completo.
-  const { isManager, barberId } = await viewerScope();
+  // Gestión: panel completo. Recepción (STAFF): operación del local sin finanzas.
+  // Barbero: solo lo suyo. (ownOnly aplica únicamente a BARBER.)
+  const { isManager, ownOnly, barberId } = await viewerScope();
 
   const now = new Date();
   const monthStart = startOfMonth(now);
@@ -39,9 +39,8 @@ export default async function DashboardHome() {
   const dayEnd = endOfDay(now);
   const last30 = subDays(now, 30);
 
-  // Filtro de barbero para vistas propias: si no es gestión y no tiene barbero
-  // asociado (p. ej. STAFF), se fuerza un id imposible para no filtrar nada.
-  const ownScope = isManager ? {} : { barberId: barberId ?? "__none__" };
+  // Solo el BARBER se limita a su propia agenda; gestión y recepción ven todo.
+  const ownScope = ownOnly ? { barberId: barberId ?? "__none__" } : {};
 
   const [todayAppts, monthAppts, upcoming] = await Promise.all([
     db.appointment.count({

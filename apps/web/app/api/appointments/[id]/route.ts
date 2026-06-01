@@ -19,12 +19,13 @@ const updateSchema = z.object({
 });
 
 /**
- * BARBER/STAFF solo pueden gestionar sus propias citas; gestión (OWNER/ADMIN)
- * puede tocar cualquiera. Devuelve tenantId + si es gestión.
+ * Solo el BARBER queda limitado a sus propias citas; gestión (OWNER/ADMIN) y
+ * recepción (STAFF) pueden gestionar cualquier cita del local. Devuelve
+ * tenantId + ownOnly (true solo para BARBER).
  */
-async function assertCanModify(apptId: string): Promise<{ tenantId: string; isManager: boolean }> {
-  const { ctx, isManager, barberId } = await viewerScope();
-  if (!isManager) {
+async function assertCanModify(apptId: string): Promise<{ tenantId: string; ownOnly: boolean }> {
+  const { ctx, ownOnly, barberId } = await viewerScope();
+  if (ownOnly) {
     const appt = await scopedDb().appointment.findFirst({
       where: { id: apptId },
       select: { barberId: true },
@@ -33,7 +34,7 @@ async function assertCanModify(apptId: string): Promise<{ tenantId: string; isMa
       throw new ApiError(403, "Solo puedes gestionar tus propias citas");
     }
   }
-  return { tenantId: ctx.tenantId, isManager };
+  return { tenantId: ctx.tenantId, ownOnly };
 }
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
@@ -56,7 +57,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { tenantId, isManager } = await assertCanModify(params.id);
+    const { tenantId, ownOnly } = await assertCanModify(params.id);
     const parsed = updateSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -70,13 +71,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     // Reagendar: conserva duración, valida solape y pertenencia del barbero destino.
-    // Un barbero NO puede reasignar la cita a otro barbero (solo gestión).
+    // Un barbero NO puede reasignar la cita a otro barbero; gestión y recepción sí.
     if (parsed.data.startsAt) {
       const result = await rescheduleAppointment(
         params.id,
         tenantId,
         new Date(parsed.data.startsAt),
-        isManager ? parsed.data.barberId : undefined,
+        ownOnly ? undefined : parsed.data.barberId,
       );
       return NextResponse.json({ appointment: result });
     }

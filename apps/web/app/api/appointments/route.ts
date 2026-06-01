@@ -25,9 +25,10 @@ export async function GET(req: Request) {
     }
     if (barberId) where.barberId = barberId;
 
-    // BARBER/STAFF: forzar solo sus citas, ignorando el filtro pedido.
-    const { isManager, barberId: ownBarberId } = await viewerScope();
-    if (!isManager) where.barberId = ownBarberId ?? "__none__";
+    // Solo el BARBER se limita a sus citas (ignora el filtro pedido). Gestión y
+    // recepción (STAFF) ven la agenda completa del local.
+    const { ownOnly, barberId: ownBarberId } = await viewerScope();
+    if (ownOnly) where.barberId = ownBarberId ?? "__none__";
 
     // Tope defensivo: sin rango from/to esto traería TODAS las citas del tenant.
     // La agenda siempre pasa rango; el cap evita un findMany sin límite.

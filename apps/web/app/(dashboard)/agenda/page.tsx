@@ -38,13 +38,13 @@ export default async function AgendaPage({ searchParams }: PageProps) {
   const todayYmd = ymd(new Date());
 
   const db = scopedDb();
-  // BARBER/STAFF ven solo su propia columna (política "solo lo suyo"). Gestión
-  // ve la agenda completa del local.
-  const { isManager, barberId } = await viewerScope();
+  // Solo el BARBER ve únicamente su columna. Gestión y recepción (STAFF) ven
+  // la agenda completa del local.
+  const { ownOnly, barberId } = await viewerScope();
   const barbersRaw = await db.barber.findMany({
     where: {
       active: true,
-      ...(isManager ? {} : { id: barberId ?? "__none__" }),
+      ...(ownOnly ? { id: barberId ?? "__none__" } : {}),
     },
     include: { user: { select: { name: true } } },
     orderBy: { createdAt: "asc" },

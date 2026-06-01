@@ -15,11 +15,12 @@ export async function GET(req: Request) {
     const take = Math.min(Number(searchParams.get("take") ?? 50), 100);
     const skip = Math.max(0, Number(searchParams.get("skip") ?? 0));
 
-    // BARBER/STAFF: solo clientes que atendió (con cita propia). Gestión: todos.
-    const { isManager, barberId } = await viewerScope();
-    const ownFilter = isManager
-      ? {}
-      : { appointments: { some: { barberId: barberId ?? "__none__" } } };
+    // Solo el BARBER se limita a sus clientes atendidos. Gestión y recepción
+    // (STAFF) ven todos los clientes del local.
+    const { ownOnly, barberId } = await viewerScope();
+    const ownFilter = ownOnly
+      ? { appointments: { some: { barberId: barberId ?? "__none__" } } }
+      : {};
 
     const where = {
       ...ownFilter,
