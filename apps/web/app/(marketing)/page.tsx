@@ -20,25 +20,33 @@ import { formatCLP } from "@/lib/format";
 
 export default function MarketingPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-x-hidden bg-background">
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between">
-          <Logo size={28} />
+        <div className="container flex h-16 items-center justify-between gap-3">
+          <Link href="/" className="shrink-0">
+            <Logo size={28} />
+          </Link>
           <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
             <a href="#features" className="hover:text-foreground">Funcionalidades</a>
             <a href="#precios" className="hover:text-foreground">Precios</a>
             <Link href="/legal" className="hover:text-foreground">Legal</Link>
           </nav>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
             <Button variant="ghost" asChild>
-              <Link href="/login">Iniciar sesión</Link>
+              <Link href="/login">
+                <span className="sm:hidden">Entrar</span>
+                <span className="hidden sm:inline">Iniciar sesión</span>
+              </Link>
             </Button>
             <Button asChild>
               <Link href="/registro">
-                Empezar gratis
-                <ArrowRight className="h-4 w-4" />
+                <span className="hidden sm:inline">Empezar gratis</span>
+                <span className="sm:hidden">Empezar</span>
+                <ArrowRight className="hidden h-4 w-4 sm:inline" />
               </Link>
             </Button>
           </div>
