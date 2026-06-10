@@ -37,7 +37,7 @@ export const PLANS = {
       "Agenda básica",
       "Soporte por email",
     ],
-    limits: { clients: 50, barbers: 1, photos: 100 },
+    limits: { clients: 50, barbers: 1, photos: 100, whatsappPerMonth: 0 },
   },
   STARTER: {
     id: "STARTER",
@@ -50,7 +50,7 @@ export const PLANS = {
       "Recordatorios automáticos por email",
       "Analítica básica",
     ],
-    limits: { clients: 500, barbers: 3, photos: 2_000 },
+    limits: { clients: 500, barbers: 3, photos: 2_000, whatsappPerMonth: 0 },
   },
   PRO: {
     id: "PRO",
@@ -60,13 +60,13 @@ export const PLANS = {
     features: [
       "Clientes ilimitados",
       "Hasta 10 barberos",
-      "Recordatorios por WhatsApp",
+      "1.000 WhatsApp/mes incluidos",
       "IA: recomendación de corte",
       "Marketing automatizado",
       "Reportes avanzados",
       "Comisiones automatizadas",
     ],
-    limits: { clients: Infinity, barbers: 10, photos: 20_000 },
+    limits: { clients: Infinity, barbers: 10, photos: 20_000, whatsappPerMonth: 1_000 },
   },
   ENTERPRISE: {
     id: "ENTERPRISE",
@@ -76,10 +76,11 @@ export const PLANS = {
       "Todo lo de Pro",
       "Multi-local",
       "Barberos ilimitados",
+      "3.000 WhatsApp/mes incluidos",
       "Integración con sistemas propios",
       "Soporte prioritario",
     ],
-    limits: { clients: Infinity, barbers: Infinity, photos: Infinity },
+    limits: { clients: Infinity, barbers: Infinity, photos: Infinity, whatsappPerMonth: 3_000 },
   },
 } as const;
 

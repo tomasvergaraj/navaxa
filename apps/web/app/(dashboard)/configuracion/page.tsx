@@ -9,6 +9,7 @@ import { ScheduleManager } from "@/components/settings/schedule-manager";
 import { TeamManager } from "@/components/settings/team-manager";
 import { PaymentSettingsForm } from "@/components/settings/payment-settings-form";
 import { PlanManager } from "@/components/settings/plan-manager";
+import { whatsappMonthlyLimit, whatsappUsageThisMonth } from "@/lib/notifications/channel";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function ConfiguracionPage({
   const db = scopedDb();
   const activeTab = searchParams.tab && TABS.includes(searchParams.tab) ? searchParams.tab : "barberia";
 
-  const [tenant, services, usersList, barbers, subscription] = await Promise.all([
+  const [tenant, services, usersList, barbers, subscription, whatsappUsed] = await Promise.all([
     prisma.tenant.findUnique({ where: { id: tenantId } }),
     db.service.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.user.findMany({
@@ -47,6 +48,7 @@ export default async function ConfiguracionPage({
       orderBy: { createdAt: "asc" },
     }),
     prisma.subscription.findUnique({ where: { tenantId } }),
+    whatsappUsageThisMonth(tenantId),
   ]);
 
   if (!tenant) return null;
@@ -154,6 +156,7 @@ export default async function ConfiguracionPage({
         <TabsContent value="plan" className="mt-6">
           <PlanManager
             currentPlan={tenant.plan}
+            whatsappUsage={{ used: whatsappUsed, limit: whatsappMonthlyLimit(tenant.plan) }}
             trialEndsAt={tenant.trialEndsAt ? tenant.trialEndsAt.toISOString() : null}
             subscription={
               subscription

@@ -178,6 +178,14 @@ if (tenant.plan === "FREE" || tenant.plan === "STARTER") {
 outbound/mes. Si el código va a mandar más, **es un bug** (loop infinito, retry sin
 backoff, etc). Considerar rate-limit por tenant.
 
+**REGLA W6: Cupo mensual por plan (implementado).** Cada plan incluye un cupo de
+mensajes WhatsApp/mes (`PLANS[plan].limits.whatsappPerMonth`: PRO 1.000, ENTERPRISE
+3.000, resto 0). `pickChannel()` (`apps/web/lib/notifications/channel.ts`) lo
+enforcea contando `NotificationLog` del mes y degrada a email al agotarse — **toda
+notificación nueva debe elegir canal vía `pickChannel()`, nunca hardcodear
+WHATSAPP**. Además: review/rating van email-first (no gastan cupo) y el
+recordatorio 1h nace desactivado (el 24h es el que reduce no-shows).
+
 ### 2.3 Storage (R2)
 
 **REGLA S1: Comprimir imágenes antes de subir.** El cliente sube fotos del celular

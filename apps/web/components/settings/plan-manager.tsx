@@ -14,6 +14,8 @@ type Status = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED";
 
 interface Props {
   currentPlan: Plan;
+  /** Mensajes WhatsApp del mes en curso vs cupo del plan (limit 0 = sin WhatsApp). */
+  whatsappUsage: { used: number; limit: number };
   trialEndsAt: string | null;
   subscription: { status: Status; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean } | null;
 }
@@ -25,7 +27,7 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export function PlanManager({ currentPlan, trialEndsAt, subscription }: Props) {
+export function PlanManager({ currentPlan, whatsappUsage, trialEndsAt, subscription }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [interval, setBillingInterval] = useState<Interval>("MONTHLY");
@@ -112,6 +114,37 @@ export function PlanManager({ currentPlan, trialEndsAt, subscription }: Props) {
             )}
           </div>
         </div>
+
+        {whatsappUsage.limit > 0 && (() => {
+          const pct = (whatsappUsage.used / whatsappUsage.limit) * 100;
+          return (
+            <div className="mt-5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Mensajes WhatsApp este mes</span>
+                <span>
+                  {whatsappUsage.used.toLocaleString("es-CL")} /{" "}
+                  {whatsappUsage.limit.toLocaleString("es-CL")}
+                </span>
+              </div>
+              <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted">
+                <div
+                  className={cn(
+                    "h-1.5 rounded-full transition-all",
+                    pct >= 100 ? "bg-destructive" : pct >= 80 ? "bg-amber-500" : "bg-foreground",
+                  )}
+                  style={{ width: `${Math.min(100, pct)}%` }}
+                />
+              </div>
+              {pct >= 80 && (
+                <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-500">
+                  {pct >= 100
+                    ? "Cupo agotado: hasta fin de mes los recordatorios saldrán por email."
+                    : "Cerca del límite: al agotarse el cupo, los recordatorios saldrán por email."}
+                </p>
+              )}
+            </div>
+          );
+        })()}
       </Card>
 
       {/* Selector mensual / anual */}

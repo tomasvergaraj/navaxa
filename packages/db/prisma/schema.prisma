@@ -496,6 +496,8 @@ model NotificationLog {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, status, createdAt])
+  // Cupo mensual de WhatsApp: count por tenant+canal+mes en cada envío (hot path).
+  @@index([tenantId, channel, createdAt])
   @@map("notification_logs")
 }
 

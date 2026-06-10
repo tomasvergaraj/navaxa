@@ -18,9 +18,9 @@ export function buildHaircutRatingUrl(haircutId: string): string {
 }
 
 /**
- * Manda al cliente el link de calificación del corte recién subido. WhatsApp si
- * el plan lo permite, sino degrada a email (ver pickChannel). Idempotente por
- * haircutId vía NotificationLog: no se reenvía si ya hay un envío previo.
+ * Manda al cliente el link de calificación del corte recién subido, por email
+ * (WhatsApp solo como fallback, ver pickChannel). Idempotente por haircutId vía
+ * NotificationLog: no se reenvía si ya hay un envío previo.
  */
 export async function sendHaircutRatingRequest(haircutId: string, tenantId: string) {
   const haircut = await prisma.haircutRecord.findFirst({
@@ -33,7 +33,11 @@ export async function sendHaircutRatingRequest(haircutId: string, tenantId: stri
   });
   if (!haircut) return { ok: false as const, error: "Foto no encontrada" };
 
-  const target = pickChannel(haircut.tenant.plan, haircut.client);
+  // Email primero (no gasta cupo WhatsApp); WhatsApp solo si no hay email.
+  const target = await pickChannel({ id: tenantId, plan: haircut.tenant.plan }, haircut.client, {
+    preferWhatsApp: false,
+    whatsappFallback: true,
+  });
   if (!target) return { ok: false as const, error: "Cliente sin canal de contacto" };
 
   const already = await prisma.notificationLog.findFirst({

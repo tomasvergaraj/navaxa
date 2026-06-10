@@ -83,6 +83,9 @@ export async function POST(req: Request) {
               channel: NotificationChannel.WHATSAPP,
               templateKey: "reminder_1h",
               conditions: { hoursBeforeStart: 1 },
+              // Apagado por defecto: el 24h es el que reduce no-shows; el 1h
+              // duplica el gasto de cupo WhatsApp. Se activa desde Marketing.
+              active: false,
             },
             {
               name: "Reactivación 30 días",

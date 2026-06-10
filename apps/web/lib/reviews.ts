@@ -33,7 +33,12 @@ export async function sendReviewRequest(appointmentId: string, tenantId: string)
   });
   if (!appt) return { ok: false as const, error: "Cita no encontrada" };
 
-  const target = pickChannel(appt.tenant.plan, appt.client);
+  // Email primero: el link de reseña funciona igual y no gasta cupo WhatsApp,
+  // que se reserva para confirmaciones y recordatorios (los que matan el no-show).
+  const target = await pickChannel({ id: tenantId, plan: appt.tenant.plan }, appt.client, {
+    preferWhatsApp: false,
+    whatsappFallback: true,
+  });
   if (!target) return { ok: false as const, error: "Cliente sin canal de contacto" };
 
   // Idempotencia: una sola invitación por cita.

@@ -1,8 +1,14 @@
-import { NotificationChannel, type Plan } from "@navaxa/db";
+import { prisma, NotificationChannel, NotificationStatus, type Plan } from "@navaxa/db";
+import { PLANS } from "@navaxa/config";
 
 /** WhatsApp es feature de plan PRO/ENTERPRISE (ver COSTS.md). */
 export function planAllowsWhatsApp(plan: Plan): boolean {
-  return plan === "PRO" || plan === "ENTERPRISE";
+  return whatsappMonthlyLimit(plan) > 0;
+}
+
+/** Cupo mensual de mensajes WhatsApp incluido en el plan (0 = sin WhatsApp). */
+export function whatsappMonthlyLimit(plan: Plan): number {
+  return PLANS[plan].limits.whatsappPerMonth;
 }
 
 /**
@@ -16,19 +22,61 @@ export function whatsappLive(): boolean {
 }
 
 /**
- * Elige el canal de notificación respetando el plan: WhatsApp solo si el plan
- * lo incluye, se prefiere Y está vivo; si no, degrada a email. Devuelve null si
- * no hay canal disponible (p.ej. FREE/STARTER con solo teléfono y sin email, o
- * WhatsApp mock + cliente sin email).
+ * Mensajes WhatsApp enviados por el tenant en el mes calendario en curso.
+ * Cuenta sobre NotificationLog (cada envío queda registrado ahí); los FAILED
+ * no suman porque nunca llegaron al proveedor → no se cobraron.
  */
-export function pickChannel(
-  plan: Plan,
+export async function whatsappUsageThisMonth(tenantId: string): Promise<number> {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  return prisma.notificationLog.count({
+    where: {
+      tenantId,
+      channel: NotificationChannel.WHATSAPP,
+      status: { not: NotificationStatus.FAILED },
+      createdAt: { gte: monthStart },
+    },
+  });
+}
+
+export interface PickChannelOpts {
+  /** Si false, se intenta email primero (default: WhatsApp primero). */
+  preferWhatsApp?: boolean;
+  /**
+   * Solo aplica con preferWhatsApp=false: permite caer a WhatsApp cuando el
+   * cliente no tiene email (p.ej. review/rating: van por email para no gastar
+   * cupo, pero un cliente solo-teléfono igual recibe su link).
+   */
+  whatsappFallback?: boolean;
+}
+
+/**
+ * Elige el canal de notificación respetando plan y cupo mensual: WhatsApp solo
+ * si el plan lo incluye, está vivo, hay teléfono Y queda cupo (límite
+ * whatsappPerMonth del plan, ver COSTS.md); si no, degrada a email. Devuelve
+ * null si no hay canal disponible.
+ */
+export async function pickChannel(
+  tenant: { id: string; plan: Plan },
   client: { phone?: string | null; email?: string | null },
-  preferWhatsApp = true,
-): { channel: NotificationChannel; recipient: string } | null {
-  if (preferWhatsApp && planAllowsWhatsApp(plan) && whatsappLive() && client.phone) {
-    return { channel: NotificationChannel.WHATSAPP, recipient: client.phone };
+  opts: PickChannelOpts = {},
+): Promise<{ channel: NotificationChannel; recipient: string } | null> {
+  const { preferWhatsApp = true, whatsappFallback = false } = opts;
+
+  // Candidato a WhatsApp solo si pasa los chequeos baratos; el count del cupo
+  // se consulta recién entonces (evita una query por envío en planes sin WA).
+  const whatsappCandidate =
+    planAllowsWhatsApp(tenant.plan) && whatsappLive() && !!client.phone;
+  const whatsappOk = async () =>
+    whatsappCandidate &&
+    (await whatsappUsageThisMonth(tenant.id)) < whatsappMonthlyLimit(tenant.plan);
+
+  if (preferWhatsApp && (await whatsappOk())) {
+    return { channel: NotificationChannel.WHATSAPP, recipient: client.phone! };
   }
   if (client.email) return { channel: NotificationChannel.EMAIL, recipient: client.email };
+  if (!preferWhatsApp && whatsappFallback && (await whatsappOk())) {
+    return { channel: NotificationChannel.WHATSAPP, recipient: client.phone! };
+  }
   return null;
 }

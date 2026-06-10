@@ -35,12 +35,11 @@ async function processReminders(templateKey: "reminder_24h" | "reminder_1h", hou
     });
     if (!campaign) continue;
 
-    // Canal según plan: WhatsApp solo PRO/ENTERPRISE; si no, degrada a email.
-    const target = pickChannel(
-      a.tenant.plan,
-      a.client,
-      campaign.channel === NotificationChannel.WHATSAPP,
-    );
+    // Canal según plan y cupo: WhatsApp solo PRO/ENTERPRISE con cupo mensual
+    // disponible; si no, degrada a email.
+    const target = await pickChannel({ id: a.tenantId, plan: a.tenant.plan }, a.client, {
+      preferWhatsApp: campaign.channel === NotificationChannel.WHATSAPP,
+    });
     if (!target) continue;
 
     const already = await prisma.notificationLog.findFirst({
@@ -170,11 +169,9 @@ export async function processInactiveRecalls() {
     });
     if (!campaign) continue;
 
-    const target = pickChannel(
-      c.tenant.plan,
-      c,
-      campaign.channel === NotificationChannel.WHATSAPP,
-    );
+    const target = await pickChannel({ id: c.tenantId, plan: c.tenant.plan }, c, {
+      preferWhatsApp: campaign.channel === NotificationChannel.WHATSAPP,
+    });
     if (!target) continue;
 
     const already = await prisma.notificationLog.findFirst({

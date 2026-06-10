@@ -43,7 +43,7 @@ export async function notifyAppointment(
   tenant: NotifyTenant,
   appointment: NotifyAppointment,
 ) {
-  const target = pickChannel(tenant.plan, appointment.client);
+  const target = await pickChannel({ id: tenant.id, plan: tenant.plan }, appointment.client);
   if (!target) return { ok: false as const, error: "Cliente sin teléfono ni email" };
 
   const { fecha, hora } = formatDateTime(appointment.startsAt, tenant.timezone);
