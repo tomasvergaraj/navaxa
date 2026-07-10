@@ -6,8 +6,10 @@ import { resolveTenantBySlug, getPublicHours } from "@/lib/public-booking";
 import { ServicesBrowser } from "@/components/booking/services-browser";
 import { HoursToggle } from "@/components/booking/hours-toggle";
 import { WhatsappIcon } from "@/components/ui/whatsapp-icon";
+import { GoogleIcon } from "@/components/ui/google-icon";
 import { Stars } from "@/components/ui/stars";
 import { formatRelative } from "@/lib/format";
+import type { GoogleReview } from "@/lib/google-reviews";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +80,16 @@ export default async function ReservarPage({ params }: { params: { slug: string 
   const avgRating = reviewAgg._avg.rating ?? 0;
   const reviewCount = reviewAgg._count;
 
+  // Cache de Google (refrescado a diario por cron; ver lib/google-reviews.ts).
+  const googleRating = tenant.googleRating ?? 0;
+  const googleCount = tenant.googleReviewCount ?? 0;
+  const googleReviews = ((tenant.googleReviews ?? []) as unknown as GoogleReview[]).filter(
+    (r) => r.text,
+  );
+  const writeReviewHref = tenant.googlePlaceId
+    ? `https://search.google.com/local/writereview?placeid=${encodeURIComponent(tenant.googlePlaceId)}`
+    : null;
+
   const fullAddress = [tenant.address, tenant.city].filter(Boolean).join(", ");
   const mapsQuery = fullAddress ? `${tenant.name} ${fullAddress}` : tenant.name;
   const mapsEmbed = `https://www.google.com/maps?q=${encodeURIComponent(mapsQuery)}&output=embed`;
@@ -140,6 +152,24 @@ export default async function ReservarPage({ params }: { params: { slug: string 
                 · {reviewCount} reseña{reviewCount === 1 ? "" : "s"}
               </span>
             </div>
+          )}
+
+          {googleRating > 0 && googleCount > 0 && (
+            <a
+              href={tenant.googleMapsUri ?? mapsLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <GoogleIcon className="h-4 w-4 shrink-0" />
+              <span className="font-medium tabular-nums text-foreground">
+                {googleRating.toFixed(1)}
+              </span>
+              <Stars value={googleRating} size={14} />
+              <span>
+                · {googleCount} reseña{googleCount === 1 ? "" : "s"} en Google
+              </span>
+            </a>
           )}
 
           {(igHref || tenant.website) && (
@@ -265,6 +295,58 @@ export default async function ReservarPage({ params }: { params: { slug: string 
                   </p>
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* Reseñas de Google (cache diario de Places API, con atribución) */}
+        {googleReviews.length > 0 && (
+          <section className="mt-12">
+            <h2 className="mb-5 flex items-center justify-center gap-2 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <GoogleIcon className="h-4 w-4" />
+              Reseñas en Google
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {googleReviews.map((r, i) => (
+                <div key={`${r.publishTime}-${i}`} className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <Stars value={r.rating} size={14} />
+                    <span className="text-xs text-muted-foreground">{r.relativeTime}</span>
+                  </div>
+                  <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-foreground/90">
+                    {r.text}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    {r.avatarUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.avatarUrl} alt="" className="h-5 w-5 rounded-full" />
+                    )}
+                    <p className="text-xs text-muted-foreground">{r.author} · en Google</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-sm">
+              {tenant.googleMapsUri && (
+                <a
+                  href={tenant.googleMapsUri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground underline transition-colors hover:text-foreground"
+                >
+                  Ver todas en Google
+                </a>
+              )}
+              {writeReviewHref && (
+                <a
+                  href={writeReviewHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground underline transition-colors hover:text-foreground"
+                >
+                  Escribir una reseña
+                </a>
+              )}
             </div>
           </section>
         )}

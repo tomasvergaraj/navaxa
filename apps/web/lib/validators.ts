@@ -150,6 +150,7 @@ export const tenantUpdateSchema = z.object({
   description: z.string().max(1000).optional().or(z.literal("")),
   instagram: z.string().max(120).optional().or(z.literal("")),
   website: z.string().max(200).optional().or(z.literal("")),
+  googlePlaceId: z.string().trim().max(300).optional().or(z.literal("")),
   bookingEnabled: z.boolean().optional(),
   bookingNoticeMin: z.coerce.number().int().min(0).max(10080).optional(), // hasta 7 días
   paymentsEnabled: z.boolean().optional(),

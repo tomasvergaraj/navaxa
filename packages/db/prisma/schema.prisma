@@ -42,6 +42,14 @@ model Tenant {
   paymentsEnabled  Boolean     @default(false)
   depositType      DepositType @default(NONE)
   depositValue     Int         @default(0) // CLP si FIXED; porcentaje 0-100 si PERCENT
+  // Reseñas de Google: Place ID configurado por el tenant + cache diario
+  // de rating/reseñas vía Places API (ver lib/google-reviews.ts).
+  googlePlaceId     String?
+  googleRating      Float?
+  googleReviewCount Int?
+  googleReviews     Json?
+  googleMapsUri     String?
+  googleSyncedAt    DateTime?
   trialEndsAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

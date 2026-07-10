@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma, DepositType } from "@navaxa/db";
+import { prisma, DepositType, Prisma } from "@navaxa/db";
 import { apiError, requireManager } from "@/lib/api-errors";
 import { tenantUpdateSchema } from "@/lib/validators";
+import { googleReviewsEnabled, syncGoogleReviewsForTenant } from "@/lib/google-reviews";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,12 @@ export async function PATCH(req: Request) {
       depositValue = Math.min(100, depositValue);
     }
 
+    const newPlaceId = emptyToNull(d.googlePlaceId);
+    const prev =
+      newPlaceId !== undefined
+        ? await prisma.tenant.findUnique({ where: { id: tenantId }, select: { googlePlaceId: true } })
+        : null;
+
     const tenant = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
@@ -40,8 +47,31 @@ export async function PATCH(req: Request) {
         paymentsEnabled: d.paymentsEnabled,
         depositType: d.depositType ? (d.depositType as DepositType) : undefined,
         depositValue,
+        googlePlaceId: newPlaceId,
+        // Al quitar el Place ID se limpia el cache de reseñas para que la
+        // página pública no siga mostrando datos de un lugar desvinculado.
+        ...(newPlaceId === null
+          ? {
+              googleRating: null,
+              googleReviewCount: null,
+              googleMapsUri: null,
+              googleReviews: Prisma.DbNull,
+              googleSyncedAt: null,
+            }
+          : {}),
       },
     });
+
+    // Place ID nuevo o cambiado → sync inmediato (best-effort) para que el
+    // dueño vea sus reseñas sin esperar al cron diario.
+    if (newPlaceId && newPlaceId !== prev?.googlePlaceId && googleReviewsEnabled()) {
+      try {
+        await syncGoogleReviewsForTenant(tenantId, newPlaceId);
+      } catch (err) {
+        console.error("[google-reviews] sync inmediato falló:", (err as Error).message);
+      }
+    }
+
     return NextResponse.json({ tenant });
   } catch (e) {
     return apiError(e);

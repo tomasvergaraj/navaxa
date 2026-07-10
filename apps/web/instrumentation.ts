@@ -26,6 +26,7 @@ export async function register() {
     expirePendingPayments,
     processSubscriptionRenewals,
   } = await import("@/lib/notifications/jobs");
+  const { syncAllGoogleReviews } = await import("@/lib/google-reviews");
 
   const intervalMs = Number(process.env.CRON_INTERVAL_MS ?? 15 * 60 * 1000);
 
@@ -48,7 +49,7 @@ export async function register() {
     }
   }, intervalMs);
 
-  // Reactivación de inactivos y renovación de suscripciones, una vez al día.
+  // Reactivación de inactivos, renovación de suscripciones y reseñas Google, una vez al día.
   setInterval(
     async () => {
       try {
@@ -64,6 +65,14 @@ export async function register() {
         }
       } catch (e) {
         console.error("[cron] error renovando suscripciones:", (e as Error).message);
+      }
+      try {
+        const gr = await syncAllGoogleReviews();
+        if (gr.synced || gr.failed) {
+          console.log(`[cron] reseñas Google — ok:${gr.synced} error:${gr.failed}`);
+        }
+      } catch (e) {
+        console.error("[cron] error sincronizando reseñas Google:", (e as Error).message);
       }
     },
     24 * 60 * 60 * 1000,

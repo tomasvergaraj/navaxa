@@ -23,6 +23,7 @@ interface Tenant {
   address: string | null;
   city: string | null;
   timezone: string;
+  googlePlaceId: string | null;
   bookingEnabled: boolean;
   bookingNoticeMin: number;
 }
@@ -57,6 +58,7 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
     description: tenant.description ?? "",
     instagram: tenant.instagram ?? "",
     website: tenant.website ?? "",
+    googlePlaceId: tenant.googlePlaceId ?? "",
     bookingEnabled: tenant.bookingEnabled,
     bookingNoticeMin: tenant.bookingNoticeMin ?? 0,
   });
@@ -154,6 +156,33 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
             placeholder="https://tubarberia.cl"
           />
         </Field>
+      </div>
+
+      <div className="border-t border-border pt-5">
+        <h3 className="mb-3 text-sm font-medium">Reseñas de Google</h3>
+        <div className="space-y-1.5">
+          <Label htmlFor="gplace">Place ID de tu barbería en Google Maps</Label>
+          <Input
+            id="gplace"
+            value={form.googlePlaceId}
+            onChange={(e) => set({ googlePlaceId: e.target.value })}
+            placeholder="ChIJN1t_tDeuEmsRUsoyG83frY4"
+            className="md:w-96"
+          />
+          <p className="text-xs text-muted-foreground">
+            Con esto tu página de reservas muestra tu puntuación y reseñas de Google (se
+            actualizan una vez al día). Encuentra tu Place ID en el{" "}
+            <a
+              href="https://developers.google.com/maps/documentation/places/web-service/place-id#find-id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              buscador de Place ID
+            </a>
+            . Déjalo vacío para ocultarlas.
+          </p>
+        </div>
       </div>
 
       <div className="border-t border-border pt-5">

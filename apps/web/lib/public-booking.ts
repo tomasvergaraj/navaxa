@@ -28,6 +28,11 @@ export async function resolveTenantBySlug(slug: string) {
       paymentsEnabled: true,
       depositType: true,
       depositValue: true,
+      googlePlaceId: true,
+      googleRating: true,
+      googleReviewCount: true,
+      googleMapsUri: true,
+      googleReviews: true,
     },
   });
   return tenant;
