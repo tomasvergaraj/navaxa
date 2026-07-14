@@ -12,7 +12,7 @@ import { prisma, Prisma } from "@navaxa/db";
  * habilitada). Sin la key, el feature queda inerte.
  */
 
-const FIELD_MASK = "rating,userRatingCount,googleMapsUri,reviews";
+const FIELD_MASK = "displayName,rating,userRatingCount,googleMapsUri,reviews";
 
 export interface GoogleReview {
   author: string;
@@ -42,6 +42,7 @@ export async function fetchGooglePlace(placeId: string) {
     throw new Error(`Places API ${res.status}: ${body.slice(0, 200)}`);
   }
   const place = (await res.json()) as {
+    displayName?: { text?: string };
     rating?: number;
     userRatingCount?: number;
     googleMapsUri?: string;
@@ -66,11 +67,55 @@ export async function fetchGooglePlace(placeId: string) {
     }));
 
   return {
+    name: place.displayName?.text ?? null,
     rating: place.rating ?? null,
     reviewCount: place.userRatingCount ?? 0,
     mapsUri: place.googleMapsUri ?? null,
     reviews,
   };
+}
+
+export interface GooglePlaceResult {
+  id: string;
+  name: string;
+  address: string;
+}
+
+/**
+ * Busca lugares por texto libre (nombre + comuna) para que el dueño vincule
+ * su local sin conocer el Place ID.
+ *
+ * Cost: Text Search Pro ~$0.032/req (5k gratis/mes). Solo se invoca a demanda
+ * desde Configuración (setup one-shot por tenant) → ignorable.
+ */
+export async function searchGooglePlaces(query: string): Promise<GooglePlaceResult[]> {
+  const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": process.env.GOOGLE_MAPS_API_KEY ?? "",
+      "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress",
+    },
+    body: JSON.stringify({ textQuery: query, languageCode: "es", pageSize: 5 }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Places searchText ${res.status}: ${body.slice(0, 200)}`);
+  }
+  const data = (await res.json()) as {
+    places?: Array<{
+      id?: string;
+      displayName?: { text?: string };
+      formattedAddress?: string;
+    }>;
+  };
+  return (data.places ?? [])
+    .filter((p) => p.id)
+    .map((p) => ({
+      id: p.id as string,
+      name: p.displayName?.text ?? "Sin nombre",
+      address: p.formattedAddress ?? "",
+    }));
 }
 
 /** Refresca el cache de Google de un tenant. Lanza si la API falla. */
@@ -79,6 +124,7 @@ export async function syncGoogleReviewsForTenant(tenantId: string, placeId: stri
   await prisma.tenant.update({
     where: { id: tenantId },
     data: {
+      googlePlaceName: data.name,
       googleRating: data.rating,
       googleReviewCount: data.reviewCount,
       googleMapsUri: data.mapsUri,

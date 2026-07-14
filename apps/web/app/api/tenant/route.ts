@@ -48,6 +48,11 @@ export async function PATCH(req: Request) {
         depositType: d.depositType ? (d.depositType as DepositType) : undefined,
         depositValue,
         googlePlaceId: newPlaceId,
+        // Si el lugar cambió, el nombre cacheado ya no corresponde; el sync
+        // inmediato de más abajo lo repone para el lugar nuevo.
+        ...(newPlaceId !== undefined && newPlaceId !== prev?.googlePlaceId
+          ? { googlePlaceName: null }
+          : {}),
         // Al quitar el Place ID se limpia el cache de reseñas para que la
         // página pública no siga mostrando datos de un lugar desvinculado.
         ...(newPlaceId === null

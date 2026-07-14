@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, Search, Star, MapPin, X } from "lucide-react";
 import { Button, Input, Label, Textarea } from "@navaxa/ui";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -24,6 +24,10 @@ interface Tenant {
   city: string | null;
   timezone: string;
   googlePlaceId: string | null;
+  googlePlaceName: string | null;
+  googleRating: number | null;
+  googleReviewCount: number | null;
+  googleMapsUri: string | null;
   bookingEnabled: boolean;
   bookingNoticeMin: number;
 }
@@ -159,30 +163,16 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
       </div>
 
       <div className="border-t border-border pt-5">
-        <h3 className="mb-3 text-sm font-medium">Reseñas de Google</h3>
-        <div className="space-y-1.5">
-          <Label htmlFor="gplace">Place ID de tu barbería en Google Maps</Label>
-          <Input
-            id="gplace"
-            value={form.googlePlaceId}
-            onChange={(e) => set({ googlePlaceId: e.target.value })}
-            placeholder="ChIJN1t_tDeuEmsRUsoyG83frY4"
-            className="md:w-96"
-          />
-          <p className="text-xs text-muted-foreground">
-            Con esto tu página de reservas muestra tu puntuación y reseñas de Google (se
-            actualizan una vez al día). Encuentra tu Place ID en el{" "}
-            <a
-              href="https://developers.google.com/maps/documentation/places/web-service/place-id#find-id"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-foreground"
-            >
-              buscador de Place ID
-            </a>
-            . Déjalo vacío para ocultarlas.
-          </p>
-        </div>
+        <h3 className="mb-1 text-sm font-medium">Reseñas de Google</h3>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Vincula tu local de Google Maps para que tu página de reservas muestre tu puntuación y
+          reseñas (se actualizan una vez al día).
+        </p>
+        <GooglePlacePicker
+          value={form.googlePlaceId}
+          onChange={(placeId) => set({ googlePlaceId: placeId })}
+          tenant={tenant}
+        />
       </div>
 
       <div className="border-t border-border pt-5">
@@ -233,6 +223,155 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="space-y-1.5">
       <Label>{label}</Label>
       {children}
+    </div>
+  );
+}
+
+interface PlaceResult {
+  id: string;
+  name: string;
+  address: string;
+}
+
+/**
+ * Vincular el local de Google Maps buscándolo por nombre, sin que el dueño
+ * tenga que saber qué es un Place ID.
+ */
+function GooglePlacePicker({
+  value,
+  onChange,
+  tenant,
+}: {
+  value: string;
+  onChange: (placeId: string) => void;
+  tenant: Tenant;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<PlaceResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  // Datos del lugar elegido en esta sesión (antes de guardar, el server aún no los cacheó).
+  const [picked, setPicked] = useState<PlaceResult | null>(null);
+
+  async function search() {
+    const q = query.trim();
+    if (q.length < 3) {
+      toast.error("Escribe al menos 3 caracteres");
+      return;
+    }
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/tenant/google-places?q=${encodeURIComponent(q)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "No se pudo buscar");
+      setResults(data.places ?? []);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  if (value) {
+    // El nombre viene de la selección en vivo o del cache del server tras guardar.
+    const isSaved = value === tenant.googlePlaceId;
+    const name = picked?.name ?? (isSaved ? tenant.googlePlaceName : null) ?? "Local vinculado";
+    const address = picked?.address ?? null;
+    return (
+      <div className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3 md:max-w-xl">
+        <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{name}</p>
+          {address ? (
+            <p className="truncate text-xs text-muted-foreground">{address}</p>
+          ) : isSaved && tenant.googleRating != null ? (
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Star className="h-3 w-3 fill-current" />
+              {tenant.googleRating.toFixed(1)} · {tenant.googleReviewCount ?? 0} reseñas
+              {tenant.googleMapsUri && (
+                <>
+                  {" · "}
+                  <a
+                    href={tenant.googleMapsUri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-foreground"
+                  >
+                    Ver en Google Maps
+                  </a>
+                </>
+              )}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {isSaved ? "Vinculado" : "Guarda los cambios para vincularlo"}
+            </p>
+          )}
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            onChange("");
+            setPicked(null);
+            setResults(null);
+            setQuery("");
+          }}
+        >
+          <X className="h-4 w-4" />
+          Quitar
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 md:max-w-xl">
+      <div className="flex gap-2">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              search();
+            }
+          }}
+          placeholder="Busca tu barbería, ej: Barbería Don Juan, Providencia"
+        />
+        <Button type="button" variant="secondary" onClick={search} disabled={searching}>
+          {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          Buscar
+        </Button>
+      </div>
+
+      {results !== null &&
+        (results.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Sin resultados. Prueba con el nombre tal como aparece en Google Maps más la comuna.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border overflow-hidden rounded-md border border-border">
+            {results.map((p) => (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(p.id);
+                    setPicked(p);
+                  }}
+                  className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-muted"
+                >
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{p.name}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{p.address}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ))}
     </div>
   );
 }

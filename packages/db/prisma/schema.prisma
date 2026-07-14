@@ -45,6 +45,7 @@ model Tenant {
   // Reseñas de Google: Place ID configurado por el tenant + cache diario
   // de rating/reseñas vía Places API (ver lib/google-reviews.ts).
   googlePlaceId     String?
+  googlePlaceName   String?
   googleRating      Float?
   googleReviewCount Int?
   googleReviews     Json?
