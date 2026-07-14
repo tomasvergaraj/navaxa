@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@navaxa/db";
-import { loadPaymentByToken } from "@/lib/payments";
+import { failPaymentAndReleaseSlot, loadPaymentByToken } from "@/lib/payments";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api-errors";
 
@@ -22,10 +21,7 @@ export async function POST(req: Request, { params }: { params: { token: string }
     }
 
     if (payment.status === "PENDING") {
-      await prisma.$transaction([
-        prisma.payment.update({ where: { id: payment.id }, data: { status: "FAILED" } }),
-        prisma.appointment.update({ where: { id: payment.appointmentId }, data: { status: "CANCELLED" } }),
-      ]);
+      await failPaymentAndReleaseSlot(payment.id, payment.appointmentId);
     }
 
     return NextResponse.json({ ok: true });

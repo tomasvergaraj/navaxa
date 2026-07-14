@@ -58,12 +58,17 @@ export default async function PagarPage({ params }: { params: { token: string } 
 
   // Cancelado / expirado / fallido.
   if (expired || payment.status !== "PENDING") {
+    const failed = payment.status === "FAILED";
     return (
       <Shell>
         <Clock className="h-10 w-10 text-muted-foreground" />
-        <h1 className="mt-4 font-display text-xl font-medium">El pago expiró</h1>
+        <h1 className="mt-4 font-display text-xl font-medium">
+          {failed ? "El pago no se completó" : "El pago expiró"}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          El tiempo para pagar el abono se agotó y la hora se liberó. Puedes reservar de nuevo.
+          {failed
+            ? "El pago fue rechazado o cancelado, así que la reserva no quedó agendada y la hora se liberó. Puedes reservar de nuevo."
+            : "El tiempo para pagar el abono se agotó y la hora se liberó. Puedes reservar de nuevo."}
         </p>
         <Button asChild variant="outline" className="mt-6 w-full">
           <Link href={`/reservar/${tenant.slug}`}>Volver a reservar</Link>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
 import { commitWebpayTransaction } from "@/lib/webpay";
-import { signPaymentToken } from "@/lib/payments";
+import { failPaymentAndReleaseSlot, signPaymentToken } from "@/lib/payments";
 import { notifyAppointment } from "@/lib/appointment-notify";
 
 export const dynamic = "force-dynamic";
@@ -39,13 +39,10 @@ async function handle(req: Request): Promise<Response> {
     if (ref) {
       const aborted = await prisma.payment.findFirst({
         where: { providerRef: ref },
-        select: { id: true, tenant: { select: { slug: true } } },
+        select: { id: true, appointmentId: true, tenant: { select: { slug: true } } },
       });
       if (aborted) {
-        await prisma.payment.updateMany({
-          where: { id: aborted.id, status: "PENDING" },
-          data: { status: "FAILED" },
-        });
+        await failPaymentAndReleaseSlot(aborted.id, aborted.appointmentId);
         return NextResponse.redirect(`${APP_URL}/reservar/${aborted.tenant.slug}`, 303);
       }
     }
@@ -76,18 +73,12 @@ async function handle(req: Request): Promise<Response> {
   try {
     result = await commitWebpayTransaction(tokenWs);
   } catch {
-    await prisma.payment.updateMany({
-      where: { id: payment.id, status: "PENDING" },
-      data: { status: "FAILED" },
-    });
+    await failPaymentAndReleaseSlot(payment.id, payment.appointmentId);
     return NextResponse.redirect(`${APP_URL}/pagar/${ownToken}`, 303);
   }
 
   if (result.response_code !== 0) {
-    await prisma.payment.updateMany({
-      where: { id: payment.id, status: "PENDING" },
-      data: { status: "FAILED" },
-    });
+    await failPaymentAndReleaseSlot(payment.id, payment.appointmentId);
     return NextResponse.redirect(`${APP_URL}/pagar/${ownToken}`, 303);
   }
 

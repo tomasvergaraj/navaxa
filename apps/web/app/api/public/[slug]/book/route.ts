@@ -15,6 +15,7 @@ import { assertWithinPlanLimit, PlanLimitError } from "@/lib/plan-limits";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import {
   computeDeposit,
+  failPaymentAndReleaseSlot,
   getPaymentProvider,
   signPaymentToken,
   PAYMENT_TTL_MIN,
@@ -187,12 +188,7 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         );
       } catch {
         // No se pudo iniciar el cobro: liberar la hora.
-        await prisma.appointment
-          .update({ where: { id: appt.id }, data: { status: "CANCELLED" } })
-          .catch(() => undefined);
-        await prisma.payment
-          .update({ where: { id: payment.id }, data: { status: "FAILED" } })
-          .catch(() => undefined);
+        await failPaymentAndReleaseSlot(payment.id, appt.id).catch(() => undefined);
         return NextResponse.json(
           { error: "No se pudo iniciar el pago. Intenta de nuevo." },
           { status: 502 },

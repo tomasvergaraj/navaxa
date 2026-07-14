@@ -132,3 +132,26 @@ export async function loadPaymentByToken(token: string) {
 }
 
 export type PaymentWithContext = NonNullable<Awaited<ReturnType<typeof loadPaymentByToken>>>;
+
+/**
+ * Marca un pago PENDING como FAILED y cancela la cita que lo esperaba, en la
+ * misma transacción. Si el abono no se concreta, la reserva NO debe quedar
+ * agendada: la cita se cancela y el slot se libera.
+ *
+ * Idempotente y a prueba de carreras: solo actúa si el pago sigue PENDING, y
+ * solo cancela la cita si sigue PENDING_PAYMENT (no toca una cita que el
+ * dueño haya confirmado a mano mientras tanto).
+ */
+export async function failPaymentAndReleaseSlot(paymentId: string, appointmentId: string) {
+  await prisma.$transaction(async (tx) => {
+    const claimed = await tx.payment.updateMany({
+      where: { id: paymentId, status: "PENDING" },
+      data: { status: "FAILED" },
+    });
+    if (claimed.count === 0) return;
+    await tx.appointment.updateMany({
+      where: { id: appointmentId, status: "PENDING_PAYMENT" },
+      data: { status: "CANCELLED", cancelledAt: new Date(), cancelReason: "Abono no pagado" },
+    });
+  });
+}

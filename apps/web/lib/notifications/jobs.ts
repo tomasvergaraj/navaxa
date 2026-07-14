@@ -92,10 +92,15 @@ export async function expirePendingPayments() {
 
   for (const p of expired) {
     await prisma.$transaction([
-      prisma.payment.update({ where: { id: p.id }, data: { status: "EXPIRED" } }),
-      prisma.appointment.update({
-        where: { id: p.appointmentId },
-        data: { status: "CANCELLED" },
+      // Guard de status en ambos: si el return de la pasarela llegó entre el
+      // findMany y acá (pago PAID / cita ya SCHEDULED), no pisarlo.
+      prisma.payment.updateMany({
+        where: { id: p.id, status: "PENDING" },
+        data: { status: "EXPIRED" },
+      }),
+      prisma.appointment.updateMany({
+        where: { id: p.appointmentId, status: "PENDING_PAYMENT" },
+        data: { status: "CANCELLED", cancelledAt: now, cancelReason: "Abono no pagado" },
       }),
     ]);
   }
