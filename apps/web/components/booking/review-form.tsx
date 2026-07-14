@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Copy, Loader2 } from "lucide-react";
 import { Button, Card, Textarea } from "@navaxa/ui";
 import { toast } from "sonner";
 import { StarRating } from "@/components/ui/star-rating";
+import { GoogleIcon } from "@/components/ui/google-icon";
 
 type Props = {
   token: string;
@@ -13,9 +14,19 @@ type Props = {
   firstName: string;
   initialRating: number;
   initialComment: string;
+  /** Deep link al diálogo de reseña de Google (null si el local no está vinculado). */
+  googleReviewUrl: string | null;
 };
 
-export function ReviewForm({ token, shopName, barberName, firstName, initialRating, initialComment }: Props) {
+export function ReviewForm({
+  token,
+  shopName,
+  barberName,
+  firstName,
+  initialRating,
+  initialComment,
+  googleReviewUrl,
+}: Props) {
   const [rating, setRating] = useState(initialRating);
   const [comment, setComment] = useState(initialComment);
   const [saving, setSaving] = useState(false);
@@ -43,6 +54,11 @@ export function ReviewForm({ token, shopName, barberName, firstName, initialRati
     }
   }
 
+  async function copyComment() {
+    await navigator.clipboard.writeText(comment.trim());
+    toast.success("Comentario copiado — pégalo en Google");
+  }
+
   if (done) {
     return (
       <Card className="flex flex-col items-center p-8 text-center">
@@ -51,6 +67,28 @@ export function ReviewForm({ token, shopName, barberName, firstName, initialRati
         <p className="mt-1 text-sm text-muted-foreground">
           Tu reseña ayuda a {shopName} y a más clientes a elegir bien.
         </p>
+
+        {googleReviewUrl && (
+          <div className="mt-6 w-full rounded-md border border-border p-4">
+            <p className="text-sm font-medium">¿Nos ayudas también en Google?</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Una reseña pública ayuda a que más personas encuentren a {shopName}.
+            </p>
+            <Button asChild variant="outline" className="mt-3 w-full">
+              <a href={googleReviewUrl} target="_blank" rel="noopener noreferrer">
+                <GoogleIcon className="h-4 w-4" />
+                Dejar reseña en Google
+              </a>
+            </Button>
+            {comment.trim() && (
+              <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={copyComment}>
+                <Copy className="h-3.5 w-3.5" />
+                Copiar mi comentario
+              </Button>
+            )}
+          </div>
+        )}
+
         <Button variant="ghost" className="mt-4" onClick={() => setDone(false)}>
           Editar mi reseña
         </Button>

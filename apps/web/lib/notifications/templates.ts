@@ -8,8 +8,7 @@ export type TemplateKey =
   | "appointment_cancelled"
   | "barber_invite"
   | "password_reset"
-  | "review_request"
-  | "haircut_rating_request";
+  | "review_request";
 
 interface Template {
   subject?: string;
@@ -62,11 +61,6 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     subject: "¿Cómo te fue en {shopName}?",
     body:
       "Hola {firstName} 👋 Gracias por tu visita a {shopName}. ¿Nos dejas tu reseña? Toma menos de un minuto: {reviewUrl}",
-  },
-  haircut_rating_request: {
-    subject: "¿Cómo te quedó el corte?",
-    body:
-      "Hola {firstName} 👋 Tu corte en {shopName} ya está en tu historial. Califícalo en un toque: {ratingUrl}",
   },
 };
 

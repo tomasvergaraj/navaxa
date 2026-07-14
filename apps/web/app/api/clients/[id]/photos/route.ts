@@ -5,7 +5,9 @@ import { assertWithinPlanLimit } from "@/lib/plan-limits";
 import { storage } from "@/lib/storage";
 import { compressImageWithThumb } from "@/lib/images";
 import { haircutPhotoMetaSchema } from "@/lib/validators";
-import { buildHaircutRatingUrl, sendHaircutRatingRequest } from "@/lib/haircut-rating";
+import { buildHaircutRatingUrl } from "@/lib/haircut-rating";
+import { buildReviewUrl } from "@/lib/reviews";
+import { subHours, addHours } from "date-fns";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +65,30 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       }),
     ]);
 
+    // Vincular la foto a la cita del cliente en curso/reciente: así la
+    // invitación a reseñar (una sola por visita, sale al completar la cita)
+    // muestra la foto y el rating del cliente aplica también al corte.
+    const now = new Date();
+    const appt = await db.appointment.findFirst({
+      where: {
+        clientId: params.id,
+        ...(meta.data.barberId ? { barberId: meta.data.barberId } : {}),
+        status: { notIn: ["CANCELLED", "NO_SHOW"] },
+        startsAt: { gte: subHours(now, 24), lte: addHours(now, 1) },
+      },
+      orderBy: { startsAt: "desc" },
+      select: { id: true },
+    });
+    const apptTaken = appt
+      ? await db.haircutRecord.findFirst({ where: { appointmentId: appt.id }, select: { id: true } })
+      : null;
+    const appointmentId = appt && !apptTaken ? appt.id : null;
+
     const record = await db.haircutRecord.create({
       data: {
         clientId: params.id,
         barberId: meta.data.barberId,
+        appointmentId,
         imageUrl: main.url,
         thumbnailUrl: thumb.url,
         notes: meta.data.notes,
@@ -74,12 +96,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       } as any,
     });
 
-    // Link público de un solo toque para que el cliente deje su rating del corte.
-    const ratingUrl = buildHaircutRatingUrl(record.id);
-
-    // Fire-and-forget: si el plan permite WhatsApp y el cliente tiene canal,
-    // el helper lo manda; si no, no rompe el upload. Errores quedan en NotificationLog.
-    void sendHaircutRatingRequest(record.id, tenantId).catch(() => {});
+    // Link para compartir a mano (copiar/WhatsApp en el diálogo de subida).
+    // Si la foto quedó ligada a una cita va al flujo unificado de reseña;
+    // si no, al rating simple del corte. Ya no se manda notificación acá:
+    // la única invitación por visita sale al completar la cita.
+    const ratingUrl = appointmentId ? buildReviewUrl(appointmentId) : buildHaircutRatingUrl(record.id);
 
     return NextResponse.json({ record, ratingUrl }, { status: 201 });
   } catch (e) {

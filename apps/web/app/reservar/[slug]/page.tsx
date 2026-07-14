@@ -89,6 +89,9 @@ export default async function ReservarPage({ params }: { params: { slug: string 
   const writeReviewHref = tenant.googlePlaceId
     ? `https://search.google.com/local/writereview?placeid=${encodeURIComponent(tenant.googlePlaceId)}`
     : null;
+  // Una sola fuente de verdad pública: si el local está vinculado a Google,
+  // se muestra SOLO el rating/reseñas de Google; lo interno queda de fallback.
+  const googleLinked = Boolean(tenant.googlePlaceId) && googleRating > 0 && googleCount > 0;
 
   const fullAddress = [tenant.address, tenant.city].filter(Boolean).join(", ");
   const mapsQuery = fullAddress ? `${tenant.name} ${fullAddress}` : tenant.name;
@@ -144,7 +147,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
 
           <h1 className="mt-3 font-display text-3xl font-medium tracking-tight">{tenant.name}</h1>
 
-          {reviewCount > 0 && (
+          {!googleLinked && reviewCount > 0 && (
             <div className="mt-2 flex items-center gap-2 text-sm">
               <Stars value={avgRating} size={16} />
               <span className="font-medium tabular-nums">{avgRating.toFixed(1)}</span>
@@ -154,7 +157,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
             </div>
           )}
 
-          {googleRating > 0 && googleCount > 0 && (
+          {googleLinked && (
             <a
               href={tenant.googleMapsUri ?? mapsLink}
               target="_blank"
@@ -274,8 +277,8 @@ export default async function ReservarPage({ params }: { params: { slug: string 
           <ServicesBrowser slug={tenant.slug} services={services} />
         </section>
 
-        {/* Reseñas */}
-        {reviews.length > 0 && (
+        {/* Reseñas internas: solo como fallback si el local no está vinculado a Google */}
+        {!googleLinked && reviews.length > 0 && (
           <section className="mt-12">
             <h2 className="mb-5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Reseñas

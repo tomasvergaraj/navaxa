@@ -24,6 +24,9 @@ admite texto libre fuera de la ventana de 24h). Esta es la lista a registrar en
 > 2 MARKETING (`recall_30d`, `birthday` — son promocionales, Meta no las acepta
 > como Utility). Al pasar a producción con el número real **en la misma WABA**,
 > estas plantillas se reutilizan; si creas otra WABA, hay que recrearlas.
+>
+> **Update 2026-07-14:** quedan **8 plantillas** vigentes: `haircut_rating_request`
+> se eliminó del código (invitación única post-visita). No crearla en Twilio.
 
 ## Variables de entorno
 
@@ -79,10 +82,8 @@ Tu hora del {{1}} a las {{2}} fue cancelada. Si quieres reagendar, responde este
 Hola {{1}} 👋 Gracias por tu visita a {{2}}. ¿Nos dejas tu reseña? Toma menos de un minuto: {{3}} ¡Gracias!
 ```
 
-### haircut_rating_request — variables: 1=firstName, 2=shopName, 3=ratingUrl
-```
-Hola {{1}} 👋 Tu corte en {{2}} ya está en tu historial. Califícalo en un toque: {{3}} ¡Gracias!
-```
+> Nota (2026-07-14): `haircut_rating_request` se eliminó — la invitación única
+> post-visita (`review_request`) cubre también la calificación del corte.
 
 ## Puesta en marcha (runbook)
 
@@ -114,7 +115,7 @@ El token temporal de la pantalla de setup dura 24h. Para prod usa un System User
    `whatsapp_business_messaging` + `whatsapp_business_management` → **sin
    expiración**. Cópialo → va en `WHATSAPP_ACCESS_TOKEN` (no se vuelve a mostrar).
 
-### 4. Registrar las 9 plantillas
+### 4. Registrar las plantillas (8 vigentes)
 En **WhatsApp Manager → Plantillas de mensajes → Crear plantilla**, una por cada
 sección de arriba:
 - Categoría **Utility**, idioma **Spanish (es)**.
@@ -191,7 +192,7 @@ Verificación final: tras disparar un envío, en BD
 
 - `barber_invite` y `password_reset` van por **email** (flujos de staff), no por
   WhatsApp. No hace falta registrarlos como template WA.
-- Los templates con link (`recall_30d`, `review_request`, `haircut_rating_request`)
+- Los templates con link (`recall_30d`, `review_request`)
   llevan la URL como variable de cuerpo. Si Meta exige botón URL dinámico, se
   puede mover a un componente `button` — por ahora va en el cuerpo (aprobación
   más simple).

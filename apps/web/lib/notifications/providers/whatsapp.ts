@@ -32,10 +32,6 @@ const WA_TEMPLATES: Partial<Record<TemplateKey, { name: string; params: string[]
   },
   appointment_cancelled: { name: "appointment_cancelled", params: ["date", "time"] },
   review_request: { name: "review_request", params: ["firstName", "shopName", "reviewUrl"] },
-  haircut_rating_request: {
-    name: "haircut_rating_request",
-    params: ["firstName", "shopName", "ratingUrl"],
-  },
 };
 
 /** Normaliza a dígitos con código país (Meta espera E.164 sin '+'). */
