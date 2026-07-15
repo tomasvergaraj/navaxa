@@ -79,6 +79,11 @@ export function PricingPlans() {
           );
         })}
       </div>
+      <p className="mt-6 text-center text-xs text-muted-foreground">
+        Al terminar los 14 días de prueba puedes seguir en el plan{" "}
+        <strong className="text-foreground">Gratis</strong> (1 barbero, hasta 50 clientes, agenda
+        básica) o elegir un plan pagado. Sin cobros automáticos sorpresa.
+      </p>
     </>
   );
 }

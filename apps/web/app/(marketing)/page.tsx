@@ -79,10 +79,10 @@ export default function MarketingPage() {
           <Link href="/" className="shrink-0">
             <Logo size={28} />
           </Link>
-          <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
-            <a href="#features" className="hover:text-foreground">Funcionalidades</a>
+          <nav className="flex items-center gap-4 text-sm text-muted-foreground md:gap-8">
+            <a href="#features" className="hidden hover:text-foreground md:inline">Funcionalidades</a>
             <a href="#precios" className="hover:text-foreground">Precios</a>
-            <a href="#faq" className="hover:text-foreground">Preguntas</a>
+            <a href="#faq" className="hidden hover:text-foreground md:inline">Preguntas</a>
           </nav>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ThemeToggle />
@@ -102,6 +102,7 @@ export default function MarketingPage() {
           </div>
         </div>
       </header>
+      <main>
 
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border">
@@ -150,7 +151,7 @@ export default function MarketingPage() {
       </section>
 
       {/* Features */}
-      <section id="features" className="border-b border-border">
+      <section id="features" className="scroll-mt-20 border-b border-border">
         <div className="container py-20">
           <Reveal className="mb-12 text-center">
             <h2 className="font-display text-3xl font-medium tracking-tight md:text-4xl">
@@ -172,7 +173,7 @@ export default function MarketingPage() {
       </section>
 
       {/* Pricing */}
-      <section id="precios" className="border-b border-border">
+      <section id="precios" className="scroll-mt-20 border-b border-border">
         <div className="container py-20">
           <Reveal className="mb-12 text-center">
             <h2 className="font-display text-3xl font-medium tracking-tight md:text-4xl">
@@ -188,7 +189,7 @@ export default function MarketingPage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="border-b border-border">
+      <section id="faq" className="scroll-mt-20 border-b border-border">
         <div className="container py-20">
           <Reveal className="mb-10 text-center">
             <h2 className="font-display text-3xl font-medium tracking-tight md:text-4xl">
@@ -235,6 +236,7 @@ export default function MarketingPage() {
       </section>
 
       {/* Footer */}
+      </main>
       <footer>
         <div className="container py-12">
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">

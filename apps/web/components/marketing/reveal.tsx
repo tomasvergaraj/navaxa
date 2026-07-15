@@ -17,11 +17,18 @@ export function Reveal({
   delay?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [shown, setShown] = useState(false);
+  // Visible por defecto: el SSR/no-JS debe mostrar TODO el contenido (antes la
+  // página nacía opacity-0 y sin hidratar los precios no se veían nunca).
+  // Tras hidratar, solo lo que está bajo el viewport se oculta y se revela al
+  // entrar — la animación pasa a ser mejora progresiva.
+  const [shown, setShown] = useState(true);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (el.getBoundingClientRect().top < window.innerHeight) return; // ya visible: no animar
+    setShown(false);
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
