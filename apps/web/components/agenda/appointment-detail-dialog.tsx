@@ -3,7 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Pencil, Trash2, ExternalLink, Clock, User, Scissors } from "lucide-react";
+import {
+  Loader2,
+  Pencil,
+  Trash2,
+  ExternalLink,
+  Clock,
+  User,
+  UserX,
+  Scissors,
+  Check,
+  CheckCheck,
+  Play,
+} from "lucide-react";
 import {
   Button,
   Dialog,
@@ -38,6 +50,48 @@ const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
   { value: AppointmentStatus.NO_SHOW, label: APPOINTMENT_STATUS_LABELS.NO_SHOW },
 ];
 
+// Acciones de avance de estado en 1 toque, según el estado actual de la cita.
+// Retroceder estados (casos raros) sigue disponible vía Editar > dropdown.
+type QuickAction = {
+  to: AppointmentStatus;
+  label: string;
+  icon: React.ReactNode;
+  variant?: "default" | "outline";
+  confirmMsg?: string;
+};
+
+const QUICK_ACTIONS: Partial<Record<AppointmentStatus, QuickAction[]>> = {
+  [AppointmentStatus.SCHEDULED]: [
+    { to: AppointmentStatus.CONFIRMED, label: "Confirmar", icon: <Check className="h-4 w-4" /> },
+    {
+      to: AppointmentStatus.NO_SHOW,
+      label: "No vino",
+      icon: <UserX className="h-4 w-4" />,
+      variant: "outline",
+      confirmMsg: "¿Marcar que el cliente no vino?",
+    },
+  ],
+  [AppointmentStatus.CONFIRMED]: [
+    { to: AppointmentStatus.IN_PROGRESS, label: "Iniciar", icon: <Play className="h-4 w-4" /> },
+    {
+      to: AppointmentStatus.COMPLETED,
+      label: "Completar",
+      icon: <CheckCheck className="h-4 w-4" />,
+      variant: "outline",
+    },
+    {
+      to: AppointmentStatus.NO_SHOW,
+      label: "No vino",
+      icon: <UserX className="h-4 w-4" />,
+      variant: "outline",
+      confirmMsg: "¿Marcar que el cliente no vino?",
+    },
+  ],
+  [AppointmentStatus.IN_PROGRESS]: [
+    { to: AppointmentStatus.COMPLETED, label: "Completar", icon: <CheckCheck className="h-4 w-4" /> },
+  ],
+};
+
 function fmtTime(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -48,6 +102,7 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [acting, setActing] = useState<AppointmentStatus | null>(null);
 
   const [status, setStatus] = useState<AppointmentStatus>(block?.status ?? AppointmentStatus.SCHEDULED);
   const [notes, setNotes] = useState<string>(block?.notes ?? "");
@@ -90,6 +145,32 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
       toast.error((e as Error).message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function applyQuickAction(action: QuickAction) {
+    if (!block || acting) return;
+    if (action.confirmMsg && !confirm(action.confirmMsg)) return;
+    setActing(action.to);
+    try {
+      const res = await fetch(`/api/appointments/${block.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: action.to }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "No se pudo actualizar");
+      toast.success(
+        action.to === AppointmentStatus.COMPLETED
+          ? "Cita completada"
+          : `Cita: ${APPOINTMENT_STATUS_LABELS[action.to]}`,
+      );
+      router.refresh();
+      onClose();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setActing(null);
     }
   }
 
@@ -159,6 +240,26 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
                     <div className="mt-0.5 text-sm font-medium">
                       {APPOINTMENT_STATUS_LABELS[block.status]}
                     </div>
+                    {(QUICK_ACTIONS[block.status]?.length ?? 0) > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {QUICK_ACTIONS[block.status]!.map((a) => (
+                          <Button
+                            key={a.to}
+                            size="sm"
+                            variant={a.variant ?? "default"}
+                            onClick={() => applyQuickAction(a)}
+                            disabled={acting !== null}
+                          >
+                            {acting === a.to ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              a.icon
+                            )}
+                            {a.label}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {block.notes && (
                     <div className="rounded-md bg-muted/40 px-3 py-2">
@@ -217,7 +318,7 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
                       <Button
                         variant="ghost"
                         onClick={cancelAppointment}
-                        disabled={cancelling}
+                        disabled={cancelling || acting !== null}
                         className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950"
                       >
                         {cancelling ? (
@@ -228,7 +329,11 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
                         Cancelar cita
                       </Button>
                     )}
-                  <Button onClick={() => setEditing(true)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditing(true)}
+                    disabled={acting !== null}
+                  >
                     <Pencil className="h-4 w-4" />
                     Editar
                   </Button>
