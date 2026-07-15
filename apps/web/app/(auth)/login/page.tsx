@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button, Input, Label } from "@navaxa/ui";
-import { Loader2 } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -89,8 +88,8 @@ function LoginForm() {
             {error}
           </p>
         )}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+        <Button type="submit" className="w-full" loading={loading}>
+          
           Iniciar sesión
         </Button>
       </form>

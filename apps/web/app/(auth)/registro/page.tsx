@@ -7,7 +7,6 @@ import { signIn } from "next-auth/react";
 import { Button, Input, Label } from "@navaxa/ui";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -121,8 +120,8 @@ export default function RegistroPage() {
             {error}
           </p>
         )}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+        <Button type="submit" className="w-full" loading={loading}>
+          
           Crear barbería
         </Button>
       </form>

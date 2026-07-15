@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { Button, Input, Label, Textarea, Card } from "@navaxa/ui";
 import { toast } from "sonner";
 import { BarberAvatar } from "@/components/barbers/barber-avatar";
@@ -102,8 +101,8 @@ export function BarberProfileForm(props: Props) {
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={save} disabled={saving}>
-          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+        <Button onClick={save} loading={saving}>
+          
           Guardar cambios
         </Button>
       </div>

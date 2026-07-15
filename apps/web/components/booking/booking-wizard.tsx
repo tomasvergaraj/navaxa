@@ -621,8 +621,8 @@ export function BookingWizard({
           <ChevronLeft className="h-4 w-4" /> Atrás
         </Button>
         {step === 3 && (
-          <Button type="submit" form="booking-form" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Button type="submit" form="booking-form" loading={submitting}>
+            
             {depositDue > 0 ? `Continuar al pago (${formatCLP(depositDue)})` : "Confirmar reserva"}
           </Button>
         )}

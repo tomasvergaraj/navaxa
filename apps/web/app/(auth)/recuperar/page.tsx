@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button, Input, Label } from "@navaxa/ui";
-import { Loader2, MailCheck } from "lucide-react";
+import { MailCheck } from "lucide-react";
 
 export default function RecuperarPage() {
   const [email, setEmail] = useState("");
@@ -76,8 +76,8 @@ export default function RecuperarPage() {
             {error}
           </p>
         )}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+        <Button type="submit" className="w-full" loading={loading}>
+          
           Enviar enlace
         </Button>
       </form>

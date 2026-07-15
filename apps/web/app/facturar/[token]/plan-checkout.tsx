@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@navaxa/ui";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 
 export function PlanCheckout({
   token,
@@ -37,8 +36,8 @@ export function PlanCheckout({
 
   return (
     <div className="mt-6 space-y-2">
-      <Button className="w-full" onClick={pay} disabled={loading}>
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      <Button className="w-full" onClick={pay} loading={loading}>
+        
         Pagar {priceLabel}{priceSuffix}
       </Button>
       <Button
