@@ -35,8 +35,12 @@ export function parsePeriod(sp: { range?: string; from?: string; to?: string }):
 
   if (sp.from && sp.to) {
     const from = startOfDay(new Date(sp.from));
-    const to = endOfDay(new Date(sp.to));
+    let to = endOfDay(new Date(sp.to));
     if (!Number.isNaN(from.getTime()) && !Number.isNaN(to.getTime()) && from <= to) {
+      // Tope de 366 días: el reporte hace findMany del rango completo y un
+      // rango arbitrario de años viola la regla de paginación de COSTS.md.
+      const MAX_MS = 366 * 24 * 60 * 60 * 1000;
+      if (+to - +from > MAX_MS) to = endOfDay(new Date(+from + MAX_MS));
       return { from, to, bucket: pickBucket(from, to), rangeKey: "custom" };
     }
   }

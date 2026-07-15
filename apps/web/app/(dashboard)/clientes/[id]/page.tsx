@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, Card } from "@navaxa/ui";
 import { Phone, Mail, ArrowLeft } from "lucide-react";
+import { APPOINTMENT_STATUS_LABELS } from "@navaxa/config";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
 import { scopedDb } from "@/lib/tenant";
 import { AIRecommendationCard } from "@/components/ai-recommendation-card";
@@ -183,6 +184,7 @@ export default async function ClientePage({ params }: PageProps) {
                       <th className="px-4 py-3 text-left font-medium">Fecha</th>
                       <th className="px-4 py-3 text-left font-medium">Barbero</th>
                       <th className="px-4 py-3 text-left font-medium">Servicios</th>
+                      <th className="px-4 py-3 text-left font-medium">Estado</th>
                       <th className="px-4 py-3 text-right font-medium">Total</th>
                     </tr>
                   </thead>
@@ -193,6 +195,20 @@ export default async function ClientePage({ params }: PageProps) {
                         <td className="px-4 py-3">{a.barber.user.name}</td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {a.services.map((s) => s.service.name).join(", ")}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            variant={
+                              a.status === "COMPLETED"
+                                ? "success"
+                                : a.status === "CANCELLED" || a.status === "NO_SHOW"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                            className="text-xs"
+                          >
+                            {APPOINTMENT_STATUS_LABELS[a.status]}
+                          </Badge>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           {formatCLP(a.totalPrice)}
