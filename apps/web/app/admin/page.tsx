@@ -20,24 +20,34 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELED: "border-zinc-400 text-zinc-700 dark:text-zinc-300",
 };
 
-export default async function AdminIndex() {
-  // No usa scopedDb: el panel super admin opera cross-tenant.
-  const tenants = await prisma.tenant.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      subscription: {
-        select: { plan: true, status: true, currentPeriodEnd: true, provider: true },
+const PAGE_SIZE = 50;
+
+export default async function AdminIndex({ searchParams }: { searchParams: { page?: string } }) {
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  // No usa scopedDb: el panel super admin opera cross-tenant. Paginado: la
+  // lista crece con el negocio (regla COSTS.md).
+  const [tenants, total] = await Promise.all([
+    prisma.tenant.findMany({
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: {
+        subscription: {
+          select: { plan: true, status: true, currentPeriodEnd: true, provider: true },
+        },
+        _count: { select: { users: true, clients: true, appointments: true } },
       },
-      _count: { select: { users: true, clients: true, appointments: true } },
-    },
-  });
+    }),
+    prisma.tenant.count(),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="container max-w-6xl py-8">
       <header className="mb-6">
         <h1 className="font-display text-3xl font-medium tracking-tight">Barberías</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {formatNumber(tenants.length)} tenants registrados en la plataforma.
+          {formatNumber(total)} tenants registrados en la plataforma.
         </p>
       </header>
 
@@ -127,6 +137,26 @@ export default async function AdminIndex() {
         </table>
 </div>
       </Card>
+
+      {totalPages > 1 && (
+        <nav className="mt-4 flex items-center justify-between text-sm" aria-label="Paginación">
+          <span className="text-muted-foreground">
+            Página {page} de {totalPages}
+          </span>
+          <div className="flex gap-2">
+            {page > 1 && (
+              <Link href={`/admin?page=${page - 1}`} className="rounded-md border border-border px-3 py-1.5 hover:bg-muted">
+                Anterior
+              </Link>
+            )}
+            {page < totalPages && (
+              <Link href={`/admin?page=${page + 1}`} className="rounded-md border border-border px-3 py-1.5 hover:bg-muted">
+                Siguiente
+              </Link>
+            )}
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

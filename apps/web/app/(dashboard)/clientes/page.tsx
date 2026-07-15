@@ -10,12 +10,15 @@ import { formatCLP, formatRelative } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: { q?: string };
+  searchParams: { q?: string; page?: string };
 }
+
+const PAGE_SIZE = 50;
 
 export default async function ClientesPage({ searchParams }: PageProps) {
   const db = scopedDb();
   const q = searchParams.q?.trim();
+  const page = Math.max(1, Number(searchParams.page) || 1);
   // Solo el BARBER ve únicamente sus clientes atendidos. Gestión y recepción
   // (STAFF) ven todos los clientes del local.
   const { ownOnly, barberId } = await viewerScope();
@@ -23,23 +26,33 @@ export default async function ClientesPage({ searchParams }: PageProps) {
     ? { appointments: { some: { barberId: barberId ?? "__none__" } } }
     : {};
 
-  const clients = await db.client.findMany({
-    where: {
-      ...ownFilter,
-      ...(q
-        ? {
-            OR: [
-              { firstName: { contains: q, mode: "insensitive" as const } },
-              { lastName: { contains: q, mode: "insensitive" as const } },
-              { phone: { contains: q } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { lastVisitAt: { sort: "desc", nulls: "last" } },
-    take: 100,
-    include: { _count: { select: { haircuts: true } } },
-  });
+  const where = {
+    ...ownFilter,
+    ...(q
+      ? {
+          OR: [
+            { firstName: { contains: q, mode: "insensitive" as const } },
+            { lastName: { contains: q, mode: "insensitive" as const } },
+            { phone: { contains: q } },
+          ],
+        }
+      : {}),
+  };
+
+  // Paginado real + count: antes se truncaba a 100 en silencio y el header
+  // mostraba "100 clientes" aunque hubiera más.
+  const [clients, total] = await Promise.all([
+    db.client.findMany({
+      where,
+      orderBy: { lastVisitAt: { sort: "desc", nulls: "last" } },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: { _count: { select: { haircuts: true } } },
+    }),
+    db.client.count({ where }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageHref = (p: number) => `/clientes?${new URLSearchParams({ ...(q ? { q } : {}), page: String(p) })}`;
 
   return (
     <div className="container max-w-7xl py-8">
@@ -47,8 +60,8 @@ export default async function ClientesPage({ searchParams }: PageProps) {
         <div>
           <h1 className="font-display text-3xl font-medium tracking-tight">Clientes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {clients.length} cliente{clients.length === 1 ? "" : "s"} registrado
-            {clients.length === 1 ? "" : "s"}
+            {total} cliente{total === 1 ? "" : "s"} {q ? "encontrado" : "registrado"}
+            {total === 1 ? "" : "s"}
           </p>
         </div>
         <NewClientButton />
@@ -129,6 +142,34 @@ export default async function ClientesPage({ searchParams }: PageProps) {
           </table>
           </div>
         </Card>
+      )}
+
+      {totalPages > 1 && (
+        <nav className="mt-4 flex items-center justify-between text-sm" aria-label="Paginación">
+          <span className="text-muted-foreground">
+            Página {page} de {totalPages} · {total} clientes
+          </span>
+          <div className="flex gap-2">
+            {page > 1 ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={pageHref(page - 1)}>Anterior</Link>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" disabled>
+                Anterior
+              </Button>
+            )}
+            {page < totalPages ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={pageHref(page + 1)}>Siguiente</Link>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" disabled>
+                Siguiente
+              </Button>
+            )}
+          </div>
+        </nav>
       )}
     </div>
   );

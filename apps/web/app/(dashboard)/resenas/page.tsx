@@ -14,11 +14,18 @@ import type { GoogleReview } from "@/lib/google-reviews";
 
 export const dynamic = "force-dynamic";
 
-export default async function ResenasPage() {
+const PAGE_SIZE = 30;
+
+export default async function ResenasPage({
+  searchParams,
+}: {
+  searchParams: { page?: string };
+}) {
   const { tenantId } = requireManagerPage();
   const db = scopedDb();
+  const page = Math.max(1, Number(searchParams.page) || 1);
 
-  const [tenant, reviews, agg] = await Promise.all([
+  const [tenant, reviews, agg, totalReviews] = await Promise.all([
     // Tenant no lleva tenantId → prisma directo, no scopedDb.
     prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -34,7 +41,8 @@ export default async function ResenasPage() {
     }),
     db.review.findMany({
       orderBy: { createdAt: "desc" },
-      take: 100,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
       select: {
         id: true,
         rating: true,
@@ -46,8 +54,10 @@ export default async function ResenasPage() {
       },
     }),
     db.review.aggregate({ where: { hidden: false }, _avg: { rating: true }, _count: true }),
+    db.review.count(),
   ]);
 
+  const totalPages = Math.max(1, Math.ceil(totalReviews / PAGE_SIZE));
   const avg = agg._avg.rating ?? 0;
   const visibleCount = agg._count;
   const googleReviews = ((tenant?.googleReviews ?? []) as unknown as GoogleReview[]).filter(
@@ -195,6 +205,32 @@ export default async function ResenasPage() {
               </Card>
             ))}
           </div>
+        )}
+
+        {totalPages > 1 && (
+          <nav className="mt-4 flex items-center justify-between text-sm" aria-label="Paginación">
+            <span className="text-muted-foreground">
+              Página {page} de {totalPages} · {totalReviews} reseñas
+            </span>
+            <div className="flex gap-2">
+              {page > 1 && (
+                <Link
+                  href={`/resenas?page=${page - 1}`}
+                  className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
+                >
+                  Anterior
+                </Link>
+              )}
+              {page < totalPages && (
+                <Link
+                  href={`/resenas?page=${page + 1}`}
+                  className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
+                >
+                  Siguiente
+                </Link>
+              )}
+            </div>
+          </nav>
         )}
       </section>
     </div>
