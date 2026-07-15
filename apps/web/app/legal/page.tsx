@@ -40,8 +40,7 @@ export default function LegalPage() {
         <h1 className="font-display text-3xl font-medium tracking-tight">Legal</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Términos de servicio y política de privacidad de <strong>navaxa</strong>, un servicio de{" "}
-          <strong>Nexo Software SpA</strong>, RUT 78.397.017-1, Chile ("Nexo Software",
-          "nosotros"). Última actualización: {VIGENCIA}.
+          <strong>Nexo Software SpA</strong>, RUT 78.397.017-1, Chile («Nexo Software», «nosotros»). Última actualización: {VIGENCIA}.
         </p>
 
         <section className="space-y-4 text-sm leading-relaxed text-muted-foreground [&_strong]:text-foreground">
@@ -52,7 +51,7 @@ export default function LegalPage() {
             navaxa es una plataforma en línea (SaaS) para la gestión de barberías y negocios
             similares: agenda y reservas online, ficha de clientes, historial de cortes,
             comisiones, reportes, notificaciones a clientes y funcionalidades de marketing. El
-            servicio se contrata por suscripción y se entrega "tal cual", con actualizaciones
+            servicio se contrata por suscripción y se entrega «tal cual», con actualizaciones
             periódicas. Podemos agregar, modificar o retirar funcionalidades para mejorar el
             producto; si un cambio reduce de forma sustancial lo contratado, te lo avisaremos con
             anticipación razonable.
