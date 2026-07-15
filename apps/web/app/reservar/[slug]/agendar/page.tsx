@@ -66,6 +66,11 @@ export default async function AgendarPage({
           currency={tenant.currency}
           timezone={tenant.timezone ?? "America/Santiago"}
           presetServiceId={service.id}
+          deposit={
+            tenant.paymentsEnabled && tenant.depositType !== "NONE"
+              ? { type: tenant.depositType, value: tenant.depositValue }
+              : null
+          }
         />
       </main>
 

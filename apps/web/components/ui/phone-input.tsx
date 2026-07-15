@@ -103,7 +103,7 @@ export function PhoneInput({
   return (
     <div className="flex gap-2">
       <Select value={code} onValueChange={onCountry}>
-        <SelectTrigger className="w-[112px] shrink-0">
+        <SelectTrigger className="w-[112px] shrink-0" aria-label="Código de país">
           <div className="flex items-center gap-1.5">
             <SelectedFlag className="h-3.5 w-5 shrink-0 rounded-[2px]" />
             <span className="text-sm">{country.dial}</span>
@@ -128,6 +128,7 @@ export function PhoneInput({
         id={id}
         type="tel"
         inputMode="numeric"
+        autoComplete="tel-national"
         placeholder={placeholder}
         value={local}
         onChange={(e) => onLocal(e.target.value)}

@@ -109,6 +109,20 @@ export default async function PagarPage({ params }: { params: { token: string } 
         <span className="font-display text-2xl font-medium">{formatCLP(payment.amount)}</span>
       </div>
 
+      {/* Deadline: la hora se libera en silencio al expirar — hacerlo visible. */}
+      <p className="mt-2 text-xs text-muted-foreground">
+        Tienes hasta las{" "}
+        <strong className="text-foreground">
+          {new Intl.DateTimeFormat("es-CL", {
+            timeZone: tenant.timezone ?? "America/Santiago",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }).format(payment.expiresAt)}
+        </strong>{" "}
+        para pagar; si no, la hora se libera automáticamente.
+      </p>
+
       {payment.provider === "webpay" && payment.providerRef ? (
         <WebpayCheckout
           token={params.token}

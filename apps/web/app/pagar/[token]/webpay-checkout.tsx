@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@navaxa/ui";
 import { Loader2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 /**
  * Checkout para Webpay Plus: hace POST nativo del formulario a Transbank con
@@ -23,6 +24,7 @@ export function WebpayCheckout({
   webpayToken: string;
 }) {
   const router = useRouter();
+  const { confirm, confirmDialog } = useConfirm();
   const formRef = useRef<HTMLFormElement>(null);
   const [loading, setLoading] = useState<"pay" | "cancel" | null>(null);
 
@@ -34,6 +36,15 @@ export function WebpayCheckout({
   }
 
   async function cancel() {
+    // Cancelar acá libera la hora de forma irreversible: pedir confirmación.
+    const ok = await confirm({
+      title: "¿Cancelar la reserva?",
+      description: "Se libera tu hora y otra persona puede tomarla. Esta acción no se puede deshacer.",
+      confirmText: "Sí, cancelar reserva",
+      cancelText: "Volver al pago",
+      destructive: true,
+    });
+    if (!ok) return;
     setLoading("cancel");
     try {
       await fetch(`/api/public/pay/${token}/cancel`, { method: "POST" });
@@ -44,6 +55,7 @@ export function WebpayCheckout({
 
   return (
     <div className="mt-6 space-y-2">
+      {confirmDialog}
       <form ref={formRef} method="POST" action={formAction} onSubmit={onSubmit}>
         <input type="hidden" name="token_ws" value={webpayToken} />
         <Button type="submit" className="w-full" disabled={loading !== null}>
@@ -59,7 +71,7 @@ export function WebpayCheckout({
         disabled={loading !== null}
       >
         {loading === "cancel" && <Loader2 className="h-4 w-4 animate-spin" />}
-        Cancelar
+        Cancelar reserva y liberar la hora
       </Button>
       <p className="mt-2 text-center text-[11px] text-muted-foreground">
         Pago seguro procesado por Webpay Plus de Transbank.

@@ -61,16 +61,34 @@ async function apiJson(path: string, init?: RequestInit) {
   return data;
 }
 
+/** Réplica cliente de computeDeposit (lib/payments.ts importa Prisma, no se puede usar acá). */
+function depositAmountFor(total: number, deposit?: DepositInfo | null): number {
+  if (!deposit) return 0;
+  if (deposit.type === "FIXED") return Math.min(Math.max(0, Math.round(deposit.value)), total);
+  if (deposit.type === "PERCENT") {
+    const pct = Math.min(100, Math.max(0, deposit.value));
+    return Math.round((total * pct) / 100);
+  }
+  return 0;
+}
+
+export interface DepositInfo {
+  type: "FIXED" | "PERCENT";
+  value: number;
+}
+
 export function BookingWizard({
   slug,
   currency: _currency,
   timezone,
   presetServiceId,
+  deposit,
 }: {
   slug: string;
   currency: string;
   timezone: string;
   presetServiceId?: string;
+  deposit?: DepositInfo | null;
 }) {
   const base = `/api/public/${slug}`;
   const minStep: Step = presetServiceId ? 1 : 0;
@@ -78,26 +96,36 @@ export function BookingWizard({
   const [step, setStep] = useState<Step>(minStep);
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [catalog, setCatalog] = useState<"loading" | "ready" | "error">("loading");
   const [selectedServices, setSelectedServices] = useState<string[]>(
     presetServiceId ? [presetServiceId] : [],
   );
   const [barberChoice, setBarberChoice] = useState<string | "any" | null>(null);
-  const [day, setDay] = useState<Date | null>(null);
+  const [day, setDay] = useState<string | null>(null); // YYYY-MM-DD en TZ del local
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", email: "" });
+  const [fieldErrors, setFieldErrors] = useState<{ firstName?: string; phone?: string; email?: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<BookResult | null>(null);
 
-  // Carga inicial de servicios y barberos.
+  // Carga inicial de servicios y barberos, con estado de error + reintento
+  // (antes un fallo de red dejaba "Cargando servicios…" para siempre).
+  async function loadCatalog() {
+    setCatalog("loading");
+    try {
+      const [s, b] = await Promise.all([apiJson(`${base}/services`), apiJson(`${base}/barbers`)]);
+      setServices(s.services);
+      setBarbers(b.barbers);
+      setCatalog("ready");
+    } catch {
+      setCatalog("error");
+    }
+  }
   useEffect(() => {
-    apiJson(`${base}/services`)
-      .then((d) => setServices(d.services))
-      .catch((e) => toast.error(e.message));
-    apiJson(`${base}/barbers`)
-      .then((d) => setBarbers(d.barbers))
-      .catch((e) => toast.error(e.message));
+    void loadCatalog();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base]);
 
   const fmtTime = useMemo(
@@ -130,18 +158,28 @@ export function BookingWizard({
     };
   }, [services, selectedServices]);
 
-  // Próximos 14 días.
+  const depositDue = useMemo(
+    () => depositAmountFor(totals.price, deposit),
+    [totals.price, deposit],
+  );
+
+  const barberLabel = useMemo(() => {
+    if (barberChoice === "any") return "Cualquiera disponible";
+    return barbers.find((b) => b.id === barberChoice)?.name ?? "";
+  }, [barberChoice, barbers]);
+
+  // Próximos 14 días como YYYY-MM-DD calculados en la TZ del LOCAL (no la del
+  // dispositivo): un cliente en otra zona veía el número de día corrido.
   const days = useMemo(() => {
-    const out: Date[] = [];
-    const now = new Date();
+    const todayYmd = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
+    const [y, m, d] = todayYmd.split("-").map(Number);
+    const out: string[] = [];
     for (let i = 0; i < 14; i++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() + i);
-      d.setHours(12, 0, 0, 0);
-      out.push(d);
+      const dt = new Date(Date.UTC(y, m - 1, d + i, 12));
+      out.push(dt.toISOString().slice(0, 10));
     }
     return out;
-  }, []);
+  }, [timezone]);
 
   // Selección única + autoavance al paso siguiente.
   function selectService(id: string) {
@@ -160,14 +198,12 @@ export function BookingWizard({
     setStep(2);
   }
 
-  async function loadSlots(forDay: Date) {
+  async function loadSlots(forDay: string) {
     setDay(forDay);
     setSlot(null);
     setLoadingSlots(true);
     try {
-      const iso = `${forDay.getFullYear()}-${String(forDay.getMonth() + 1).padStart(2, "0")}-${String(
-        forDay.getDate(),
-      ).padStart(2, "0")}T12:00:00.000Z`;
+      const iso = `${forDay}T12:00:00.000Z`;
       const d = await apiJson(`${base}/availability`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -182,8 +218,20 @@ export function BookingWizard({
     }
   }
 
-  async function submit() {
-    if (!slot) return;
+  function validateForm(): boolean {
+    const errs: typeof fieldErrors = {};
+    if (!form.firstName.trim()) errs.firstName = "Ingresa tu nombre";
+    if (!form.phone.trim()) errs.phone = "Ingresa tu teléfono para confirmarte la hora";
+    if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim()))
+      errs.email = "Ese email no parece válido";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  async function submit(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!slot || submitting) return;
+    if (!validateForm()) return;
     setSubmitting(true);
     try {
       const d: BookResponse = await apiJson(`${base}/book`, {
@@ -269,11 +317,32 @@ export function BookingWizard({
       </ol>
 
       <div className="rounded-lg border border-border bg-card p-5">
+        {/* Catálogo: cargando / error con reintento (aplica a pasos 1 y 2) */}
+        {catalog === "loading" && step <= 1 && (
+          <p className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
+          </p>
+        )}
+        {catalog === "error" && (
+          <div className="py-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              No pudimos cargar la información. Revisa tu conexión.
+            </p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => void loadCatalog()}>
+              Reintentar
+            </Button>
+          </div>
+        )}
+
         {/* Paso 1: servicios */}
-        {step === 0 && (
+        {step === 0 && catalog === "ready" && (
           <div className="space-y-2">
             <h2 className="mb-3 font-medium">¿Qué te vas a hacer?</h2>
-            {services.length === 0 && <p className="text-sm text-muted-foreground">Cargando servicios…</p>}
+            {services.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Este local aún no tiene servicios disponibles para reservar online.
+              </p>
+            )}
             {services.map((s) => {
               const active = selectedServices.includes(s.id);
               return (
@@ -310,7 +379,7 @@ export function BookingWizard({
         )}
 
         {/* Paso 2: barbero */}
-        {step === 1 && (
+        {step === 1 && catalog === "ready" && (
           <div className="space-y-2">
             <h2 className="mb-3 font-medium">¿Con quién?</h2>
             <button
@@ -361,21 +430,23 @@ export function BookingWizard({
           <div>
             <h2 className="mb-3 font-medium">Elige día y hora</h2>
             <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1">
-              {days.map((d) => {
-                const active = day && d.toDateString() === day.toDateString();
+              {days.map((ymd) => {
+                const active = day === ymd;
+                const noon = new Date(`${ymd}T12:00:00.000Z`);
                 return (
                   <button
-                    key={d.toISOString()}
-                    onClick={() => loadSlots(d)}
+                    key={ymd}
+                    onClick={() => loadSlots(ymd)}
+                    aria-pressed={active}
                     className={cn(
-                      "flex shrink-0 flex-col items-center rounded-md border px-3 py-2 transition-colors",
+                      "flex min-h-[44px] shrink-0 flex-col items-center rounded-md border px-3 py-2 transition-colors",
                       active ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
                     )}
                   >
                     <span className="text-[10px] uppercase">
-                      {new Intl.DateTimeFormat("es-CL", { timeZone: timezone, weekday: "short" }).format(d)}
+                      {new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", weekday: "short" }).format(noon)}
                     </span>
-                    <span className="text-sm font-medium">{d.getDate()}</span>
+                    <span className="text-sm font-medium">{Number(ymd.slice(8, 10))}</span>
                   </button>
                 );
               })}
@@ -402,7 +473,7 @@ export function BookingWizard({
                         setStep(3);
                       }}
                       className={cn(
-                        "rounded-md border py-2 text-sm transition-colors",
+                        "min-h-[44px] rounded-md border py-2 text-sm transition-colors",
                         active ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
                       )}
                     >
@@ -417,30 +488,47 @@ export function BookingWizard({
 
         {/* Paso 4: datos */}
         {step === 3 && (
-          <div className="space-y-4">
+          <form id="booking-form" className="space-y-4" onSubmit={submit} noValidate>
             <h2 className="font-medium">Tus datos</h2>
             <div className="rounded-md bg-muted/50 p-3 text-sm">
               <p className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 {slot && fmtDayLong.format(new Date(slot.startsAt))} · {slot && fmtTime.format(new Date(slot.startsAt))}
+                {barberLabel && <span>· {barberLabel}</span>}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {totals.names.join(" + ")} · {formatDuration(totals.duration)} · {formatCLP(totals.price)}
               </p>
+              {depositDue > 0 && (
+                <p className="mt-2 border-t border-border pt-2 text-xs text-foreground">
+                  Para confirmar esta hora se paga un abono de{" "}
+                  <strong>{formatCLP(depositDue)}</strong> con Webpay. El resto (
+                  {formatCLP(Math.max(0, totals.price - depositDue))}) se paga en el local.
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="firstName">Nombre *</Label>
                 <Input
                   id="firstName"
+                  autoComplete="given-name"
+                  aria-invalid={!!fieldErrors.firstName}
+                  aria-describedby={fieldErrors.firstName ? "firstName-error" : undefined}
                   value={form.firstName}
                   onChange={(e) => setForm({ ...form, firstName: e.target.value })}
                 />
+                {fieldErrors.firstName && (
+                  <p id="firstName-error" className="text-xs text-destructive">
+                    {fieldErrors.firstName}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="lastName">Apellido</Label>
                 <Input
                   id="lastName"
+                  autoComplete="family-name"
                   value={form.lastName}
                   onChange={(e) => setForm({ ...form, lastName: e.target.value })}
                 />
@@ -449,17 +537,27 @@ export function BookingWizard({
             <div className="space-y-1.5">
               <Label htmlFor="phone">Teléfono (WhatsApp) *</Label>
               <PhoneInput id="phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
+              {fieldErrors.phone && <p className="text-xs text-destructive">{fieldErrors.phone}</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="email">Email (opcional)</Label>
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
+                inputMode="email"
+                aria-invalid={!!fieldErrors.email}
+                aria-describedby={fieldErrors.email ? "email-error" : undefined}
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
+              {fieldErrors.email && (
+                <p id="email-error" className="text-xs text-destructive">
+                  {fieldErrors.email}
+                </p>
+              )}
             </div>
-          </div>
+          </form>
         )}
       </div>
 
@@ -473,9 +571,9 @@ export function BookingWizard({
           <ChevronLeft className="h-4 w-4" /> Atrás
         </Button>
         {step === 3 && (
-          <Button onClick={submit} disabled={submitting || !form.firstName.trim() || !form.phone.trim()}>
+          <Button type="submit" form="booking-form" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            Confirmar reserva
+            {depositDue > 0 ? `Continuar al pago (${formatCLP(depositDue)})` : "Confirmar reserva"}
           </Button>
         )}
       </div>
