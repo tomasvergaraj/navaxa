@@ -91,7 +91,10 @@ export default async function FacturarPage({
       });
       webpay = { token: created.token };
     } catch (e) {
-      webpayError = (e as Error).message;
+      // Log interno; al usuario solo un mensaje genérico (el error crudo de la
+      // API de Transbank puede filtrar detalles).
+      console.error("[facturar] Webpay create failed:", e);
+      webpayError = "No pudimos iniciar el pago con Webpay. Intenta de nuevo en unos minutos.";
     }
   }
 

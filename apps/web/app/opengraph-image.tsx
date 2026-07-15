@@ -7,7 +7,13 @@ export const alt = "navaxa — el sistema operativo para barberías";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OgImage() {
+// Fraunces (la display de la marca) embebida: sin esto el preview salía con
+// serif genérica del sistema.
+const frauncesData = fetch(new URL("../assets/fraunces-latin-600.ttf", import.meta.url)).then(
+  (r) => r.arrayBuffer(),
+);
+
+export default async function OgImage() {
   return new ImageResponse(
     (
       <div
@@ -20,7 +26,7 @@ export default function OgImage() {
           padding: "80px",
           backgroundColor: "#0A0B0E",
           color: "#FAFAF7",
-          fontFamily: "serif",
+          fontFamily: "Fraunces",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -42,6 +48,9 @@ export default function OgImage() {
         </div>
       </div>
     ),
-    size,
+    {
+      ...size,
+      fonts: [{ name: "Fraunces", data: await frauncesData, weight: 600, style: "normal" }],
+    },
   );
 }

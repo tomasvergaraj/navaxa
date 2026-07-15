@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -118,6 +118,8 @@ export function BookingWizard({
   const [fieldErrors, setFieldErrors] = useState<{ firstName?: string; phone?: string; email?: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<BookResult | null>(null);
+  const stepCardRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(false);
 
   // Carga inicial de servicios y barberos, con estado de error + reintento
   // (antes un fallo de red dejaba "Cargando servicios…" para siempre).
@@ -142,6 +144,20 @@ export function BookingWizard({
   useEffect(() => {
     if (step === 2 && !day && barberChoice) void loadSlots(days[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // El autoavance cambia el contenido bajo el dedo sin feedback: al cambiar de
+  // paso llevamos el scroll y el foco al card (los lectores de pantalla quedaban
+  // parados en un botón que ya no existe).
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    const el = stepCardRef.current;
+    if (!el) return;
+    el.scrollIntoView({ block: "start", behavior: "smooth" });
+    el.focus({ preventScroll: true });
   }, [step]);
 
   const fmtTime = useMemo(
@@ -350,7 +366,7 @@ export function BookingWizard({
         ))}
       </ol>
 
-      <div className="rounded-lg border border-border bg-card p-5">
+      <div ref={stepCardRef} tabIndex={-1} className="rounded-lg border border-border bg-card p-5 focus:outline-none">
         {/* Catálogo: cargando / error con reintento (aplica a pasos 1 y 2) */}
         {catalog === "loading" && step <= 1 && (
           <p className="flex items-center gap-2 py-4 text-sm text-muted-foreground">

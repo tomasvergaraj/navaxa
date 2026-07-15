@@ -342,7 +342,7 @@ function HeroMock() {
             <span className="text-sm font-medium">Agenda · Hoy</span>
           </div>
           <span className="rounded-full bg-brand-brass/15 px-2 py-0.5 text-xs font-medium text-accent-ink">
-            8 citas
+            {rows.length} citas
           </span>
         </div>
         <div className="divide-y divide-border">
