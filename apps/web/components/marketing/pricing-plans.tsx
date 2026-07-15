@@ -72,7 +72,7 @@ export function PricingPlans() {
                   className="mt-6 w-full"
                   asChild
                 >
-                  <Link href="/registro">Empezar</Link>
+                  <Link href={`/registro?plan=${plan.id.toLowerCase()}&interval=${interval.toLowerCase()}`}>Empezar</Link>
                 </Button>
               </Card>
             </Reveal>

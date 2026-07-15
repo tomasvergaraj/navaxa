@@ -110,10 +110,16 @@ export default function MarketingPage() {
           <Link href="/" className="shrink-0">
             <Logo size={28} />
           </Link>
-          <nav className="flex items-center gap-4 text-sm text-muted-foreground md:gap-8">
-            <a href="#features" className="hidden hover:text-foreground md:inline">Funcionalidades</a>
+          <nav className="flex items-center gap-3 text-sm text-muted-foreground sm:gap-4 md:gap-8">
+            <a href="#features" className="hover:text-foreground">
+              <span className="md:hidden">Funciones</span>
+              <span className="hidden md:inline">Funcionalidades</span>
+            </a>
             <a href="#precios" className="hover:text-foreground">Precios</a>
-            <a href="#faq" className="hidden hover:text-foreground md:inline">Preguntas</a>
+            <a href="#faq" className="hover:text-foreground">
+              <span className="md:hidden">FAQ</span>
+              <span className="hidden md:inline">Preguntas</span>
+            </a>
           </nav>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ThemeToggle />
@@ -133,7 +139,7 @@ export default function MarketingPage() {
           </div>
         </div>
       </header>
-      <main>
+      <main id="main">
 
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border">
@@ -239,7 +245,7 @@ export default function MarketingPage() {
       <section className="border-b border-border">
         <div className="container py-20">
           <Reveal>
-            <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-brand-graphite to-[#16181d] px-6 py-14 text-center text-brand-ivory">
+            <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-brand-graphite to-brand-graphite-soft px-6 py-14 text-center text-brand-ivory">
               <div
                 aria-hidden
                 className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-brand-brass/30 blur-3xl"
@@ -324,10 +330,10 @@ function Faq({ q, a }: { q: string; a: string }) {
 /** Mockup estilizado del producto (agenda del día) para el hero — puro CSS. */
 function HeroMock() {
   const rows = [
-    { t: "10:00", n: "Tomás V.", s: "Corte clásico", c: "bg-emerald-500" },
-    { t: "11:30", n: "Diego R.", s: "Corte + barba", c: "bg-blue-500" },
-    { t: "13:00", n: "Matías P.", s: "Solo barba", c: "bg-violet-500" },
-    { t: "16:00", n: "Joaquín L.", s: "Corte + barba", c: "bg-amber-500" },
+    { t: "10:00", n: "Tomás V.", s: "Corte clásico", c: "bg-brand-graphite text-brand-ivory dark:bg-brand-ivory dark:text-brand-graphite" },
+    { t: "11:30", n: "Diego R.", s: "Corte + barba", c: "bg-accent-ink text-white" },
+    { t: "13:00", n: "Matías P.", s: "Solo barba", c: "bg-brand-brass/25 text-accent-ink" },
+    { t: "16:00", n: "Joaquín L.", s: "Corte + barba", c: "bg-muted text-foreground" },
   ];
   return (
     <div className="relative mx-auto w-full max-w-md animate-float motion-reduce:animate-none">
@@ -351,7 +357,7 @@ function HeroMock() {
               <span className="w-11 text-xs tabular-nums text-muted-foreground">{r.t}</span>
               <span
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium text-white",
+                  "flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium",
                   r.c,
                 )}
               >

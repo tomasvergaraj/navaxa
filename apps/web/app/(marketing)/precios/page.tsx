@@ -27,9 +27,25 @@ const PAYMENT_FAQS = [
   },
 ];
 
+function jsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: PAYMENT_FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+}
+
 export default function PreciosPage() {
   return (
     <div className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
+      />
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
         <div className="container flex h-16 items-center justify-between gap-3">
           <Link href="/" className="shrink-0">
@@ -47,7 +63,7 @@ export default function PreciosPage() {
         </div>
       </header>
 
-      <main className="container py-14">
+      <main id="main" className="container py-14">
         <Link
           href="/"
           className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"

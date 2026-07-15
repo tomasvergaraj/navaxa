@@ -51,6 +51,7 @@ const config: Config = {
         },
         brand: {
           graphite: "#0A0B0E",
+          "graphite-soft": "#16181D",
           brass: "#C9A961",
           "brass-soft": "#E6D4A3",
           ivory: "#FAFAF7",

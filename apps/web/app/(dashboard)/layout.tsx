@@ -43,7 +43,7 @@ export default async function DashboardLayout({
             trialEndsAt={tenant?.trialEndsAt ?? null}
             plan={tenant?.plan ?? "FREE"}
           />
-          <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+          <main id="main" className="min-h-0 flex-1 overflow-y-auto">{children}</main>
         </div>
       </div>
     </AuthSessionProvider>

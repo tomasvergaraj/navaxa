@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@navaxa/db";
 
-// Se resuelve por request (no en build: el build corre sin BD).
-export const dynamic = "force-dynamic";
+// ISR 1h: no golpea la BD en cada hit de bot; en build (sin BD) el catch
+// devuelve la lista base y la primera revalidación en runtime la completa.
+export const revalidate = 3600;
 
 // robots.txt ya anunciaba /sitemap.xml — antes daba 404.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

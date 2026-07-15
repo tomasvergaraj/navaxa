@@ -36,7 +36,7 @@ export default function LegalPage() {
         </div>
       </header>
 
-      <main className="container max-w-3xl py-12">
+      <main id="main" className="container max-w-3xl py-12">
         <h1 className="font-display text-3xl font-medium tracking-tight">Legal</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Términos de servicio y política de privacidad de <strong>navaxa</strong>, un servicio de{" "}

@@ -60,6 +60,14 @@ export default function RootLayout({
   return (
     <html lang="es-CL" suppressHydrationWarning className="scroll-smooth">
       <body className={`${inter.variable} ${fraunces.variable} font-sans antialiased`}>
+        {/* Skip-link: visible solo con foco de teclado. Las páginas marcan su
+            contenido con id="main". */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:shadow-lg focus:ring-2 focus:ring-ring"
+        >
+          Saltar al contenido
+        </a>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
