@@ -86,6 +86,7 @@ export function BookingWizard({
   deposit,
   initialServices,
   initialBarbers,
+  weekdaysByBarber,
 }: {
   slug: string;
   currency: string;
@@ -95,6 +96,8 @@ export function BookingWizard({
   // Catálogo pre-resuelto por el Server Component (evita el fetch al montar).
   initialServices?: Service[];
   initialBarbers?: Barber[];
+  // Días de la semana (0=dom) con horario por barbero: atenúa días cerrados.
+  weekdaysByBarber?: Record<string, number[]>;
 }) {
   const base = `/api/public/${slug}`;
   const minStep: Step = presetServiceId ? 1 : 0;
@@ -142,7 +145,12 @@ export function BookingWizard({
   // Al llegar al paso de hora, precarga las horas del primer día: antes el
   // cliente probaba día por día a ciegas ("No hay horas ese día" repetido).
   useEffect(() => {
-    if (step === 2 && !day && barberChoice) void loadSlots(days[0]);
+    if (step !== 2 || day || !barberChoice) return;
+    const first =
+      openWeekdays === null
+        ? days[0]
+        : days.find((ymd) => openWeekdays.has(new Date(`${ymd}T12:00:00.000Z`).getUTCDay()));
+    if (first) void loadSlots(first);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
@@ -199,6 +207,16 @@ export function BookingWizard({
     if (barberChoice === "any") return "Cualquiera disponible";
     return barbers.find((b) => b.id === barberChoice)?.name ?? "";
   }, [barberChoice, barbers]);
+
+  // Weekdays con atención para la elección actual ("any" = unión de todos).
+  const openWeekdays = useMemo(() => {
+    if (!weekdaysByBarber) return null; // sin dato: no atenuar nada
+    const sets =
+      barberChoice && barberChoice !== "any"
+        ? [weekdaysByBarber[barberChoice] ?? []]
+        : Object.values(weekdaysByBarber);
+    return new Set(sets.flat());
+  }, [weekdaysByBarber, barberChoice]);
 
   // Próximos 14 días como YYYY-MM-DD calculados en la TZ del LOCAL (no la del
   // dispositivo): un cliente en otra zona veía el número de día corrido.
@@ -272,7 +290,16 @@ export function BookingWizard({
   async function submit(e?: React.FormEvent) {
     e?.preventDefault();
     if (!slot || submitting) return;
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      // Lleva el foco al primer campo con error (en móvil el mensaje puede
+      // quedar fuera del viewport y el submit parecía "no hacer nada").
+      requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>('#booking-form [aria-invalid="true"]');
+        el?.focus();
+        el?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+      return;
+    }
     setSubmitting(true);
     try {
       const d: BookResponse = await apiJson(`${base}/book`, {
@@ -489,14 +516,21 @@ export function BookingWizard({
               {days.map((ymd) => {
                 const active = day === ymd;
                 const noon = new Date(`${ymd}T12:00:00.000Z`);
+                const closed = openWeekdays !== null && !openWeekdays.has(noon.getUTCDay());
                 return (
                   <button
                     key={ymd}
                     onClick={() => loadSlots(ymd)}
                     aria-pressed={active}
+                    disabled={closed}
+                    title={closed ? "Cerrado ese día" : undefined}
                     className={cn(
                       "flex min-h-[44px] shrink-0 flex-col items-center rounded-md border px-3 py-2 transition-colors",
-                      active ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
+                      active
+                        ? "border-foreground bg-foreground text-background"
+                        : closed
+                          ? "cursor-not-allowed border-border opacity-35"
+                          : "border-border hover:bg-muted",
                     )}
                   >
                     <span className="text-[10px] uppercase">

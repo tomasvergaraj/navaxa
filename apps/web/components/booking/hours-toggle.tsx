@@ -30,6 +30,7 @@ export function HoursToggle({ hours, timezone }: { hours: DayHours[]; timezone: 
     <div>
       <button
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
         className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <Clock className="h-4 w-4" />

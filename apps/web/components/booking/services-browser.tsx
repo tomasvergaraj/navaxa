@@ -64,6 +64,8 @@ export function ServicesBrowser({ slug, services }: { slug: string; services: Se
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           className="pl-8"
+          type="search"
+          aria-label="Buscar servicio"
           placeholder="¿Qué servicio buscas?"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -101,6 +103,7 @@ export function ServicesBrowser({ slug, services }: { slug: string; services: Se
             <div key={cat} className="space-y-3">
               <button
                 onClick={() => toggle(cat)}
+                aria-expanded={!isCollapsed}
                 className="flex w-full items-center justify-between border-b border-border pb-2 text-left"
               >
                 <span className="font-medium">{cat}</span>

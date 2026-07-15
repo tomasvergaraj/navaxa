@@ -81,7 +81,7 @@ export function HaircutRatingForm({ token, firstName, barberName, style, initial
         {style ? ` · ${style}` : ""}.
       </p>
       <div className="mt-6 flex justify-center">
-        <StarRating value={rating} onChange={submit} />
+        <StarRating value={rating} onChange={submit} disabled={saving} />
       </div>
       <p className="mt-4 text-xs text-muted-foreground">
         {saving ? (

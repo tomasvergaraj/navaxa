@@ -57,10 +57,12 @@ export default async function ResenaPage({ params }: { params: { token: string }
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center text-center">
           {appt.tenant.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={appt.tenant.logoUrl}
               alt={appt.tenant.name}
+              width={56}
+              height={56}
+              sizes="56px"
               className="h-14 w-14 rounded-2xl border border-border object-cover"
             />
           ) : (

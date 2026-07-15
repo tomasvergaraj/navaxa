@@ -404,7 +404,7 @@ export function ManageBooking({ token }: { token: string }) {
                   key={s.startsAt}
                   onClick={() => reschedule(s.startsAt)}
                   disabled={working}
-                  className="rounded-md border border-border py-2 text-sm transition-colors hover:bg-muted disabled:opacity-50"
+                  className="min-h-[44px] rounded-md border border-border py-2 text-sm transition-colors hover:bg-muted disabled:opacity-50"
                 >
                   {fmt.time.format(new Date(s.startsAt))}
                 </button>

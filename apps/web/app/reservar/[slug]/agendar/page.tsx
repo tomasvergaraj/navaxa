@@ -45,7 +45,13 @@ export default async function AgendarPage({
     }),
     prisma.barber.findMany({
       where: { tenantId: tenant.id, active: true },
-      select: { id: true, avatarUrl: true, specialties: true, user: { select: { name: true } } },
+      select: {
+        id: true,
+        avatarUrl: true,
+        specialties: true,
+        user: { select: { name: true } },
+        schedule: { select: { weekday: true } },
+      },
       orderBy: { createdAt: "asc" },
     }),
   ]);
@@ -55,6 +61,12 @@ export default async function AgendarPage({
     avatarUrl: b.avatarUrl,
     specialties: b.specialties,
   }));
+  // Días de la semana en que cada barbero atiende: el wizard atenúa los días
+  // sin horario para que el cliente no tapee a ciegas ("No hay horas ese día").
+  const weekdaysByBarber: Record<string, number[]> = {};
+  for (const b of barbersRaw) {
+    weekdaysByBarber[b.id] = [...new Set(b.schedule.map((sc) => sc.weekday))];
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -89,6 +101,7 @@ export default async function AgendarPage({
           presetServiceId={service.id}
           initialServices={services}
           initialBarbers={barbers}
+          weekdaysByBarber={weekdaysByBarber}
           deposit={
             tenant.paymentsEnabled && tenant.depositType !== "NONE"
               ? { type: tenant.depositType, value: tenant.depositValue }
