@@ -120,7 +120,7 @@ export async function loadAppointmentByToken(token: string) {
       barber: { include: { user: { select: { name: true } } } },
       client: { select: { firstName: true, phone: true, email: true } },
       services: { include: { service: { select: { id: true, name: true, price: true, durationMin: true } } } },
-      payment: { select: { amount: true, status: true, paidAt: true } },
+      payment: { select: { id: true, amount: true, status: true, paidAt: true, expiresAt: true } },
     },
   });
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadAppointmentByToken } from "@/lib/public-booking";
+import { signPaymentToken } from "@/lib/payments";
 import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,15 @@ export async function GET(_req: Request, { params }: { params: { token: string }
         timezone: appt.tenant.timezone ?? "America/Santiago",
         // Abono: monto y estado (para mostrar abono pagado + saldo en el local).
         deposit: appt.payment ? { amount: appt.payment.amount, status: appt.payment.status } : null,
+        // Si el abono sigue pendiente y no expiró, damos el link para completar
+        // el pago (antes PENDING_PAYMENT era un callejón sin salida si el
+        // cliente perdía el email/WhatsApp con el checkout).
+        payToken:
+          appt.status === "PENDING_PAYMENT" &&
+          appt.payment?.status === "PENDING" &&
+          appt.payment.expiresAt > new Date()
+            ? signPaymentToken(appt.payment.id)
+            : null,
       },
     });
   } catch (e) {

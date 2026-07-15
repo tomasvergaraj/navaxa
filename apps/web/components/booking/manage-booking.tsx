@@ -19,6 +19,7 @@ interface Appointment {
   durationMin: number;
   serviceIds: string[];
   services: { name: string; price: number }[];
+  payToken?: string | null;
   slug: string;
   shopName: string;
   address: string | null;
@@ -196,6 +197,14 @@ export function ManageBooking({ token }: { token: string }) {
   }
 
   async function reschedule(startsAt: string) {
+    // Antes se ejecutaba al primer tap en el slot: un mis-tap reprogramaba la cita.
+    const ok = await confirm({
+      title: "¿Cambiar tu hora?",
+      description: `Tu cita quedará para el ${fmt.dayLong.format(new Date(startsAt))} a las ${fmt.time.format(new Date(startsAt))}.`,
+      confirmText: "Sí, cambiar hora",
+      cancelText: "Volver",
+    });
+    if (!ok) return;
     setWorking(true);
     try {
       await apiJson(`/api/public/manage/${token}/reschedule`, {
@@ -284,6 +293,18 @@ export function ManageBooking({ token }: { token: string }) {
             referrerPolicy="no-referrer-when-downgrade"
             src={`https://www.google.com/maps?q=${encodeURIComponent(appt.address)}&output=embed`}
           />
+        )}
+
+        {appt.payToken && (
+          <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+            <p>
+              Tu hora aún no está confirmada: falta pagar el abono de{" "}
+              <strong>{appt.deposit ? formatCLP(appt.deposit.amount) : ""}</strong>.
+            </p>
+            <Button asChild size="sm" className="mt-2">
+              <a href={`/pagar/${appt.payToken}`}>Completar pago</a>
+            </Button>
+          </div>
         )}
 
         {appt.deposit && appt.deposit.status === "PAID" && (
