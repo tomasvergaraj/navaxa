@@ -75,7 +75,10 @@ export function AgendaWeek({ capacity }: { capacity: WeekCapacity }) {
                     style={
                       closed
                         ? undefined
-                        : { backgroundColor: `rgba(16, 185, 129, ${0.1 + cell.pct * 0.55})` }
+                        : // Tinte de ocupación sobre el token accent-ink (antes era un
+                          // emerald rgba hardcodeado, fuera del sistema y con texto
+                          // ilegible en dark con ocupación alta).
+                          { backgroundColor: `hsl(var(--accent-ink) / ${(0.08 + cell.pct * 0.45).toFixed(2)})` }
                     }
                   >
                     {closed ? (
@@ -83,7 +86,7 @@ export function AgendaWeek({ capacity }: { capacity: WeekCapacity }) {
                     ) : (
                       <>
                         <span className="font-medium tabular-nums">{pct}%</span>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-[10px] text-foreground/70">
                           {cell.count} cita{cell.count === 1 ? "" : "s"}
                         </span>
                       </>

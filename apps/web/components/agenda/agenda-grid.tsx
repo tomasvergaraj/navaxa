@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -120,31 +120,34 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
   const [actingId, setActingId] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
 
-  async function quickFromMenu(block: GridBlock, action: QuickAction) {
-    if (actingId) return;
-    if (
-      action.confirmMsg &&
-      !(await confirm({
-        title: action.confirmMsg,
-        description: `${block.clientName} · ${fmtMin(block.startMin)}`,
-        confirmText: action.label,
-        destructive: action.to === "NO_SHOW",
-      }))
-    )
-      return;
-    setActingId(block.id);
-    try {
-      await patchAppointmentStatus(block.id, action.to);
-      toast.success(
-        action.to === "COMPLETED" ? "Cita completada" : `Cita: ${APPOINTMENT_STATUS_LABELS[action.to]}`,
-      );
-      router.refresh();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setActingId(null);
-    }
-  }
+  const quickFromMenu = useCallback(
+    async (block: GridBlock, action: QuickAction) => {
+      if (actingId) return;
+      if (
+        action.confirmMsg &&
+        !(await confirm({
+          title: action.confirmMsg,
+          description: `${block.clientName} · ${fmtMin(block.startMin)}`,
+          confirmText: action.label,
+          destructive: action.to === "NO_SHOW",
+        }))
+      )
+        return;
+      setActingId(block.id);
+      try {
+        await patchAppointmentStatus(block.id, action.to);
+        toast.success(
+          action.to === "COMPLETED" ? "Cita completada" : `Cita: ${APPOINTMENT_STATUS_LABELS[action.to]}`,
+        );
+        router.refresh();
+      } catch (e) {
+        toast.error((e as Error).message);
+      } finally {
+        setActingId(null);
+      }
+    },
+    [actingId, confirm, router],
+  );
 
   const hours = useMemo(() => {
     const out: number[] = [];
@@ -390,22 +393,42 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
     [onPointerMove, endDrag, preventTouchScroll],
   );
 
-  function openCreateAt(barberId: string, clientY: number) {
-    const wrap = columnsRef.current;
-    if (!wrap) return;
-    const rect = wrap.getBoundingClientRect();
-    let min = startMin + (clientY - rect.top) / PX_PER_MIN;
-    min = clamp(Math.round(min / SNAP_MIN) * SNAP_MIN, startMin, endMin - SNAP_MIN);
-    setPreset({ barberId, startIso: isoFromMin(min) });
-    setCreateOpen(true);
-  }
+  const openCreateAt = useCallback(
+    (barberId: string, clientY: number) => {
+      if (suppressClickRef.current) return;
+      const wrap = columnsRef.current;
+      if (!wrap) return;
+      const rect = wrap.getBoundingClientRect();
+      let min = startMin + (clientY - rect.top) / PX_PER_MIN;
+      min = clamp(Math.round(min / SNAP_MIN) * SNAP_MIN, startMin, endMin - SNAP_MIN);
+      setPreset({ barberId, startIso: isoFromMin(min) });
+      setCreateOpen(true);
+    },
+    [startMin, endMin, isoFromMin],
+  );
 
-  // Posición efectiva del bloque (override optimista o la del servidor).
-  function placed(block: GridBlock): { startMin: number; endMin: number; barberId: string } {
-    return overrides[block.id] ?? { startMin: block.startMin, endMin: block.endMin, barberId: block.barberId };
-  }
+  const openDetail = useCallback((b: GridBlock) => {
+    if (suppressClickRef.current) return;
+    setDetailBlock(b);
+  }, []);
+
+  // Bloques por columna, con override optimista aplicado. Memo: durante el drag
+  // el padre re-renderiza en cada pointermove y las columnas (React.memo) solo
+  // se saltan el trabajo si sus props no cambian de identidad.
+  const blocksByCol = useMemo(() => {
+    const placed = (b: GridBlock) =>
+      overrides[b.id] ?? { startMin: b.startMin, endMin: b.endMin, barberId: b.barberId };
+    const map = new Map<string, { block: GridBlock; startMin: number; endMin: number }[]>();
+    for (const c of columns) map.set(c.barberId, []);
+    for (const b of allBlocks) {
+      const pos = placed(b);
+      map.get(pos.barberId)?.push({ block: b, startMin: pos.startMin, endMin: pos.endMin });
+    }
+    return map;
+  }, [columns, allBlocks, overrides]);
 
   const draggedBlock = drag ? blockById.get(drag.id) : null;
+  const ghostColIdx = drag ? columns.findIndex((c) => c.barberId === drag.ghostBarberId) : -1;
 
   return (
     <div className="flex h-full flex-col">
@@ -450,124 +473,43 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
               ))}
             </div>
 
-            {/* Columnas de barberos */}
+            {/* Columnas de barberos (memoizadas: el drag re-renderiza el padre
+                a 60fps y las columnas se saltan el trabajo vía React.memo) */}
             <div ref={columnsRef} className="relative flex">
               {columns.map((c) => (
-                <div
+                <GridColumnView
                   key={c.barberId}
-                  className="relative shrink-0 border-r border-border"
-                  style={{ width: COL_W }}
-                  onClick={(e) => {
-                    if (suppressClickRef.current) return;
-                    openCreateAt(c.barberId, e.clientY);
-                  }}
-                  title="Click para agendar aquí"
-                >
-                  {/* Sombrear fuera del horario de trabajo */}
-                  <ClosedShade startMin={startMin} endMin={endMin} windows={c.windows} />
-                  {/* Líneas de hora y media hora */}
-                  {hours.map((h) => (
-                    <div key={h}>
-                      <div className="absolute inset-x-0 border-t border-border/70" style={{ top: (h - startMin) * PX_PER_MIN }} />
-                      {h + 30 <= endMin && (
-                        <div className="absolute inset-x-0 border-t border-border/30" style={{ top: (h + 30 - startMin) * PX_PER_MIN }} />
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Vista previa del destino (slot encajado, transparente, detrás del flotante) */}
-                  {drag && drag.ghostBarberId === c.barberId && (
-                    <div
-                      className="pointer-events-none absolute left-0.5 right-0.5 z-20 rounded-md border-2 border-dashed border-foreground/50 bg-foreground/5"
-                      style={{
-                        top: (drag.ghostStartMin - startMin) * PX_PER_MIN,
-                        height: Math.max(MIN_BLOCK_PX, drag.durationMin * PX_PER_MIN - 2),
-                      }}
-                    >
-                      <div className="px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-foreground/70">
-                        {fmtMin(drag.ghostStartMin)}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bloques de esta columna */}
-                  {allBlocks
-                    .filter((b) => placed(b).barberId === c.barberId)
-                    .map((b) => {
-                      const p = placed(b);
-                      const dragging = drag?.id === b.id;
-                      const height = Math.max(MIN_BLOCK_PX, (p.endMin - p.startMin) * PX_PER_MIN - 2);
-                      const tooltip = `${fmtMin(p.startMin)}–${fmtMin(p.endMin)} · ${b.clientName}\n${b.serviceNames.join(", ")}${b.notes ? `\n${b.notes}` : ""}\n${APPOINTMENT_STATUS_LABELS[b.status]} · ${formatCLP(b.totalPrice)}`;
-                      return (
-                        <div
-                          key={b.id}
-                          title={tooltip}
-                          onClick={(e) => {
-                            // Bloquea el click-en-hueco del padre y, si no veníamos de un
-                            // drag (suppressClickRef se setea al soltar), abre el detalle.
-                            e.stopPropagation();
-                            if (suppressClickRef.current) return;
-                            setDetailBlock(b);
-                          }}
-                          onPointerDown={(e) => beginDrag(b, e)}
-                          className={cn(
-                            "absolute left-0.5 right-0.5 overflow-hidden rounded-md border border-l-4 border-border px-1.5 py-1 text-xs select-none",
-                            STATUS_STYLE[b.status],
-                            b.draggable ? "cursor-grab" : "cursor-default",
-                            dragging && "opacity-40",
-                          )}
-                          style={{ top: (p.startMin - startMin) * PX_PER_MIN, height, WebkitTouchCallout: "none" }}
-                        >
-                          <div className="pr-6 font-medium tabular-nums leading-tight">{fmtMin(p.startMin)}</div>
-                          <div className="truncate pr-6 leading-tight">{b.clientName}</div>
-                          {height > 40 && (
-                            <div className="truncate text-[10px] leading-tight text-muted-foreground">
-                              {b.serviceNames.join(", ")}
-                            </div>
-                          )}
-                          {height > 56 && (
-                            <div className="truncate text-[10px] font-medium leading-tight text-muted-foreground">
-                              {APPOINTMENT_STATUS_LABELS[b.status]}
-                            </div>
-                          )}
-
-                          {/* Menú "⋮": acciones de estado sin abrir el detalle. Es
-                              además la entrada de teclado/lector de pantalla a la cita
-                              (el bloque en sí es solo puntero: click/drag). Los
-                              stopPropagation evitan que el trigger inicie drag o abra
-                              el detalle (handlers del bloque padre). */}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                type="button"
-                                aria-label={`Cita de ${b.clientName} a las ${fmtMin(p.startMin)}, ${APPOINTMENT_STATUS_LABELS[b.status]} — acciones`}
-                                disabled={actingId === b.id}
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-0 flex h-7 w-7 items-center justify-center rounded-bl-md text-muted-foreground/70 hover:bg-background/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44">
-                              {(QUICK_ACTIONS[b.status] ?? []).map((a) => (
-                                <DropdownMenuItem key={a.to} onSelect={() => void quickFromMenu(b, a)}>
-                                  {a.icon}
-                                  {a.label}
-                                </DropdownMenuItem>
-                              ))}
-                              {(QUICK_ACTIONS[b.status]?.length ?? 0) > 0 && <DropdownMenuSeparator />}
-                              <DropdownMenuItem onSelect={() => setDetailBlock(b)}>
-                                <ExternalLink className="h-4 w-4" />
-                                Ver detalle
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      );
-                    })}
-                </div>
+                  col={c}
+                  hours={hours}
+                  startMin={startMin}
+                  endMin={endMin}
+                  items={blocksByCol.get(c.barberId) ?? []}
+                  draggedId={drag?.id ?? null}
+                  actingId={actingId}
+                  onEmptyClick={openCreateAt}
+                  onOpenDetail={openDetail}
+                  onPointerDownBlock={beginDrag}
+                  onQuickAction={quickFromMenu}
+                />
               ))}
+
+              {/* Vista previa del destino (overlay a nivel wrapper para no
+                  invalidar el memo de las columnas en cada frame) */}
+              {drag && ghostColIdx >= 0 && (
+                <div
+                  className="pointer-events-none absolute z-20 rounded-md border-2 border-dashed border-foreground/50 bg-foreground/5"
+                  style={{
+                    left: ghostColIdx * COL_W + 2,
+                    width: COL_W - 4,
+                    top: (drag.ghostStartMin - startMin) * PX_PER_MIN,
+                    height: Math.max(MIN_BLOCK_PX, drag.durationMin * PX_PER_MIN - 2),
+                  }}
+                >
+                  <div className="px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-foreground/70">
+                    {fmtMin(drag.ghostStartMin)}
+                  </div>
+                </div>
+              )}
 
               {/* Línea de "ahora" (sobre las columnas) */}
               {nowMin != null && nowMin >= startMin && nowMin <= endMin && (
@@ -660,3 +602,132 @@ function ClosedShade({ startMin, endMin, windows }: { startMin: number; endMin: 
     </>
   );
 }
+
+interface ColumnItem {
+  block: GridBlock;
+  startMin: number; // posición efectiva (override optimista aplicado)
+  endMin: number;
+}
+
+/**
+ * Columna de un barbero. React.memo: durante un arrastre el padre re-renderiza
+ * en cada pointermove; mientras las props no cambien de identidad, la columna
+ * entera (sombras, líneas y bloques) se salta el render.
+ */
+const GridColumnView = memo(function GridColumnView({
+  col,
+  hours,
+  startMin,
+  endMin,
+  items,
+  draggedId,
+  actingId,
+  onEmptyClick,
+  onOpenDetail,
+  onPointerDownBlock,
+  onQuickAction,
+}: {
+  col: GridColumn;
+  hours: number[];
+  startMin: number;
+  endMin: number;
+  items: ColumnItem[];
+  draggedId: string | null;
+  actingId: string | null;
+  onEmptyClick: (barberId: string, clientY: number) => void;
+  onOpenDetail: (b: GridBlock) => void;
+  onPointerDownBlock: (b: GridBlock, e: ReactPointerEvent) => void;
+  onQuickAction: (b: GridBlock, a: QuickAction) => void;
+}) {
+  return (
+    <div
+      className="relative shrink-0 border-r border-border"
+      style={{ width: COL_W }}
+      onClick={(e) => onEmptyClick(col.barberId, e.clientY)}
+      title="Click para agendar aquí"
+    >
+      {/* Sombrear fuera del horario de trabajo */}
+      <ClosedShade startMin={startMin} endMin={endMin} windows={col.windows} />
+      {/* Líneas de hora y media hora */}
+      {hours.map((h) => (
+        <div key={h}>
+          <div className="absolute inset-x-0 border-t border-border/70" style={{ top: (h - startMin) * PX_PER_MIN }} />
+          {h + 30 <= endMin && (
+            <div className="absolute inset-x-0 border-t border-border/30" style={{ top: (h + 30 - startMin) * PX_PER_MIN }} />
+          )}
+        </div>
+      ))}
+
+      {/* Bloques de esta columna */}
+      {items.map(({ block: b, startMin: bStart, endMin: bEnd }) => {
+        const dragging = draggedId === b.id;
+        const height = Math.max(MIN_BLOCK_PX, (bEnd - bStart) * PX_PER_MIN - 2);
+        const tooltip = `${fmtMin(bStart)}–${fmtMin(bEnd)} · ${b.clientName}\n${b.serviceNames.join(", ")}${b.notes ? `\n${b.notes}` : ""}\n${APPOINTMENT_STATUS_LABELS[b.status]} · ${formatCLP(b.totalPrice)}`;
+        return (
+          <div
+            key={b.id}
+            title={tooltip}
+            onClick={(e) => {
+              // Bloquea el click-en-hueco del padre; onOpenDetail ya ignora el
+              // click fantasma post-drag (suppressClickRef en el padre).
+              e.stopPropagation();
+              onOpenDetail(b);
+            }}
+            onPointerDown={(e) => onPointerDownBlock(b, e)}
+            className={cn(
+              "absolute left-0.5 right-0.5 overflow-hidden rounded-md border border-l-4 border-border px-1.5 py-1 text-xs select-none",
+              STATUS_STYLE[b.status],
+              b.draggable ? "cursor-grab" : "cursor-default",
+              dragging && "opacity-40",
+            )}
+            style={{ top: (bStart - startMin) * PX_PER_MIN, height, WebkitTouchCallout: "none" }}
+          >
+            <div className="pr-6 font-medium tabular-nums leading-tight">{fmtMin(bStart)}</div>
+            <div className="truncate pr-6 leading-tight">{b.clientName}</div>
+            {height > 40 && (
+              <div className="truncate text-[10px] leading-tight text-muted-foreground">
+                {b.serviceNames.join(", ")}
+              </div>
+            )}
+            {height > 56 && (
+              <div className="truncate text-[10px] font-medium leading-tight text-muted-foreground">
+                {APPOINTMENT_STATUS_LABELS[b.status]}
+              </div>
+            )}
+
+            {/* Menú "⋮": acciones de estado sin abrir el detalle. Es además la
+                entrada de teclado/lector de pantalla a la cita (el bloque en sí
+                es solo puntero: click/drag). */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Cita de ${b.clientName} a las ${fmtMin(bStart)}, ${APPOINTMENT_STATUS_LABELS[b.status]} — acciones`}
+                  disabled={actingId === b.id}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-0 flex h-7 w-7 items-center justify-center rounded-bl-md text-muted-foreground/70 hover:bg-background/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {(QUICK_ACTIONS[b.status] ?? []).map((a) => (
+                  <DropdownMenuItem key={a.to} onSelect={() => void onQuickAction(b, a)}>
+                    {a.icon}
+                    {a.label}
+                  </DropdownMenuItem>
+                ))}
+                {(QUICK_ACTIONS[b.status]?.length ?? 0) > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem onSelect={() => onOpenDetail(b)}>
+                  <ExternalLink className="h-4 w-4" />
+                  Ver detalle
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      })}
+    </div>
+  );
+});
