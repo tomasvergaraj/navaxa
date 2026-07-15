@@ -94,8 +94,8 @@ export function BarberProfileForm(props: Props) {
       </div>
 
       <div className="space-y-1.5">
-        <Label>Comisión</Label>
-        <Input value={`${props.commissionPct}%`} readOnly disabled />
+        <Label htmlFor="p-comm">Comisión</Label>
+        <Input id="p-comm" value={`${props.commissionPct}%`} readOnly disabled />
         <p className="text-xs text-muted-foreground">
           La comisión la define el dueño de la barbería.
         </p>

@@ -42,6 +42,7 @@ export default async function AdminIndex() {
       </header>
 
       <Card className="overflow-hidden">
+<div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
@@ -124,6 +125,7 @@ export default async function AdminIndex() {
             )}
           </tbody>
         </table>
+</div>
       </Card>
     </div>
   );

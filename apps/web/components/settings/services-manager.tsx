@@ -131,6 +131,7 @@ export function ServicesManager({ services }: { services: Service[] }) {
         </Button>
       </div>
 
+<div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
@@ -184,6 +185,7 @@ export function ServicesManager({ services }: { services: Service[] }) {
           ))}
         </tbody>
       </table>
+</div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

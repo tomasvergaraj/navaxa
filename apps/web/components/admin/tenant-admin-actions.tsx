@@ -108,7 +108,7 @@ export function TenantAdminActions({ tenantId, initial }: Props) {
         <div className="space-y-1.5">
           <Label>Plan</Label>
           <Select value={plan} onValueChange={(v) => setPlan(v as Plan)}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Plan">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -123,7 +123,7 @@ export function TenantAdminActions({ tenantId, initial }: Props) {
         <div className="space-y-1.5">
           <Label>Estado de suscripción</Label>
           <Select value={status} onValueChange={(v) => setStatus(v as SubscriptionStatus)}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Estado de suscripción">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

@@ -219,11 +219,14 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  // El input va DENTRO del <label> (asociación implícita): lectores de pantalla
+  // anuncian el campo con nombre y el tap en el texto enfoca el control, sin
+  // tener que cablear htmlFor/id en cada uso.
   return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
+    <Label className="block space-y-1.5">
+      <span className="block">{label}</span>
       {children}
-    </div>
+    </Label>
   );
 }
 

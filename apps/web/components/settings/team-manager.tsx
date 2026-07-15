@@ -138,6 +138,7 @@ export function TeamManager({ members, currentUserId }: { members: Member[]; cur
         </Button>
       </div>
 
+<div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
@@ -168,6 +169,7 @@ export function TeamManager({ members, currentUserId }: { members: Member[]; cur
                     <select
                       value={m.role}
                       disabled={busy}
+                      aria-label={`Rol de ${m.name}`}
                       onChange={(e) => patchMember(m.id, { role: e.target.value })}
                       className="h-8 rounded-md border border-input bg-background px-2 text-sm"
                     >
@@ -186,6 +188,7 @@ export function TeamManager({ members, currentUserId }: { members: Member[]; cur
                         type="number"
                         min={0}
                         max={100}
+                        aria-label={`Comisión de ${m.name} (%)`}
                         defaultValue={Math.round(m.commissionRate * 100)}
                         disabled={busy}
                         onBlur={(e) => saveCommission(m.barberId!, e.target.value, m.commissionRate!)}
@@ -226,6 +229,7 @@ export function TeamManager({ members, currentUserId }: { members: Member[]; cur
           })}
         </tbody>
       </table>
+</div>
 
       <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : closeDialog())}>
         <DialogContent>

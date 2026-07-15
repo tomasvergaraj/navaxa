@@ -12,8 +12,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <AuthSessionProvider>
-      <div className="flex h-dvh overflow-hidden bg-background">
-        <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-muted/30">
+      <div className="flex h-dvh flex-col overflow-hidden bg-background md:flex-row">
+        {/* Header móvil: la sidebar fija dejaba el panel inusable en celular. */}
+        <header className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3 md:hidden">
+          <Link href="/admin" className="flex items-center gap-2 text-sm font-medium">
+            <Shield className="h-4 w-4 text-amber-600" />
+            navaxa admin
+          </Link>
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Volver a mi tenant
+          </Link>
+        </header>
+        <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-muted/30 md:flex">
           <div className="flex items-center gap-2 border-b border-border px-4 py-4">
             <Shield className="h-5 w-5 text-amber-600" />
             <div>

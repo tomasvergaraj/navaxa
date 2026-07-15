@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, Badge, Input } from "@navaxa/ui";
+import { Card, Badge, Input, Button } from "@navaxa/ui";
 import { Search, Users } from "lucide-react";
 import { NewClientButton } from "@/components/clients/new-client-button";
 import { scopedDb } from "@/lib/tenant";
@@ -54,16 +54,21 @@ export default async function ClientesPage({ searchParams }: PageProps) {
         <NewClientButton />
       </header>
 
-      <form className="mb-4 max-w-sm">
-        <div className="relative">
+      <form className="mb-4 flex max-w-sm gap-2" role="search">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             name="q"
+            type="search"
+            aria-label="Buscar clientes por nombre o teléfono"
             defaultValue={q ?? ""}
             placeholder="Buscar por nombre o teléfono"
             className="pl-9"
           />
         </div>
+        <Button type="submit" variant="outline">
+          Buscar
+        </Button>
       </form>
 
       {clients.length === 0 ? (
