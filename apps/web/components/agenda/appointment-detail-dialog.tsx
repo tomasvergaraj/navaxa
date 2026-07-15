@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Loader2, Pencil, Trash2, ExternalLink, Clock, User, Scissors } from "lucide-react";
 import {
   Button,
+  Input,
+  NativeSelect,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -49,6 +51,11 @@ function fmtTime(iso: string): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+function localDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function AppointmentDetailDialog({ block, onClose }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -59,37 +66,80 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
 
   const [status, setStatus] = useState<AppointmentStatus>(block?.status ?? AppointmentStatus.SCHEDULED);
   const [notes, setNotes] = useState<string>(block?.notes ?? "");
+  // Mover cita sin drag (accesible por teclado): fecha + hora + barbero.
+  const [moveDate, setMoveDate] = useState("");
+  const [moveTime, setMoveTime] = useState("");
+  const [moveBarberId, setMoveBarberId] = useState("");
+  const [barberOptions, setBarberOptions] = useState<{ id: string; name: string }[] | null>(null);
 
   // Resetear edición al cambiar de cita (o reabrir): adoptamos los valores actuales del bloque.
   useEffect(() => {
     if (block) {
       setStatus(block.status);
       setNotes(block.notes ?? "");
+      setMoveDate(localDate(block.startsAtIso));
+      setMoveTime(fmtTime(block.startsAtIso));
+      setMoveBarberId(block.barberId);
       setEditing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [block?.id]);
 
+  // Lista de barberos para reasignar (se pide una sola vez, al entrar a editar).
+  useEffect(() => {
+    if (!editing || barberOptions !== null) return;
+    fetch("/api/barbers")
+      .then((r) => r.json())
+      .then((d) =>
+        setBarberOptions(
+          (d.barbers ?? []).map((b: { id: string; user: { name: string } }) => ({
+            id: b.id,
+            name: b.user.name,
+          })),
+        ),
+      )
+      .catch(() => setBarberOptions([]));
+  }, [editing, barberOptions]);
+
   const open = block !== null;
+
+  async function patchJson(id: string, body: Record<string, unknown>) {
+    const res = await fetch(`/api/appointments/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "No se pudo guardar");
+  }
 
   async function save() {
     if (!block) return;
     setSaving(true);
     try {
+      // Mover (fecha/hora/barbero): va en su propio PATCH porque el endpoint
+      // procesa startsAt como reagendamiento y no mezcla estado/notas.
+      const newStartIso =
+        moveDate && moveTime ? new Date(`${moveDate}T${moveTime}:00`).toISOString() : null;
+      const moved =
+        (newStartIso && newStartIso !== new Date(block.startsAtIso).toISOString()) ||
+        moveBarberId !== block.barberId;
+      if (moved && newStartIso) {
+        await patchJson(block.id, {
+          startsAt: newStartIso,
+          ...(moveBarberId !== block.barberId ? { barberId: moveBarberId } : {}),
+        });
+      }
+
       const body: Record<string, unknown> = {};
       if (status !== block.status) body.status = status;
       if (notes.trim() !== (block.notes ?? "")) body.notes = notes.trim();
-      if (Object.keys(body).length === 0) {
+      if (Object.keys(body).length > 0) {
+        await patchJson(block.id, body);
+      } else if (!moved) {
         setEditing(false);
         return;
       }
-      const res = await fetch(`/api/appointments/${block.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "No se pudo guardar");
       toast.success("Cita actualizada");
       setEditing(false);
       router.refresh();
@@ -274,9 +324,42 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
                       onChange={(e) => setNotes(e.target.value)}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Para mover de hora o de barbero, arrastra el bloque en la grilla.
-                  </p>
+                  {/* Mover cita sin arrastrar: alternativa accesible al drag de la
+                      grilla (teclado / lector de pantalla / mis-taps en móvil). */}
+                  <div className="space-y-1.5 border-t pt-3">
+                    <Label>Mover cita</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="date"
+                        aria-label="Nueva fecha"
+                        value={moveDate}
+                        onChange={(e) => setMoveDate(e.target.value)}
+                      />
+                      <Input
+                        type="time"
+                        aria-label="Nueva hora"
+                        value={moveTime}
+                        onChange={(e) => setMoveTime(e.target.value)}
+                      />
+                    </div>
+                    <NativeSelect
+                      aria-label="Barbero"
+                      value={moveBarberId}
+                      onChange={(e) => setMoveBarberId(e.target.value)}
+                    >
+                      {(barberOptions ?? [{ id: block.barberId, name: block.barberName }]).map(
+                        (b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name}
+                          </option>
+                        ),
+                      )}
+                    </NativeSelect>
+                    <p className="text-xs text-muted-foreground">
+                      Si el horario está ocupado te avisamos al guardar. También puedes arrastrar
+                      el bloque en la grilla.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
