@@ -1,4 +1,5 @@
-import { Card, Tabs, TabsList, TabsTrigger, TabsContent } from "@navaxa/ui";
+import { Card, TabsList, TabsTrigger, TabsContent } from "@navaxa/ui";
+import { UrlTabs } from "@/components/ui/url-tabs";
 import { scopedDb } from "@/lib/tenant";
 import { requireManagerPage } from "@/lib/page-guards";
 import { prisma } from "@navaxa/db";
@@ -65,7 +66,7 @@ export default async function ConfiguracionPage({
         </p>
       </header>
 
-      <Tabs defaultValue={activeTab}>
+      <UrlTabs defaultValue={activeTab}>
         <TabsList className="flex w-full max-w-full justify-start overflow-x-auto">
           <TabsTrigger value="barberia">Barbería</TabsTrigger>
           <TabsTrigger value="servicios">Servicios</TabsTrigger>
@@ -171,7 +172,7 @@ export default async function ConfiguracionPage({
             }
           />
         </TabsContent>
-      </Tabs>
+      </UrlTabs>
     </div>
   );
 }

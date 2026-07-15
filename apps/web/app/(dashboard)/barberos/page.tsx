@@ -9,6 +9,7 @@ import { AppointmentStatus } from "@navaxa/db";
 import { subDays } from "date-fns";
 import { formatCLP, formatRelative } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -54,16 +55,11 @@ export default async function BarberosPage() {
 
   return (
     <div className="container max-w-7xl py-8">
-      <header className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-medium tracking-tight">Barberos</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {barbers.length} barbero{barbers.length === 1 ? "" : "s"} activo
-            {barbers.length === 1 ? "" : "s"}
-          </p>
-        </div>
-        <NewBarberButton />
-      </header>
+      <PageHeader
+        title="Barberos"
+        subtitle={`${barbers.length} barbero${barbers.length === 1 ? "" : "s"} activo${barbers.length === 1 ? "" : "s"}`}
+        action={<NewBarberButton />}
+      />
 
       {stats.length === 0 ? (
         <EmptyState

@@ -3,6 +3,7 @@ import { Button } from "@navaxa/ui";
 import { ChevronLeft, ChevronRight, CalendarDays, LayoutGrid } from "lucide-react";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
 import { AgendaGrid } from "@/components/agenda/agenda-grid";
+import { PageHeader } from "@/components/page-header";
 import { AgendaWeek } from "@/components/agenda/agenda-week";
 import { UnmarkedBanner, type UnmarkedItem } from "@/components/agenda/unmarked-banner";
 import { scopedDb } from "@/lib/tenant";
@@ -88,19 +89,20 @@ export default async function AgendaPage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-4 md:px-6">
-      <header className="mb-4 flex shrink-0 items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-medium tracking-tight">Agenda</h1>
-          <p className="mt-1 text-sm capitalize text-muted-foreground">
+      <PageHeader
+        className="mb-4 shrink-0"
+        title="Agenda"
+        subtitle={
+          <span className="capitalize">
             {view === "week" ? (
               <>Semana del {formatDateShort(startOfWeek(date, { weekStartsOn: 1 }))} al {formatDateShort(endOfWeek(date, { weekStartsOn: 1 }))}</>
             ) : (
               date.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
             )}
-          </p>
-        </div>
-        <NewAppointmentDialog label="Nueva cita" />
-      </header>
+          </span>
+        }
+        action={<NewAppointmentDialog label="Nueva cita" />}
+      />
 
       <UnmarkedBanner items={unmarked} />
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, Badge, Input, Button } from "@navaxa/ui";
 import { Search, Users } from "lucide-react";
 import { NewClientButton } from "@/components/clients/new-client-button";
+import { PageHeader } from "@/components/page-header";
 import { scopedDb } from "@/lib/tenant";
 import { viewerScope } from "@/lib/page-guards";
 import { EmptyState } from "@/components/empty-state";
@@ -56,16 +57,12 @@ export default async function ClientesPage({ searchParams }: PageProps) {
 
   return (
     <div className="container max-w-7xl py-8">
-      <header className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-medium tracking-tight">Clientes</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {total} cliente{total === 1 ? "" : "s"} {q ? "encontrado" : "registrado"}
-            {total === 1 ? "" : "s"}
-          </p>
-        </div>
-        <NewClientButton />
-      </header>
+      <PageHeader
+        className="mb-6"
+        title="Clientes"
+        subtitle={`${total} cliente${total === 1 ? "" : "s"} ${q ? "encontrado" : "registrado"}${total === 1 ? "" : "s"}`}
+        action={<NewClientButton />}
+      />
 
       <form className="mb-4 flex max-w-sm gap-2" role="search">
         <div className="relative flex-1">
