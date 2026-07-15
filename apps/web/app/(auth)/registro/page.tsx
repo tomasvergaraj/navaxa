@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 export default function RegistroPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     shopName: "",
     ownerName: "",
@@ -26,6 +27,7 @@ export default function RegistroPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/auth/register-tenant", {
         method: "POST",
@@ -46,7 +48,8 @@ export default function RegistroPage() {
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      toast.error((err as Error).message);
+      // Inline y persistente: el toast desaparecía antes de poder leer el motivo.
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -113,6 +116,11 @@ export default function RegistroPage() {
             onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
           />
         </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           Crear barbería

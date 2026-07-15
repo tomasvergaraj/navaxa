@@ -9,10 +9,12 @@ export default function RecuperarPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
       await fetch("/api/auth/forgot-password", {
         method: "POST",
@@ -21,6 +23,9 @@ export default function RecuperarPage() {
       });
       // Siempre mostramos confirmación (la API no revela si el correo existe).
       setSent(true);
+    } catch {
+      // Antes un fallo de red quedaba en silencio (sin catch).
+      setError("No pudimos enviar el correo. Revisa tu conexión e intenta de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -66,6 +71,11 @@ export default function RecuperarPage() {
             placeholder="tu@barberia.cl"
           />
         </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           Enviar enlace

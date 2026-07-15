@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button, Input, Label } from "@navaxa/ui";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 function LoginForm() {
@@ -15,10 +14,13 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  // Error inline y persistente (el toast desaparecía a los 4s sin asociarse al form).
+  const [error, setError] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
       const res = await signIn("credentials", {
         email,
@@ -26,13 +28,13 @@ function LoginForm() {
         redirect: false,
       });
       if (!res?.ok) {
-        toast.error("Credenciales inválidas");
+        setError("Email o contraseña incorrectos.");
         return;
       }
       router.push(from);
       router.refresh();
     } catch {
-      toast.error("Error iniciando sesión");
+      setError("No pudimos iniciar sesión. Revisa tu conexión e intenta de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -82,6 +84,11 @@ function LoginForm() {
             placeholder="••••••••"
           />
         </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           Iniciar sesión
@@ -95,10 +102,6 @@ function LoginForm() {
         </Link>
       </p>
 
-      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-        <strong className="text-foreground">Demo:</strong>{" "}
-        <code>pepe@donpepe.cl</code> / <code>navaxa123</code>
-      </div>
     </div>
   );
 }
