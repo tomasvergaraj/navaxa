@@ -37,7 +37,9 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/images") ||
     pathname === "/robots.txt" ||
-    pathname === "/sitemap.xml"
+    pathname === "/sitemap.xml" ||
+    // Imagen OG generada por Next (la piden WhatsApp/bots sin sesión).
+    pathname.startsWith("/opengraph-image")
   ) {
     return NextResponse.next();
   }
