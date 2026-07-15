@@ -3,19 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  Loader2,
-  Pencil,
-  Trash2,
-  ExternalLink,
-  Clock,
-  User,
-  UserX,
-  Scissors,
-  Check,
-  CheckCheck,
-  Play,
-} from "lucide-react";
+import { Loader2, Pencil, Trash2, ExternalLink, Clock, User, Scissors } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -36,6 +24,11 @@ import { AppointmentStatus } from "@navaxa/db";
 import { APPOINTMENT_STATUS_LABELS } from "@navaxa/config";
 import type { GridBlock } from "@/lib/agenda";
 import { formatCLP } from "@/lib/format";
+import {
+  QUICK_ACTIONS,
+  patchAppointmentStatus,
+  type QuickAction,
+} from "@/components/agenda/appointment-quick-actions";
 
 type Props = {
   block: GridBlock | null;
@@ -49,48 +42,6 @@ const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
   { value: AppointmentStatus.COMPLETED, label: APPOINTMENT_STATUS_LABELS.COMPLETED },
   { value: AppointmentStatus.NO_SHOW, label: APPOINTMENT_STATUS_LABELS.NO_SHOW },
 ];
-
-// Acciones de avance de estado en 1 toque, según el estado actual de la cita.
-// Retroceder estados (casos raros) sigue disponible vía Editar > dropdown.
-type QuickAction = {
-  to: AppointmentStatus;
-  label: string;
-  icon: React.ReactNode;
-  variant?: "default" | "outline";
-  confirmMsg?: string;
-};
-
-const QUICK_ACTIONS: Partial<Record<AppointmentStatus, QuickAction[]>> = {
-  [AppointmentStatus.SCHEDULED]: [
-    { to: AppointmentStatus.CONFIRMED, label: "Confirmar", icon: <Check className="h-4 w-4" /> },
-    {
-      to: AppointmentStatus.NO_SHOW,
-      label: "No vino",
-      icon: <UserX className="h-4 w-4" />,
-      variant: "outline",
-      confirmMsg: "¿Marcar que el cliente no vino?",
-    },
-  ],
-  [AppointmentStatus.CONFIRMED]: [
-    { to: AppointmentStatus.IN_PROGRESS, label: "Iniciar", icon: <Play className="h-4 w-4" /> },
-    {
-      to: AppointmentStatus.COMPLETED,
-      label: "Completar",
-      icon: <CheckCheck className="h-4 w-4" />,
-      variant: "outline",
-    },
-    {
-      to: AppointmentStatus.NO_SHOW,
-      label: "No vino",
-      icon: <UserX className="h-4 w-4" />,
-      variant: "outline",
-      confirmMsg: "¿Marcar que el cliente no vino?",
-    },
-  ],
-  [AppointmentStatus.IN_PROGRESS]: [
-    { to: AppointmentStatus.COMPLETED, label: "Completar", icon: <CheckCheck className="h-4 w-4" /> },
-  ],
-};
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -153,13 +104,7 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
     if (action.confirmMsg && !confirm(action.confirmMsg)) return;
     setActing(action.to);
     try {
-      const res = await fetch(`/api/appointments/${block.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: action.to }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "No se pudo actualizar");
+      await patchAppointmentStatus(block.id, action.to);
       toast.success(
         action.to === AppointmentStatus.COMPLETED
           ? "Cita completada"

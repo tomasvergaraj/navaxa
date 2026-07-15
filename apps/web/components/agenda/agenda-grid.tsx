@@ -4,13 +4,26 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { cn } from "@navaxa/ui";
+import {
+  cn,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@navaxa/ui";
+import { MoreVertical, ExternalLink } from "lucide-react";
 import type { AppointmentStatus } from "@navaxa/db";
 import { APPOINTMENT_STATUS_LABELS } from "@navaxa/config";
 import type { GridBlock, GridColumn } from "@/lib/agenda";
 import { formatCLP } from "@/lib/format";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
 import { AppointmentDetailDialog } from "@/components/agenda/appointment-detail-dialog";
+import {
+  QUICK_ACTIONS,
+  patchAppointmentStatus,
+  type QuickAction,
+} from "@/components/agenda/appointment-quick-actions";
 
 // Escala y layout (rendering, lado cliente). PX_PER_MIN coincide con lib/agenda.
 const PX_PER_MIN = 2;
@@ -101,6 +114,26 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
 
   // Detalle/edición de una cita: click (o tap) sobre un bloque.
   const [detailBlock, setDetailBlock] = useState<GridBlock | null>(null);
+
+  // Cita con acción rápida (menú "⋮") en curso — evita doble PATCH.
+  const [actingId, setActingId] = useState<string | null>(null);
+
+  async function quickFromMenu(block: GridBlock, action: QuickAction) {
+    if (actingId) return;
+    if (action.confirmMsg && !confirm(action.confirmMsg)) return;
+    setActingId(block.id);
+    try {
+      await patchAppointmentStatus(block.id, action.to);
+      toast.success(
+        action.to === "COMPLETED" ? "Cita completada" : `Cita: ${APPOINTMENT_STATUS_LABELS[action.to]}`,
+      );
+      router.refresh();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setActingId(null);
+    }
+  }
 
   const hours = useMemo(() => {
     const out: number[] = [];
@@ -476,13 +509,44 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
                           )}
                           style={{ top: (p.startMin - startMin) * PX_PER_MIN, height, WebkitTouchCallout: "none" }}
                         >
-                          <div className="font-medium tabular-nums leading-tight">{fmtMin(p.startMin)}</div>
-                          <div className="truncate leading-tight">{b.clientName}</div>
+                          <div className="pr-4 font-medium tabular-nums leading-tight">{fmtMin(p.startMin)}</div>
+                          <div className="truncate pr-4 leading-tight">{b.clientName}</div>
                           {height > 40 && (
                             <div className="truncate text-[10px] leading-tight text-muted-foreground">
                               {b.serviceNames.join(", ")}
                             </div>
                           )}
+
+                          {/* Menú "⋮": acciones de estado sin abrir el detalle. Los
+                              stopPropagation evitan que el trigger inicie drag o abra
+                              el detalle (handlers del bloque padre). */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label="Acciones de la cita"
+                                disabled={actingId === b.id}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 top-0 rounded-bl-md p-1 text-muted-foreground/70 hover:bg-background/70 hover:text-foreground"
+                              >
+                                <MoreVertical className="h-3.5 w-3.5" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              {(QUICK_ACTIONS[b.status] ?? []).map((a) => (
+                                <DropdownMenuItem key={a.to} onSelect={() => void quickFromMenu(b, a)}>
+                                  {a.icon}
+                                  {a.label}
+                                </DropdownMenuItem>
+                              ))}
+                              {(QUICK_ACTIONS[b.status]?.length ?? 0) > 0 && <DropdownMenuSeparator />}
+                              <DropdownMenuItem onSelect={() => setDetailBlock(b)}>
+                                <ExternalLink className="h-4 w-4" />
+                                Ver detalle
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       );
                     })}

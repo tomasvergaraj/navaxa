@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, CalendarDays, LayoutGrid } from "lucide-reac
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
 import { AgendaGrid } from "@/components/agenda/agenda-grid";
 import { AgendaWeek } from "@/components/agenda/agenda-week";
+import { UnmarkedBanner, type UnmarkedItem } from "@/components/agenda/unmarked-banner";
 import { scopedDb } from "@/lib/tenant";
 import { viewerScope } from "@/lib/page-guards";
 import { prisma, AppointmentStatus } from "@navaxa/db";
@@ -52,6 +53,33 @@ export default async function AgendaPage({ searchParams }: PageProps) {
   const barbers: RawBarber[] = barbersRaw.map((b) => ({ id: b.id, name: b.user.name }));
   const barberIds = barbers.map((b) => b.id);
 
+  // Citas pasadas (antes de hoy) que nadie marcó: siguen en Agendada/Confirmada/
+  // En curso. Se ofrecen para completar/no-vino a mano — no se auto-completan
+  // porque COMPLETED dispara comisiones + invitación de reseña.
+  const unmarkedRaw = await db.appointment.findMany({
+    where: {
+      startsAt: { lt: startOfDay(new Date()) },
+      status: {
+        in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS],
+      },
+      ...(ownOnly ? { barberId: barberId ?? "__none__" } : {}),
+    },
+    orderBy: { startsAt: "asc" },
+    take: 50,
+    select: {
+      id: true,
+      startsAt: true,
+      client: { select: { firstName: true, lastName: true } },
+      barber: { select: { user: { select: { name: true } } } },
+    },
+  });
+  const unmarked: UnmarkedItem[] = unmarkedRaw.map((a) => ({
+    id: a.id,
+    when: `${a.startsAt.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}, ${a.startsAt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}`,
+    clientName: `${a.client.firstName} ${a.client.lastName ?? ""}`.trim(),
+    barberName: a.barber.user.name,
+  }));
+
   // Navegación (preserva la vista actual)
   const step = view === "week" ? 7 : 1;
   const prev = `/agenda?view=${view}&date=${ymd(subDays(date, step))}`;
@@ -73,6 +101,8 @@ export default async function AgendaPage({ searchParams }: PageProps) {
         </div>
         <NewAppointmentDialog label="Nueva cita" />
       </header>
+
+      <UnmarkedBanner items={unmarked} />
 
       <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
         <Button variant="outline" size="icon" asChild>
