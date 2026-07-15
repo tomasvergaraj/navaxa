@@ -33,7 +33,7 @@ const DATETIME = new Intl.DateTimeFormat("es-CL", {
   hour12: false,
 });
 
-export const formatCLP = (cents: number | bigint) => CLP.format(Number(cents));
+export const formatCLP = (pesos: number | bigint) => CLP.format(Number(pesos));
 export const formatNumber = (n: number) => NUMBER.format(n);
 export const formatDate = (d: Date | string) =>
   DATE_FULL.format(typeof d === "string" ? new Date(d) : d);

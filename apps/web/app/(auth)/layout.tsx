@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthVideo } from "@/components/auth-video";
 import { Logo } from "@navaxa/ui";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -15,16 +16,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
       </div>
       <div className="relative hidden overflow-hidden bg-brand-graphite lg:block">
-        <video
-          className="absolute inset-0 h-full w-full object-cover"
-          autoPlay
-          loop
-          muted
-          playsInline
-          poster="/videos/barber-loop-poster.jpg"
-        >
-          <source src="/videos/barber-loop.mp4" type="video/mp4" />
-        </video>
+        <AuthVideo />
         {/* Oscurece desde abajo para que la cita blanca sea legible sobre el video */}
         <div className="absolute inset-0 bg-gradient-to-t from-brand-graphite via-brand-graphite/60 to-brand-graphite/20" />
         <div className="absolute inset-0 flex flex-col justify-end p-12 text-brand-ivory">
