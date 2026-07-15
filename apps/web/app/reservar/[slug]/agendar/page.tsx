@@ -35,6 +35,27 @@ export default async function AgendarPage({
   });
   if (!service) redirect(`/reservar/${tenant.slug}`);
 
+  // Catálogo resuelto en el server: el wizard antes re-fetcheaba /services y
+  // /barbers al montar (spinner extra antes de poder elegir barbero).
+  const [services, barbersRaw] = await Promise.all([
+    prisma.service.findMany({
+      where: { tenantId: tenant.id, active: true },
+      select: { id: true, name: true, description: true, durationMin: true, price: true, category: true },
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+    }),
+    prisma.barber.findMany({
+      where: { tenantId: tenant.id, active: true },
+      select: { id: true, avatarUrl: true, specialties: true, user: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+  const barbers = barbersRaw.map((b) => ({
+    id: b.id,
+    name: b.user.name,
+    avatarUrl: b.avatarUrl,
+    specialties: b.specialties,
+  }));
+
   return (
     <div className="min-h-screen bg-muted/30">
       <nav className="border-b border-border bg-card">
@@ -66,6 +87,8 @@ export default async function AgendarPage({
           currency={tenant.currency}
           timezone={tenant.timezone ?? "America/Santiago"}
           presetServiceId={service.id}
+          initialServices={services}
+          initialBarbers={barbers}
           deposit={
             tenant.paymentsEnabled && tenant.depositType !== "NONE"
               ? { type: tenant.depositType, value: tenant.depositValue }

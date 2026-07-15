@@ -83,20 +83,28 @@ export function BookingWizard({
   timezone,
   presetServiceId,
   deposit,
+  initialServices,
+  initialBarbers,
 }: {
   slug: string;
   currency: string;
   timezone: string;
   presetServiceId?: string;
   deposit?: DepositInfo | null;
+  // Catálogo pre-resuelto por el Server Component (evita el fetch al montar).
+  initialServices?: Service[];
+  initialBarbers?: Barber[];
 }) {
   const base = `/api/public/${slug}`;
   const minStep: Step = presetServiceId ? 1 : 0;
+  const preloaded = !!(initialServices && initialBarbers);
 
   const [step, setStep] = useState<Step>(minStep);
-  const [services, setServices] = useState<Service[]>([]);
-  const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [catalog, setCatalog] = useState<"loading" | "ready" | "error">("loading");
+  const [services, setServices] = useState<Service[]>(initialServices ?? []);
+  const [barbers, setBarbers] = useState<Barber[]>(initialBarbers ?? []);
+  const [catalog, setCatalog] = useState<"loading" | "ready" | "error">(
+    preloaded ? "ready" : "loading",
+  );
   const [selectedServices, setSelectedServices] = useState<string[]>(
     presetServiceId ? [presetServiceId] : [],
   );
@@ -124,9 +132,16 @@ export function BookingWizard({
     }
   }
   useEffect(() => {
-    void loadCatalog();
+    if (!preloaded) void loadCatalog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base]);
+
+  // Al llegar al paso de hora, precarga las horas del primer día: antes el
+  // cliente probaba día por día a ciegas ("No hay horas ese día" repetido).
+  useEffect(() => {
+    if (step === 2 && !day && barberChoice) void loadSlots(days[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const fmtTime = useMemo(
     () =>
