@@ -82,7 +82,7 @@ export default async function AgendarPage({
         </div>
       </nav>
 
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <main id="main" className="mx-auto max-w-2xl px-4 py-6">
         <div className="mb-5 rounded-lg border border-border bg-card p-4">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Servicio</p>
           <h1 className="mt-1 font-display text-xl font-medium tracking-tight">{service.name}</h1>

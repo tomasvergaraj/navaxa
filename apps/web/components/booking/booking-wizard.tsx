@@ -426,6 +426,7 @@ export function BookingWizard({
                 <button
                   key={s.id}
                   onClick={() => selectService(s.id)}
+                  aria-pressed={active}
                   className={cn(
                     "flex w-full items-center justify-between rounded-md border p-3 text-left transition-colors",
                     active ? "border-foreground bg-accent/10" : "border-border hover:bg-muted",
@@ -461,6 +462,7 @@ export function BookingWizard({
             <h2 className="mb-3 font-medium">¿Con quién?</h2>
             <button
               onClick={() => selectBarber("any")}
+              aria-pressed={barberChoice === "any"}
               className={cn(
                 "flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors",
                 barberChoice === "any" ? "border-foreground bg-accent/10" : "border-border hover:bg-muted",
@@ -478,6 +480,7 @@ export function BookingWizard({
               <button
                 key={b.id}
                 onClick={() => selectBarber(b.id)}
+                aria-pressed={barberChoice === b.id}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors",
                   barberChoice === b.id ? "border-foreground bg-accent/10" : "border-border hover:bg-muted",

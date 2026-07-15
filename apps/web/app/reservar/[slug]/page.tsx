@@ -123,7 +123,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
         </div>
       </nav>
 
-      <main className="mx-auto max-w-4xl px-4 pb-14">
+      <main id="main" className="mx-auto max-w-4xl px-4 pb-14">
         {/* Portada */}
         <div className="mt-6 aspect-[16/5] w-full overflow-hidden rounded-2xl border border-border bg-muted">
           {tenant.coverUrl ? (
@@ -231,7 +231,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
                 href={waHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                className="inline-flex items-center gap-2 rounded-full bg-[#128C7E] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
               >
                 <WhatsappIcon className="h-4 w-4 shrink-0" />
                 WhatsApp
@@ -290,7 +290,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
         )}
 
         {/* Servicios */}
-        <section className="mt-12">
+        <section id="servicios" className="mt-12 scroll-mt-20">
           <h2 className="mb-5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Servicios
           </h2>
@@ -419,6 +419,17 @@ export default async function ReservarPage({ params }: { params: { slug: string 
           </section>
         )}
       </main>
+
+      {/* CTA sticky (solo móvil): la conversión no debe depender de scrollear
+          hasta la lista de servicios. */}
+      <div className="sticky bottom-0 z-20 border-t border-border bg-background/95 p-3 backdrop-blur md:hidden">
+        <a
+          href="#servicios"
+          className="flex h-11 w-full items-center justify-center rounded-md bg-foreground text-sm font-medium text-background"
+        >
+          Reservar hora
+        </a>
+      </div>
 
       <footer className="py-8 text-center text-xs text-muted-foreground">
         Reservas con <span className="font-medium text-foreground">navaxa</span>
