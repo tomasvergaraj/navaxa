@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  NativeSelect,
 } from "@navaxa/ui";
 import { toast } from "sonner";
 
@@ -166,19 +167,19 @@ export function TeamManager({ members, currentUserId }: { members: Member[]; cur
                       {ROLE_LABEL[m.role]}
                     </Badge>
                   ) : (
-                    <select
+                    <NativeSelect
                       value={m.role}
                       disabled={busy}
                       aria-label={`Rol de ${m.name}`}
                       onChange={(e) => patchMember(m.id, { role: e.target.value })}
-                      className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                      className="h-8 w-auto px-2"
                     >
                       {ROLES.map((r) => (
                         <option key={r} value={r}>
                           {ROLE_LABEL[r]}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   )}
                 </td>
                 <td className="px-4 py-3">

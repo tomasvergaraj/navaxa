@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
   cn,
+  NativeSelect,
 } from "@navaxa/ui";
 import { toast } from "sonner";
 import { formatCLP, formatDuration } from "@/lib/format";
@@ -293,17 +294,16 @@ export function NewAppointmentDialog({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="a-barber">Barbero</Label>
-                <select
+                <NativeSelect
                   id="a-barber"
                   value={barberId}
                   onChange={(e) => setBarberId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   <option value="">Elegir…</option>
                   {barbers.map((b) => (
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="a-date">Fecha</Label>

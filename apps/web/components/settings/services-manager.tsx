@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  NativeSelect,
 } from "@navaxa/ui";
 import { toast } from "sonner";
 import { formatCLP, formatDuration } from "@/lib/format";
@@ -223,7 +224,7 @@ export function ServicesManager({ services }: { services: Service[] }) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="s-cat">Categoría</Label>
-                <select
+                <NativeSelect
                   id="s-cat"
                   value={creatingCategory ? "__new__" : form.category}
                   onChange={(e) => {
@@ -235,7 +236,6 @@ export function ServicesManager({ services }: { services: Service[] }) {
                       setForm({ ...form, category: e.target.value });
                     }
                   }}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">Sin categoría</option>
                   {categories.map((c) => (
@@ -244,7 +244,7 @@ export function ServicesManager({ services }: { services: Service[] }) {
                     </option>
                   ))}
                   <option value="__new__">+ Crear categoría…</option>
-                </select>
+                </NativeSelect>
                 {creatingCategory && (
                   <Input
                     autoFocus

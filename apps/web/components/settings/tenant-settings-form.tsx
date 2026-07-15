@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, Search, Star, MapPin, X } from "lucide-react";
-import { Button, Input, Label, Textarea } from "@navaxa/ui";
+import { Button, Input, Label, Textarea, NativeSelect } from "@navaxa/ui";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { LogoUpload } from "@/components/settings/logo-upload";
@@ -134,17 +134,16 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
           <Input value={form.city} onChange={(e) => set({ city: e.target.value })} />
         </Field>
         <Field label="Zona horaria">
-          <select
+          <NativeSelect
             value={form.timezone}
             onChange={(e) => set({ timezone: e.target.value })}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {tzList.map((tz) => (
               <option key={tz} value={tz}>
                 {tz}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </Field>
         <Field label="Instagram">
           <Input
@@ -193,18 +192,18 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
 
         <div className="mt-3">
           <Label htmlFor="notice">Anticipación mínima para reservar</Label>
-          <select
+          <NativeSelect
             id="notice"
             value={form.bookingNoticeMin}
             onChange={(e) => set({ bookingNoticeMin: Number(e.target.value) })}
-            className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:w-72"
+            className="mt-1.5 md:w-72"
           >
             {NOTICE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 

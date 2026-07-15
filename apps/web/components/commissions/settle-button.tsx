@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, Undo2 } from "lucide-react";
-import { Button } from "@navaxa/ui";
+import { Button, NativeSelect } from "@navaxa/ui";
 import { toast } from "sonner";
 import { formatCLP } from "@/lib/format";
 
@@ -43,7 +43,7 @@ export function SettleButton({ barberId, year, month, pendingAmount, paidAmount 
     <div className="flex items-center gap-2">
       {pendingAmount > 0 && (
         <>
-          <select
+          <NativeSelect
             value={method}
             onChange={(e) => setMethod(e.target.value as typeof method)}
             disabled={loading !== null}
@@ -53,7 +53,7 @@ export function SettleButton({ barberId, year, month, pendingAmount, paidAmount 
             <option value="CASH">Efectivo</option>
             <option value="TRANSFER">Transferencia</option>
             <option value="OTHER">Otro</option>
-          </select>
+          </NativeSelect>
           <Button size="sm" onClick={() => settle(true)} disabled={loading !== null}>
             {loading === "pay" ? <Loader2 className="animate-spin" /> : <Check />}
             Liquidar {formatCLP(pendingAmount)}

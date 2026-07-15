@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check } from "lucide-react";
-import { Button, Input, Label } from "@navaxa/ui";
+import { Button, Input, Label, NativeSelect } from "@navaxa/ui";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 
@@ -78,7 +78,7 @@ export function PaymentSettingsForm({ tenant }: Props) {
         <div className="space-y-4 rounded-md border border-dashed border-border p-4">
           <div>
             <Label htmlFor="dep-type">Tipo de abono</Label>
-            <select
+            <NativeSelect
               id="dep-type"
               value={form.depositType}
               onChange={(e) => set({ depositType: e.target.value as DepositType })}
@@ -87,7 +87,7 @@ export function PaymentSettingsForm({ tenant }: Props) {
               <option value="NONE">Sin abono</option>
               <option value="FIXED">Monto fijo (CLP)</option>
               <option value="PERCENT">Porcentaje del total</option>
-            </select>
+            </NativeSelect>
           </div>
 
           {needsValue && (

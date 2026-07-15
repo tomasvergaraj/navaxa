@@ -13,3 +13,4 @@ export * from "./components/skeleton";
 export * from "./components/tabs";
 export * from "./components/logo";
 export { cn } from "./lib/utils";
+export * from "./components/native-select";
