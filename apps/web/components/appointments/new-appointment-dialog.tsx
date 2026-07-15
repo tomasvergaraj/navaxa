@@ -96,9 +96,11 @@ export function NewAppointmentDialog({
       setResults([]);
       return;
     }
+    let stale = false;
     const t = setTimeout(async () => {
       try {
         const d = await apiJson(`/api/clients?q=${encodeURIComponent(query.trim())}&take=6`);
+        if (stale) return; // respuesta de una búsqueda anterior: descartar
         setResults(
           d.clients.map((c: { id: string; firstName: string; lastName: string | null }) => ({
             id: c.id,
@@ -106,10 +108,13 @@ export function NewAppointmentDialog({
           })),
         );
       } catch {
-        setResults([]);
+        if (!stale) setResults([]);
       }
     }, 300);
-    return () => clearTimeout(t);
+    return () => {
+      stale = true;
+      clearTimeout(t);
+    };
   }, [query, presetClient]);
 
   // Disponibilidad
@@ -120,10 +125,12 @@ export function NewAppointmentDialog({
       return;
     }
     setLoadingSlots(true);
+    const ctrl = new AbortController();
     apiJson("/api/appointments/availability", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ barberId, date: `${date}T12:00:00.000Z`, serviceIds: selectedServices }),
+      signal: ctrl.signal,
     })
       .then((d) => {
         setSlots(d.slots);
@@ -139,10 +146,12 @@ export function NewAppointmentDialog({
         }
       })
       .catch((e) => {
+        if ((e as Error).name === "AbortError") return; // reemplazada por una petición más nueva
         toast.error(e.message);
         setSlots([]);
       })
       .finally(() => setLoadingSlots(false));
+    return () => ctrl.abort();
   }, [barberId, date, selectedServices, presetStartIso]);
 
   const totals = useMemo(() => {
@@ -237,10 +246,17 @@ export function NewAppointmentDialog({
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     className="pl-8"
+                    type="search"
+                    aria-label="Buscar cliente por nombre o teléfono"
                     placeholder="Buscar por nombre o teléfono…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
+                  {query.trim().length >= 2 && results.length === 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Sin resultados — puedes crearlo desde la sección Clientes.
+                    </p>
+                  )}
                   {results.length > 0 && (
                     <div className="mt-1 rounded-md border border-border">
                       {results.map((c) => (
@@ -266,12 +282,18 @@ export function NewAppointmentDialog({
             <div className="space-y-1.5">
               <Label>Servicios</Label>
               <div className="space-y-1.5">
+                {services.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No hay servicios configurados. Créalos en Configuración → Servicios.
+                  </p>
+                )}
                 {services.map((s) => {
                   const active = selectedServices.includes(s.id);
                   return (
                     <button
                       key={s.id}
                       onClick={() => toggleService(s.id)}
+                      aria-pressed={active}
                       className={cn(
                         "flex w-full items-center justify-between rounded-md border p-2.5 text-left text-sm transition-colors",
                         active ? "border-foreground bg-accent/10" : "border-border hover:bg-muted",
@@ -327,8 +349,9 @@ export function NewAppointmentDialog({
                       <button
                         key={sl.startsAt}
                         onClick={() => setSlot(sl)}
+                        aria-pressed={slot?.startsAt === sl.startsAt}
                         className={cn(
-                          "rounded-md border py-1.5 text-sm transition-colors",
+                          "min-h-[40px] rounded-md border py-1.5 text-sm transition-colors",
                           slot?.startsAt === sl.startsAt ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
                         )}
                       >
