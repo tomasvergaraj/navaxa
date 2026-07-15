@@ -276,8 +276,8 @@ export default function MarketingPage() {
               © {new Date().getFullYear()} navaxa · Hecho en Chile.
             </p>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link href="/legal" className="hover:text-foreground">Términos</Link>
-              <Link href="/legal" className="hover:text-foreground">Privacidad</Link>
+              <Link href="/legal#terminos" className="hover:text-foreground">Términos</Link>
+              <Link href="/legal#privacidad" className="hover:text-foreground">Privacidad</Link>
               <a href="mailto:contacto@navaxa.cl" className="hover:text-foreground">
                 contacto@navaxa.cl
               </a>

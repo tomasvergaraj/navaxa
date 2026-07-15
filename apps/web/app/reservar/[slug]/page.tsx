@@ -20,7 +20,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const tenant = await resolveTenantBySlug(params.slug);
   return {
     title: tenant ? `Reservar hora · ${tenant.name}` : "Reservar hora",
-    robots: { index: false },
+    // Indexable a propósito: es la vitrina pública del local (SEO local con
+    // sus reseñas de Google). /agendar y /gestion siguen noindex.
   };
 }
 
