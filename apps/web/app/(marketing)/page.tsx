@@ -70,9 +70,40 @@ const FAQS = [
   },
 ];
 
+// JSON-LD: habilita rich results (FAQ) y describe la app con sus precios.
+function jsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        name: "navaxa",
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        description:
+          "Software de gestión para barberías: agenda, clientes, comisiones y recordatorios por WhatsApp.",
+        url: "https://navaxa.cl",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "CLP", description: "Plan gratis y 14 días de prueba" },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: FAQS.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        })),
+      },
+    ],
+  };
+}
+
 export default function MarketingPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
+      />
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
         <div className="container flex h-16 items-center justify-between gap-3">

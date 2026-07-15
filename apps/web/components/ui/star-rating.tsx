@@ -17,15 +17,22 @@ export function StarRating({
   const [hover, setHover] = useState(0);
   const active = hover || value;
   return (
-    <div className="flex gap-1.5" onMouseLeave={() => setHover(0)}>
+    <div
+      className="flex gap-1"
+      role="radiogroup"
+      aria-label="Calificación de 1 a 5 estrellas"
+      onMouseLeave={() => setHover(0)}
+    >
       {[1, 2, 3, 4, 5].map((i) => (
         <button
           key={i}
           type="button"
+          role="radio"
+          aria-checked={value === i}
           onClick={() => onChange(i)}
           onMouseEnter={() => setHover(i)}
           aria-label={`${i} estrella${i > 1 ? "s" : ""}`}
-          className="transition-transform hover:scale-110"
+          className="p-1 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <Star
             style={{ width: size, height: size }}

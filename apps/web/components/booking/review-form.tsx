@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, Copy, Loader2 } from "lucide-react";
-import { Button, Card, Textarea } from "@navaxa/ui";
+import { Button, Card, Textarea, Label } from "@navaxa/ui";
 import { toast } from "sonner";
 import { StarRating } from "@/components/ui/star-rating";
 import { GoogleIcon } from "@/components/ui/google-icon";
@@ -107,11 +107,16 @@ export function ReviewForm({
         <StarRating value={rating} onChange={setRating} />
       </div>
 
-      <div className="mt-5 space-y-1.5">
+      <div className="mt-5 space-y-1.5 text-left">
+        <div className="flex items-baseline justify-between">
+          <Label htmlFor="rv-comment">Tu comentario (opcional)</Label>
+          <span className="text-xs tabular-nums text-muted-foreground">{comment.length}/500</span>
+        </div>
         <Textarea
+          id="rv-comment"
           rows={4}
           maxLength={500}
-          placeholder="Cuéntanos cómo fue tu experiencia (opcional)…"
+          placeholder="Cuéntanos cómo fue tu experiencia…"
           value={comment}
           onChange={(e) => setComment(e.target.value)}
         />

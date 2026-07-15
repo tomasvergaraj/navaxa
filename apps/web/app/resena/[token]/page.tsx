@@ -109,7 +109,7 @@ export default async function ResenaPage({ params }: { params: { token: string }
         )}
       </div>
 
-      <footer className="fixed bottom-4 left-0 right-0 text-center text-xs text-muted-foreground">
+      <footer className="mt-10 pb-6 text-center text-xs text-muted-foreground">
         Reseñas con <span className="font-medium text-foreground">navaxa</span>
       </footer>
     </div>
