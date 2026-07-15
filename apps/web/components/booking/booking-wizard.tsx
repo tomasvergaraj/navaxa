@@ -282,7 +282,16 @@ export function BookingWizard({
       setResult(d as BookResult);
       setStep(4);
     } catch (e) {
-      toast.error((e as Error).message);
+      const msg = (e as Error).message;
+      toast.error(msg);
+      // Si otro cliente tomó la hora mientras llenaba sus datos, volvemos al
+      // paso de hora y recargamos los cupos del día (antes quedaba estancado
+      // en "Tus datos" con un slot muerto).
+      if (/ocupad/i.test(msg) && day) {
+        setSlot(null);
+        setStep(2);
+        void loadSlots(day);
+      }
     } finally {
       setSubmitting(false);
     }

@@ -101,6 +101,9 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
   const dragRef = useRef<DragState | null>(null);
 
   const [nowMin, setNowMin] = useState<number | null>(null);
+  // Ancho de columna: COL_W es el mínimo; con pocas columnas (ej. rol barbero,
+  // 1 sola) se estiran para no dejar medio teléfono muerto.
+  const [colW, setColW] = useState(COL_W);
   const scrollRef = useRef<HTMLDivElement>(null);
   const columnsRef = useRef<HTMLDivElement>(null);
   const lastPointerRef = useRef({ x: 0, y: 0 });
@@ -186,6 +189,18 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Mide el contenedor y reparte el ancho entre columnas (mínimo COL_W).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || columns.length === 0) return;
+    const measure = () =>
+      setColW(Math.max(COL_W, Math.floor((el.clientWidth - GUTTER_W) / columns.length)));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [columns.length]);
+
   const isoFromMin = useCallback(
     (min: number) => new Date(dayStartMs + min * 60_000).toISOString(),
     [dayStartMs],
@@ -225,13 +240,13 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
       const rect = wrap.getBoundingClientRect();
       let newStart = startMin + (clientY - rect.top) / PX_PER_MIN - d.offsetMin;
       newStart = clamp(Math.round(newStart / SNAP_MIN) * SNAP_MIN, startMin, endMin - d.durationMin);
-      const idx = clamp(Math.floor((clientX - rect.left) / COL_W), 0, columns.length - 1);
+      const idx = clamp(Math.floor((clientX - rect.left) / colW), 0, columns.length - 1);
       const ghostBarberId = columns[idx]?.barberId ?? d.ghostBarberId;
       const next: DragState = { ...d, pointerX: clientX, pointerY: clientY, ghostStartMin: newStart, ghostBarberId };
       dragRef.current = next;
       setDrag(next);
     },
-    [startMin, endMin, columns],
+    [startMin, endMin, columns, colW],
   );
 
   // Define la velocidad de auto-scroll según la cercanía del puntero a cada borde.
@@ -318,7 +333,7 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
       const rect = wrap.getBoundingClientRect();
       const pointerMin = startMin + (clientY - rect.top) / PX_PER_MIN;
       const colIndex = Math.max(0, columns.findIndex((c) => c.barberId === block.barberId));
-      const blockLeftX = rect.left + colIndex * COL_W + 2;
+      const blockLeftX = rect.left + colIndex * colW + 2;
       const state: DragState = {
         id: block.id,
         durationMin: block.endMin - block.startMin,
@@ -341,7 +356,7 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
       if (isTouch) navigator.vibrate?.(20);
       rafRef.current = requestAnimationFrame(autoScrollTick);
     },
-    [startMin, columns, onPointerMove, endDrag, preventTouchScroll, autoScrollTick],
+    [startMin, columns, colW, onPointerMove, endDrag, preventTouchScroll, autoScrollTick],
   );
 
   const beginDrag = useCallback(
@@ -442,7 +457,7 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
         className={cn("relative min-h-0 flex-1 overflow-auto rounded-lg border border-border", drag && "select-none")}
         style={{ touchAction: drag ? "none" : undefined }}
       >
-        <div className="relative" style={{ width: GUTTER_W + columns.length * COL_W, minWidth: "100%" }}>
+        <div className="relative" style={{ width: GUTTER_W + columns.length * colW, minWidth: "100%" }}>
           {/* Header: barberos (sticky arriba) */}
           <div className="sticky top-0 z-30 flex border-b border-border bg-background">
             <div className="sticky left-0 z-10 shrink-0 border-r border-border bg-background" style={{ width: GUTTER_W }} />
@@ -450,7 +465,7 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
               <div
                 key={c.barberId}
                 className="shrink-0 truncate border-r border-border px-2 py-2 text-center text-sm font-medium"
-                style={{ width: COL_W }}
+                style={{ width: colW }}
               >
                 {c.barberName}
                 <span className="ml-1 text-xs text-muted-foreground">({c.blocks.length})</span>
@@ -480,6 +495,7 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
                 <GridColumnView
                   key={c.barberId}
                   col={c}
+                  colW={colW}
                   hours={hours}
                   startMin={startMin}
                   endMin={endMin}
@@ -499,8 +515,8 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
                 <div
                   className="pointer-events-none absolute z-20 rounded-md border-2 border-dashed border-foreground/50 bg-foreground/5"
                   style={{
-                    left: ghostColIdx * COL_W + 2,
-                    width: COL_W - 4,
+                    left: ghostColIdx * colW + 2,
+                    width: colW - 4,
                     top: (drag.ghostStartMin - startMin) * PX_PER_MIN,
                     height: Math.max(MIN_BLOCK_PX, drag.durationMin * PX_PER_MIN - 2),
                   }}
@@ -548,7 +564,7 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
             style={{
               left: drag.pointerX - drag.grabOffsetX,
               top: drag.pointerY - drag.offsetMin * PX_PER_MIN,
-              width: COL_W - 4,
+              width: colW - 4,
               height: Math.max(MIN_BLOCK_PX, drag.durationMin * PX_PER_MIN - 2),
             }}
           >
@@ -616,6 +632,7 @@ interface ColumnItem {
  */
 const GridColumnView = memo(function GridColumnView({
   col,
+  colW,
   hours,
   startMin,
   endMin,
@@ -628,6 +645,7 @@ const GridColumnView = memo(function GridColumnView({
   onQuickAction,
 }: {
   col: GridColumn;
+  colW: number;
   hours: number[];
   startMin: number;
   endMin: number;
@@ -642,7 +660,7 @@ const GridColumnView = memo(function GridColumnView({
   return (
     <div
       className="relative shrink-0 border-r border-border"
-      style={{ width: COL_W }}
+      style={{ width: colW }}
       onClick={(e) => onEmptyClick(col.barberId, e.clientY)}
       title="Click para agendar aquí"
     >
@@ -706,7 +724,7 @@ const GridColumnView = memo(function GridColumnView({
                   disabled={actingId === b.id}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute right-0 top-0 flex h-7 w-7 items-center justify-center rounded-bl-md text-muted-foreground/70 hover:bg-background/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="absolute right-0 top-0 flex h-7 w-7 items-center justify-center rounded-bl-md text-muted-foreground/70 before:absolute before:-inset-2 before:content-[''] hover:bg-background/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </button>

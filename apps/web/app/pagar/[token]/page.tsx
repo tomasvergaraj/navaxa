@@ -31,6 +31,9 @@ export default async function PagarPage({ params }: { params: { token: string } 
         <p className="mt-2 text-sm text-muted-foreground">
           Este enlace es inválido o ya no existe. Vuelve a reservar tu hora.
         </p>
+        <Button asChild variant="outline" className="mt-6">
+          <a href="/">Ir a navaxa.cl</a>
+        </Button>
       </Shell>
     );
   }

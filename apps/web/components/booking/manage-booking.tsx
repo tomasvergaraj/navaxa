@@ -237,6 +237,9 @@ export function ManageBooking({ token }: { token: string }) {
         <p className="mt-2 text-sm text-muted-foreground">
           El enlace no es válido o expiró. Si necesitas ayuda, contacta a la barbería.
         </p>
+        <Button asChild variant="outline" className="mt-6">
+          <a href="/">Ir a navaxa.cl</a>
+        </Button>
       </div>
     );
   }
