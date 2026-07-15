@@ -76,7 +76,7 @@ export default async function DashboardHome() {
   ]);
 
   // Métricas financieras / de negocio: solo gestión.
-  const [monthRevenue, activeClients, newClients30, barberStats] = isManager
+  const [monthRevenue, activeClients, newClients30, barberStats, barberSums] = isManager
     ? await Promise.all([
         db.appointment.aggregate({
           where: {
@@ -93,17 +93,23 @@ export default async function DashboardHome() {
             id: true,
             user: { select: { name: true } },
             commissionRate: true,
-            appointments: {
-              where: {
-                startsAt: { gte: last30 },
-                status: AppointmentStatus.COMPLETED,
-              },
-              select: { totalPrice: true },
-            },
           },
         }),
+        // Suma agregada en BD (antes: todas las citas de 30 días a JS para un reduce).
+        db.appointment.groupBy({
+          by: ["barberId"],
+          where: { startsAt: { gte: last30 }, status: AppointmentStatus.COMPLETED },
+          _sum: { totalPrice: true },
+          _count: true,
+        }),
       ])
-    : [null, 0, 0, [] as never[]];
+    : [null, 0, 0, [] as never[], [] as never[]];
+
+  const sumByBarber = new Map(
+    (barberSums as { barberId: string; _sum: { totalPrice: number | null }; _count: number }[]).map(
+      (s) => [s.barberId, s],
+    ),
+  );
 
   return (
     <div className="container max-w-7xl py-8">
@@ -213,16 +219,17 @@ export default async function DashboardHome() {
             ) : (
               <ul className="divide-y divide-border">
                 {barberStats
-                  .map((b) => ({
-                    id: b.id,
-                    name: b.user.name,
-                    appts: b.appointments.length,
-                    revenue: b.appointments.reduce((s, a) => s + a.totalPrice, 0),
-                    commission: Math.round(
-                      b.appointments.reduce((s, a) => s + a.totalPrice, 0) *
-                        b.commissionRate,
-                    ),
-                  }))
+                  .map((b) => {
+                    const agg = sumByBarber.get(b.id);
+                    const revenue = agg?._sum.totalPrice ?? 0;
+                    return {
+                      id: b.id,
+                      name: b.user.name,
+                      appts: agg?._count ?? 0,
+                      revenue,
+                      commission: Math.round(revenue * b.commissionRate),
+                    };
+                  })
                   .sort((a, b) => b.revenue - a.revenue)
                   .map((b, i) => (
                     <li key={b.id} className="flex items-center justify-between px-3 py-3">

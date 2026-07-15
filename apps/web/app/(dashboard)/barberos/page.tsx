@@ -22,25 +22,33 @@ export default async function BarberosPage() {
     where: { active: true },
     include: {
       user: { select: { name: true, email: true, lastLoginAt: true } },
-      appointments: {
-        where: {
-          startsAt: { gte: last30 },
-          status: AppointmentStatus.COMPLETED,
-        },
-        select: { totalPrice: true },
-      },
       _count: { select: { appointments: true } },
     },
     orderBy: { createdAt: "asc" },
   });
 
+  // Suma agregada en la BD (antes se traían todas las citas de 30 días solo
+  // para hacer reduce en JS — crecía lineal en filas transferidas).
+  const sums = await db.appointment.groupBy({
+    by: ["barberId"],
+    where: {
+      barberId: { in: barbers.map((b) => b.id) },
+      startsAt: { gte: last30 },
+      status: AppointmentStatus.COMPLETED,
+    },
+    _sum: { totalPrice: true },
+    _count: true,
+  });
+  const sumByBarber = new Map(sums.map((s) => [s.barberId, s]));
+
   const stats = barbers.map((b) => {
-    const revenue = b.appointments.reduce((s, a) => s + a.totalPrice, 0);
+    const agg = sumByBarber.get(b.id);
+    const revenue = agg?._sum.totalPrice ?? 0;
     return {
       ...b,
       revenue,
       commission: Math.round(revenue * b.commissionRate),
-      apptsCount: b.appointments.length,
+      apptsCount: agg?._count ?? 0,
     };
   });
 

@@ -45,6 +45,9 @@ export default async function ComisionesPage() {
   const [grouped, barbers] = await Promise.all([
     db.commission.groupBy({
       by: ["periodStart", "barberId", "paid", "paymentMethod"],
+      // Acota en la BD a los últimos 12 meses (antes se traía todo el histórico
+      // y se descartaba en JS).
+      where: { periodStart: { gte: new Date(new Date().getFullYear(), new Date().getMonth() - 11, 1) } },
       _sum: { amount: true },
       _count: true,
       orderBy: { periodStart: "desc" },

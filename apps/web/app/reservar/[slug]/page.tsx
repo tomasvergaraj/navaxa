@@ -11,7 +11,9 @@ import { Stars } from "@/components/ui/stars";
 import { formatRelative } from "@/lib/format";
 import type { GoogleReview } from "@/lib/google-reviews";
 
-export const dynamic = "force-dynamic";
+// ISR corto: esta página se comparte por WhatsApp y pagaba 6 queries por hit.
+// Nada acá es per-request (sin cookies); 120s de staleness es aceptable.
+export const revalidate = 120;
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const tenant = await resolveTenantBySlug(params.slug);
