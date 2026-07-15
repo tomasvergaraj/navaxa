@@ -27,6 +27,11 @@ admite texto libre fuera de la ventana de 24h). Esta es la lista a registrar en
 >
 > **Update 2026-07-14:** quedan **8 plantillas** vigentes: `haircut_rating_request`
 > se eliminó del código (invitación única post-visita). No crearla en Twilio.
+>
+> **Update 2026-07-15:** se agregó `appointment_scheduled` → son **9 plantillas**
+> vigentes. Al crear/reagendar una cita el cliente recibe "hora agendada";
+> "hora confirmada" (`appointment_confirmed`) se envía SOLO cuando el local
+> confirma la cita desde el panel.
 
 ## Variables de entorno
 
@@ -65,6 +70,11 @@ Hola {{1}}, hace un mes que no nos vemos. {{2}} tiene horas disponibles esta sem
 ### birthday — variables: 1=firstName, 2=shopName — categoría MARKETING
 ```
 ¡Feliz cumpleaños, {{1}}! 🎉 Tienes 20% off en tu próximo corte. Te esperamos en {{2}} para celebrarlo.
+```
+
+### appointment_scheduled — variables: 1=date, 2=time, 3=barberName, 4=shopName
+```
+Tu hora quedó agendada: {{1}} {{2}} con {{3}} en {{4}}. ¡Nos vemos!
 ```
 
 ### appointment_confirmed — variables: 1=date, 2=time, 3=barberName, 4=shopName
@@ -115,7 +125,7 @@ El token temporal de la pantalla de setup dura 24h. Para prod usa un System User
    `whatsapp_business_messaging` + `whatsapp_business_management` → **sin
    expiración**. Cópialo → va en `WHATSAPP_ACCESS_TOKEN` (no se vuelve a mostrar).
 
-### 4. Registrar las plantillas (8 vigentes)
+### 4. Registrar las plantillas (9 vigentes)
 En **WhatsApp Manager → Plantillas de mensajes → Crear plantilla**, una por cada
 sección de arriba:
 - Categoría **Utility**, idioma **Spanish (es)**.

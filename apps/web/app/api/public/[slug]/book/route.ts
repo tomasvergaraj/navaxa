@@ -197,7 +197,7 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     }
 
     // --- Flujo sin abono: confirmar de inmediato (comportamiento original). ---
-    await notifyAppointment("confirmed", tenant, appt).catch(() => undefined);
+    await notifyAppointment("scheduled", tenant, appt).catch(() => undefined);
 
     const manageToken = signManageToken(appt.id);
     return NextResponse.json(

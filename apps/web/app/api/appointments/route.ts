@@ -69,12 +69,12 @@ export async function POST(req: Request) {
       notes: parsed.data.notes,
     });
 
-    // Confirmación al cliente (no bloquea la respuesta si falla el envío).
+    // Aviso de hora agendada al cliente (no bloquea la respuesta si falla el envío).
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { id: true, name: true, plan: true, address: true, timezone: true },
     });
-    if (tenant) await notifyAppointment("confirmed", tenant, appt).catch(() => undefined);
+    if (tenant) await notifyAppointment("scheduled", tenant, appt).catch(() => undefined);
 
     return NextResponse.json({ appointment: appt }, { status: 201 });
   } catch (e) {

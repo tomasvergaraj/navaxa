@@ -33,8 +33,8 @@ export async function POST(req: Request, { params }: { params: { token: string }
       return NextResponse.json({ error: msg }, { status });
     }
 
-    // Reenvía confirmación con el nuevo horario.
-    await notifyAppointment("confirmed", appt.tenant, updated).catch(() => undefined);
+    // Reenvía el aviso de hora agendada con el nuevo horario.
+    await notifyAppointment("scheduled", appt.tenant, updated).catch(() => undefined);
 
     return NextResponse.json({ ok: true, startsAt: updated.startsAt, endsAt: updated.endsAt });
   } catch (e) {

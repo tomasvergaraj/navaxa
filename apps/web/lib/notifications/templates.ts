@@ -4,6 +4,7 @@ export type TemplateKey =
   | "thanks_post_visit"
   | "recall_30d"
   | "birthday"
+  | "appointment_scheduled"
   | "appointment_confirmed"
   | "appointment_cancelled"
   | "barber_invite"
@@ -36,6 +37,11 @@ const TEMPLATES: Record<TemplateKey, Template> = {
   birthday: {
     body:
       "¡Feliz cumpleaños, {firstName}! 🎉 Tienes 20% off en tu próximo corte. Te esperamos en {shopName}.",
+  },
+  appointment_scheduled: {
+    subject: "Hora agendada en {shopName}",
+    body:
+      "Tu hora quedó agendada: {date} {time} con {barberName} en {shopName}. ¡Nos vemos!",
   },
   appointment_confirmed: {
     subject: "Hora confirmada en {shopName}",

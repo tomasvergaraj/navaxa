@@ -63,8 +63,8 @@ export async function POST(req: Request, { params }: { params: { token: string }
       return NextResponse.json({ ok: true, manageToken: signManageToken(payment.appointmentId) });
     }
 
-    // Confirmación al cliente (no bloquea la respuesta si falla el envío).
-    await notifyAppointment("confirmed", payment.tenant, payment.appointment).catch(() => undefined);
+    // Aviso de hora agendada al cliente (no bloquea la respuesta si falla el envío).
+    await notifyAppointment("scheduled", payment.tenant, payment.appointment).catch(() => undefined);
 
     return NextResponse.json({ ok: true, manageToken: signManageToken(payment.appointmentId) });
   } catch (e) {

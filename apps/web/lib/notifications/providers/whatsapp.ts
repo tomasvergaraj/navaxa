@@ -26,6 +26,10 @@ const WA_TEMPLATES: Partial<Record<TemplateKey, { name: string; params: string[]
   thanks_post_visit: { name: "thanks_post_visit", params: ["firstName"] },
   recall_30d: { name: "recall_30d", params: ["firstName", "barberName", "bookingUrl"] },
   birthday: { name: "birthday", params: ["firstName", "shopName"] },
+  appointment_scheduled: {
+    name: "appointment_scheduled",
+    params: ["date", "time", "barberName", "shopName"],
+  },
   appointment_confirmed: {
     name: "appointment_confirmed",
     params: ["date", "time", "barberName", "shopName"],

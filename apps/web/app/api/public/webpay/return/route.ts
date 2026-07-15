@@ -106,7 +106,7 @@ async function handle(req: Request): Promise<Response> {
       },
     });
     if (apptFull) {
-      await notifyAppointment("confirmed", payment.tenant, apptFull).catch(() => undefined);
+      await notifyAppointment("scheduled", payment.tenant, apptFull).catch(() => undefined);
     }
   }
 

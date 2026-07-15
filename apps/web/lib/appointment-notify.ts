@@ -33,13 +33,20 @@ function formatDateTime(date: Date, timezone?: string | null) {
   return { fecha, hora };
 }
 
+const TEMPLATE_BY_KIND = {
+  scheduled: "appointment_scheduled",
+  confirmed: "appointment_confirmed",
+  cancelled: "appointment_cancelled",
+} as const;
+
 /**
- * Notifica al cliente la confirmación o cancelación de su cita.
- * No lanza: si falla el envío queda registrado en NotificationLog.
+ * Notifica al cliente sobre su cita. "scheduled" al crear/reagendar (la cita
+ * nace Agendada), "confirmed" cuando el local la confirma desde el panel,
+ * "cancelled" al cancelar. No lanza: si falla el envío queda en NotificationLog.
  * WhatsApp se usa solo en planes que lo incluyen; si no, degrada a email.
  */
 export async function notifyAppointment(
-  kind: "confirmed" | "cancelled",
+  kind: keyof typeof TEMPLATE_BY_KIND,
   tenant: NotifyTenant,
   appointment: NotifyAppointment,
 ) {
@@ -52,7 +59,7 @@ export async function notifyAppointment(
     tenantId: tenant.id,
     channel: target.channel,
     recipient: target.recipient,
-    templateKey: kind === "confirmed" ? "appointment_confirmed" : "appointment_cancelled",
+    templateKey: TEMPLATE_BY_KIND[kind],
     data: {
       firstName: appointment.client.firstName,
       shopName: tenant.name,

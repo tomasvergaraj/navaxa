@@ -5,7 +5,8 @@ import { apiError, ApiError } from "@/lib/api-errors";
 import { viewerScope } from "@/lib/page-guards";
 import { completeAppointment, rescheduleAppointment } from "@/lib/booking";
 import { sendReviewRequest } from "@/lib/reviews";
-import { AppointmentStatus } from "@navaxa/db";
+import { notifyAppointment } from "@/lib/appointment-notify";
+import { AppointmentStatus, prisma } from "@navaxa/db";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     const db = scopedDb();
+    // Estado previo: para avisar al cliente solo cuando la cita RECIÉN pasa a
+    // Confirmada (no en re-guardados que ya estaban confirmados).
+    const prev = await db.appointment.findFirst({
+      where: { id: params.id },
+      select: { status: true },
+    });
     const data: any = { ...parsed.data };
     if (parsed.data.status === AppointmentStatus.CANCELLED) {
       data.cancelledAt = new Date();
@@ -91,6 +98,29 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       where: { id: params.id },
       data,
     });
+
+    if (
+      parsed.data.status === AppointmentStatus.CONFIRMED &&
+      prev?.status !== AppointmentStatus.CONFIRMED
+    ) {
+      // "Hora confirmada" recién cuando el local confirma desde el panel (al
+      // crear la cita se envía "hora agendada"). No bloquea la respuesta.
+      const [tenant, appt] = await Promise.all([
+        // Tenant no tiene columna tenantId: leerlo con prisma crudo, no scopedDb.
+        prisma.tenant.findUnique({
+          where: { id: tenantId },
+          select: { id: true, name: true, plan: true, address: true, timezone: true },
+        }),
+        db.appointment.findFirst({
+          where: { id: params.id },
+          include: { client: true, barber: { include: { user: true } } },
+        }),
+      ]);
+      if (tenant && appt) {
+        await notifyAppointment("confirmed", tenant, appt).catch(() => undefined);
+      }
+    }
+
     return NextResponse.json({ appointment: updated });
   } catch (e) {
     return apiError(e);
