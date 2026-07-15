@@ -16,6 +16,7 @@ import {
 } from "@navaxa/ui";
 import { toast } from "sonner";
 import { Plan, SubscriptionStatus } from "@navaxa/db";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Props = {
   tenantId: string;
@@ -38,6 +39,7 @@ function isoToDateInput(iso: string | null): string {
 
 export function TenantAdminActions({ tenantId, initial }: Props) {
   const router = useRouter();
+  const { confirm, confirmDialog } = useConfirm();
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(false);
 
@@ -81,7 +83,13 @@ export function TenantAdminActions({ tenantId, initial }: Props) {
   async function toggleActive() {
     const next = !initial.active;
     const verb = next ? "Activar" : "Suspender";
-    if (!confirm(`¿${verb} esta barbería? Cambia el acceso de inmediato.`)) return;
+    const ok = await confirm({
+      title: `¿${verb} esta barbería?`,
+      description: "Cambia el acceso de inmediato.",
+      confirmText: verb,
+      destructive: !next,
+    });
+    if (!ok) return;
     setToggling(true);
     try {
       await patch({ active: next }, next ? "Barbería activada" : "Barbería suspendida");
@@ -166,6 +174,7 @@ export function TenantAdminActions({ tenantId, initial }: Props) {
           {initial.active ? "Suspender barbería" : "Reactivar barbería"}
         </Button>
       </div>
+      {confirmDialog}
     </Card>
   );
 }

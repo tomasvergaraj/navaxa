@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AlertTriangle, CheckCheck, ChevronDown, ChevronUp, Loader2, UserX } from "lucide-react";
 import { Button, cn } from "@navaxa/ui";
 import { AppointmentStatus } from "@navaxa/db";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { patchAppointmentStatus } from "@/components/agenda/appointment-quick-actions";
 
 export type UnmarkedItem = {
@@ -25,6 +26,7 @@ type Props = { items: UnmarkedItem[] };
  */
 export function UnmarkedBanner({ items }: Props) {
   const router = useRouter();
+  const { confirm, confirmDialog } = useConfirm();
   const [open, setOpen] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
   const [bulkRunning, setBulkRunning] = useState(false);
@@ -36,7 +38,15 @@ export function UnmarkedBanner({ items }: Props) {
 
   async function markOne(id: string, status: AppointmentStatus) {
     if (actingId || bulkRunning) return;
-    if (status === AppointmentStatus.NO_SHOW && !confirm("¿Marcar que el cliente no vino?")) return;
+    if (
+      status === AppointmentStatus.NO_SHOW &&
+      !(await confirm({
+        title: "¿Marcar que el cliente no vino?",
+        confirmText: "No vino",
+        destructive: true,
+      }))
+    )
+      return;
     setActingId(id);
     try {
       await patchAppointmentStatus(id, status);
@@ -52,33 +62,35 @@ export function UnmarkedBanner({ items }: Props) {
 
   async function completeAll() {
     if (actingId || bulkRunning) return;
-    if (
-      !confirm(
-        `Se marcarán ${pending.length} cita(s) como completadas. Esto registra comisiones y envía la invitación de reseña a cada cliente. ¿Continuar?`,
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: `¿Completar ${pending.length} cita(s)?`,
+      description:
+        "Esto registra las comisiones y envía la invitación de reseña a cada cliente. Si alguien no vino, márcalo individualmente antes.",
+      confirmText: "Completar todas",
+    });
+    if (!ok) return;
     setBulkRunning(true);
-    let ok = 0;
+    let done_ = 0;
     let failed = 0;
     // Secuencial a propósito: cada COMPLETED dispara comisiones + reseña en el server.
     for (const item of pending) {
       try {
         await patchAppointmentStatus(item.id, AppointmentStatus.COMPLETED);
         setDone((s) => new Set(s).add(item.id));
-        ok++;
+        done_++;
       } catch {
         failed++;
       }
     }
     setBulkRunning(false);
-    if (failed === 0) toast.success(`${ok} cita(s) completadas`);
-    else toast.error(`${ok} completadas, ${failed} fallaron`);
+    if (failed === 0) toast.success(`${done_} cita(s) completadas`);
+    else toast.error(`${done_} completadas, ${failed} fallaron`);
     router.refresh();
   }
 
   return (
     <div className="mb-3 shrink-0 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+      {confirmDialog}
       <div className="flex flex-wrap items-center gap-2">
         <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
         <span className="font-medium">
@@ -114,7 +126,7 @@ export function UnmarkedBanner({ items }: Props) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 px-2"
+                    className="px-2"
                     disabled={busy || actingId !== null}
                     onClick={() => markOne(i.id, AppointmentStatus.COMPLETED)}
                   >
@@ -124,7 +136,7 @@ export function UnmarkedBanner({ items }: Props) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 px-2 text-muted-foreground"
+                    className="px-2 text-muted-foreground"
                     disabled={busy || actingId !== null}
                     onClick={() => markOne(i.id, AppointmentStatus.NO_SHOW)}
                   >

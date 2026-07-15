@@ -24,6 +24,7 @@ import { AppointmentStatus } from "@navaxa/db";
 import { APPOINTMENT_STATUS_LABELS } from "@navaxa/config";
 import type { GridBlock } from "@/lib/agenda";
 import { formatCLP } from "@/lib/format";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   QUICK_ACTIONS,
   patchAppointmentStatus,
@@ -54,6 +55,7 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [acting, setActing] = useState<AppointmentStatus | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
 
   const [status, setStatus] = useState<AppointmentStatus>(block?.status ?? AppointmentStatus.SCHEDULED);
   const [notes, setNotes] = useState<string>(block?.notes ?? "");
@@ -101,7 +103,16 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
 
   async function applyQuickAction(action: QuickAction) {
     if (!block || acting) return;
-    if (action.confirmMsg && !confirm(action.confirmMsg)) return;
+    if (
+      action.confirmMsg &&
+      !(await confirm({
+        title: action.confirmMsg,
+        description: `${block.clientName} · ${fmtTime(block.startsAtIso)}`,
+        confirmText: action.label,
+        destructive: action.to === AppointmentStatus.NO_SHOW,
+      }))
+    )
+      return;
     setActing(action.to);
     try {
       await patchAppointmentStatus(block.id, action.to);
@@ -121,7 +132,14 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
 
   async function cancelAppointment() {
     if (!block) return;
-    if (!confirm("¿Cancelar esta cita? Se notifica al cliente si está habilitado.")) return;
+    const ok = await confirm({
+      title: "¿Cancelar esta cita?",
+      description: "Se notifica al cliente si está habilitado.",
+      confirmText: "Cancelar cita",
+      cancelText: "Volver",
+      destructive: true,
+    });
+    if (!ok) return;
     setCancelling(true);
     try {
       const res = await fetch(`/api/appointments/${block.id}`, { method: "DELETE" });
@@ -298,6 +316,7 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
           </>
         )}
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

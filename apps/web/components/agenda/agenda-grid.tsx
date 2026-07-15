@@ -19,6 +19,7 @@ import type { GridBlock, GridColumn } from "@/lib/agenda";
 import { formatCLP } from "@/lib/format";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
 import { AppointmentDetailDialog } from "@/components/agenda/appointment-detail-dialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   QUICK_ACTIONS,
   patchAppointmentStatus,
@@ -117,10 +118,20 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
 
   // Cita con acción rápida (menú "⋮") en curso — evita doble PATCH.
   const [actingId, setActingId] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
 
   async function quickFromMenu(block: GridBlock, action: QuickAction) {
     if (actingId) return;
-    if (action.confirmMsg && !confirm(action.confirmMsg)) return;
+    if (
+      action.confirmMsg &&
+      !(await confirm({
+        title: action.confirmMsg,
+        description: `${block.clientName} · ${fmtMin(block.startMin)}`,
+        confirmText: action.label,
+        destructive: action.to === "NO_SHOW",
+      }))
+    )
+      return;
     setActingId(block.id);
     try {
       await patchAppointmentStatus(block.id, action.to);
@@ -490,8 +501,6 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
                       return (
                         <div
                           key={b.id}
-                          role="button"
-                          tabIndex={0}
                           title={tooltip}
                           onClick={(e) => {
                             // Bloquea el click-en-hueco del padre y, si no veníamos de un
@@ -509,28 +518,35 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
                           )}
                           style={{ top: (p.startMin - startMin) * PX_PER_MIN, height, WebkitTouchCallout: "none" }}
                         >
-                          <div className="pr-4 font-medium tabular-nums leading-tight">{fmtMin(p.startMin)}</div>
-                          <div className="truncate pr-4 leading-tight">{b.clientName}</div>
+                          <div className="pr-6 font-medium tabular-nums leading-tight">{fmtMin(p.startMin)}</div>
+                          <div className="truncate pr-6 leading-tight">{b.clientName}</div>
                           {height > 40 && (
                             <div className="truncate text-[10px] leading-tight text-muted-foreground">
                               {b.serviceNames.join(", ")}
                             </div>
                           )}
+                          {height > 56 && (
+                            <div className="truncate text-[10px] font-medium leading-tight text-muted-foreground">
+                              {APPOINTMENT_STATUS_LABELS[b.status]}
+                            </div>
+                          )}
 
-                          {/* Menú "⋮": acciones de estado sin abrir el detalle. Los
+                          {/* Menú "⋮": acciones de estado sin abrir el detalle. Es
+                              además la entrada de teclado/lector de pantalla a la cita
+                              (el bloque en sí es solo puntero: click/drag). Los
                               stopPropagation evitan que el trigger inicie drag o abra
                               el detalle (handlers del bloque padre). */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                aria-label="Acciones de la cita"
+                                aria-label={`Cita de ${b.clientName} a las ${fmtMin(p.startMin)}, ${APPOINTMENT_STATUS_LABELS[b.status]} — acciones`}
                                 disabled={actingId === b.id}
                                 onPointerDown={(e) => e.stopPropagation()}
                                 onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-0 rounded-bl-md p-1 text-muted-foreground/70 hover:bg-background/70 hover:text-foreground"
+                                className="absolute right-0 top-0 flex h-7 w-7 items-center justify-center rounded-bl-md text-muted-foreground/70 hover:bg-background/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                               >
-                                <MoreVertical className="h-3.5 w-3.5" />
+                                <MoreVertical className="h-4 w-4" />
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
@@ -615,6 +631,7 @@ export function AgendaGrid({ dateStr, dayStartMs, isToday, startMin, endMin, col
 
       {/* Detalle de cita (click sobre un bloque). */}
       <AppointmentDetailDialog block={detailBlock} onClose={() => setDetailBlock(null)} />
+      {confirmDialog}
     </div>
   );
 }
