@@ -28,6 +28,9 @@ export default async function ReportesPage({
       db.appointment.findMany({
         where: { status: AppointmentStatus.COMPLETED, startsAt: range },
         select: { startsAt: true, totalPrice: true },
+        // Tope de seguridad (regla COSTS.md): el rango ya está acotado a 366
+        // días, esto protege ante volúmenes anómalos.
+        take: 20000,
       }),
       db.appointment.groupBy({
         by: ["status"],

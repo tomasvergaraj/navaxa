@@ -51,6 +51,7 @@ export function PeriodSelector({
       <div className="flex flex-wrap items-center gap-1.5">
         <Input
           type="date"
+          aria-label="Desde"
           value={customFrom}
           max={customTo || undefined}
           onChange={(e) => setCustomFrom(e.target.value)}
@@ -59,6 +60,7 @@ export function PeriodSelector({
         <span className="text-muted-foreground">–</span>
         <Input
           type="date"
+          aria-label="Hasta"
           value={customTo}
           min={customFrom || undefined}
           onChange={(e) => setCustomTo(e.target.value)}

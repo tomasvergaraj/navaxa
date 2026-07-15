@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   NativeSelect,
 } from "@navaxa/ui";
@@ -192,6 +193,7 @@ export function ServicesManager({ services }: { services: Service[] }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? "Editar servicio" : "Nuevo servicio"}</DialogTitle>
+            <DialogDescription className="sr-only">Crea o edita un servicio del catálogo.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">

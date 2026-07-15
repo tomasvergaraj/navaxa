@@ -2,7 +2,7 @@ import { Skeleton } from "@navaxa/ui";
 
 export default function Loading() {
   return (
-    <div className="container max-w-6xl py-8">
+    <div className="container max-w-7xl py-8">
       <Skeleton className="h-9 w-52" />
       <Skeleton className="mt-2 h-4 w-72" />
 

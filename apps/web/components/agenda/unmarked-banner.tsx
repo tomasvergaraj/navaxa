@@ -30,6 +30,7 @@ export function UnmarkedBanner({ items }: Props) {
   const [open, setOpen] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
   const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
   // Ocultamos localmente las ya resueltas para feedback inmediato (el refresh confirma).
   const [done, setDone] = useState<Set<string>>(new Set());
 
@@ -70,6 +71,7 @@ export function UnmarkedBanner({ items }: Props) {
     });
     if (!ok) return;
     setBulkRunning(true);
+    setBulkProgress(0);
     let done_ = 0;
     let failed = 0;
     // Secuencial a propósito: cada COMPLETED dispara comisiones + reseña en el server.
@@ -81,6 +83,7 @@ export function UnmarkedBanner({ items }: Props) {
       } catch {
         failed++;
       }
+      setBulkProgress(done_ + failed);
     }
     setBulkRunning(false);
     if (failed === 0) toast.success(`${done_} cita(s) completadas`);
@@ -104,7 +107,7 @@ export function UnmarkedBanner({ items }: Props) {
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={completeAll} disabled={bulkRunning || actingId !== null}>
             {bulkRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
-            Completar todas
+            {bulkRunning ? `Completando ${bulkProgress}/${pending.length + bulkProgress}…` : "Completar todas"}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
             {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

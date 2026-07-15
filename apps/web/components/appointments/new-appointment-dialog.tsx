@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarPlus, Check, Loader2, Search } from "lucide-react";
+import { CalendarPlus, Check, Loader2, Plus, Search } from "lucide-react";
 import {
   Button,
   Input,
@@ -69,6 +69,7 @@ export function NewAppointmentDialog({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [creatingClient, setCreatingClient] = useState(false);
 
   // Cliente
   const [client, setClient] = useState<ClientLite | null>(presetClient ?? null);
@@ -169,6 +170,31 @@ export function NewAppointmentDialog({
     setSelectedServices((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   }
 
+
+  // Alta rápida sin salir del flujo: antes "sin resultados" te expulsaba a la
+  // sección Clientes a mitad del agendamiento.
+  async function quickCreateClient() {
+    const name = query.trim();
+    if (!name || creatingClient) return;
+    setCreatingClient(true);
+    try {
+      const parts = name.split(/\s+/);
+      const d = await apiJson("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName: parts[0], lastName: parts.slice(1).join(" ") }),
+      });
+      setClient({ id: d.client.id, name });
+      setQuery("");
+      setResults([]);
+      toast.success("Cliente creado — recuerda completar su teléfono después");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setCreatingClient(false);
+    }
+  }
+
   async function submit() {
     if (!client || !slot) return;
     setSubmitting(true);
@@ -247,21 +273,34 @@ export function NewAppointmentDialog({
                   <Input
                     className="pl-8"
                     type="search"
+                    role="combobox"
+                    aria-expanded={results.length > 0}
+                    aria-controls="client-results"
                     aria-label="Buscar cliente por nombre o teléfono"
                     placeholder="Buscar por nombre o teléfono…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
                   {query.trim().length >= 2 && results.length === 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Sin resultados — puedes crearlo desde la sección Clientes.
-                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-1.5 w-full"
+                      loading={creatingClient}
+                      onClick={() => void quickCreateClient()}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Crear cliente «{query.trim()}»
+                    </Button>
                   )}
                   {results.length > 0 && (
-                    <div className="mt-1 rounded-md border border-border">
+                    <div id="client-results" role="listbox" className="mt-1 rounded-md border border-border">
                       {results.map((c) => (
                         <button
                           key={c.id}
+                          role="option"
+                          aria-selected={false}
                           onClick={() => {
                             setClient(c);
                             setQuery("");

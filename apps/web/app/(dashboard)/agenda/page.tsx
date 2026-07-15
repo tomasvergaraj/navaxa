@@ -124,12 +124,12 @@ export default async function AgendaPage({ searchParams }: PageProps) {
         {/* Selector Día / Semana */}
         <div className="ml-auto inline-flex overflow-hidden rounded-md border border-border">
           <Button variant={view === "day" ? "default" : "ghost"} size="sm" className="rounded-none" asChild>
-            <Link href={`/agenda?view=day&date=${ymd(date)}`}>
+            <Link href={`/agenda?view=day&date=${ymd(date)}`} aria-current={view === "day" ? "page" : undefined}>
               <LayoutGrid className="h-4 w-4" /> Día
             </Link>
           </Button>
           <Button variant={view === "week" ? "default" : "ghost"} size="sm" className="rounded-none" asChild>
-            <Link href={`/agenda?view=week&date=${ymd(date)}`}>
+            <Link href={`/agenda?view=week&date=${ymd(date)}`} aria-current={view === "week" ? "page" : undefined}>
               <CalendarDays className="h-4 w-4" /> Semana
             </Link>
           </Button>

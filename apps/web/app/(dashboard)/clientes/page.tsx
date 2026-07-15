@@ -92,7 +92,33 @@ export default async function ClientesPage({ searchParams }: PageProps) {
           }
         />
       ) : (
-        <Card className="overflow-hidden">
+        <>
+        {/* Móvil: tarjetas (la tabla obligaba a pan horizontal en la pantalla
+            más usada desde el celular). Desde md: tabla completa. */}
+        <div className="space-y-2 md:hidden">
+          {clients.map((c) => (
+            <Link key={c.id} href={`/clientes/${c.id}`} className="block">
+              <Card className="p-4 transition-colors hover:bg-muted/30">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate font-medium">
+                    {c.firstName} {c.lastName ?? ""}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {c.lastVisitAt ? formatRelative(c.lastVisitAt) : "sin visitas"}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span className="truncate">{c.phone ?? c.email ?? "—"}</span>
+                  <span className="shrink-0 tabular-nums">
+                    {c._count.haircuts} corte{c._count.haircuts === 1 ? "" : "s"} · {formatCLP(c.totalSpent)}
+                  </span>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+
+        <Card className="hidden overflow-hidden md:block">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">
             <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
@@ -139,6 +165,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
           </table>
           </div>
         </Card>
+        </>
       )}
 
       {totalPages > 1 && (

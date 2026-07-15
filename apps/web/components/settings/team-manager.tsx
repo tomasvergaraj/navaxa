@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   NativeSelect,
 } from "@navaxa/ui";
@@ -236,6 +237,7 @@ export function TeamManager({ members, currentUserId }: { members: Member[]; cur
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{inviteUrl ? "Barbero invitado" : "Agregar barbero"}</DialogTitle>
+            <DialogDescription className="sr-only">Invita a un nuevo miembro del equipo.</DialogDescription>
           </DialogHeader>
 
           {inviteUrl ? (
