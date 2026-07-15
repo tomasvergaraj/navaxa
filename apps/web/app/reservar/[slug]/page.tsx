@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Globe, Instagram, MapPin, Phone } from "lucide-react";
 import { prisma } from "@navaxa/db";
 import { resolveTenantBySlug, getPublicHours } from "@/lib/public-booking";
@@ -125,8 +126,16 @@ export default async function ReservarPage({ params }: { params: { slug: string 
         {/* Portada */}
         <div className="mt-6 aspect-[16/5] w-full overflow-hidden rounded-2xl border border-border bg-muted">
           {tenant.coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={tenant.coverUrl} alt={tenant.name} className="h-full w-full object-cover" />
+            // next/image: la portada full-res de R2 descargaba megas en 4G.
+            <Image
+              src={tenant.coverUrl}
+              alt={tenant.name}
+              width={1024}
+              height={320}
+              priority
+              sizes="(max-width: 896px) 100vw, 896px"
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="h-full w-full bg-gradient-to-br from-brand-graphite to-accent/30" />
           )}
@@ -135,10 +144,12 @@ export default async function ReservarPage({ params }: { params: { slug: string 
         {/* Identidad centrada (logo sobre la portada) */}
         <header className="flex flex-col items-center px-4 text-center">
           {tenant.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={tenant.logoUrl}
               alt={tenant.name}
+              width={96}
+              height={96}
+              sizes="96px"
               className="-mt-12 h-24 w-24 rounded-2xl border-4 border-card bg-card object-cover shadow-sm"
             />
           ) : (
@@ -238,8 +249,14 @@ export default async function ReservarPage({ params }: { params: { slug: string 
               {professionals.map((p) => (
                 <div key={p.id} className="flex w-20 flex-col items-center text-center">
                   {p.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.avatarUrl} alt={p.name} className="h-16 w-16 rounded-full object-cover" />
+                    <Image
+                      src={p.avatarUrl}
+                      alt={p.name}
+                      width={64}
+                      height={64}
+                      sizes="64px"
+                      className="h-16 w-16 rounded-full object-cover"
+                    />
                   ) : (
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-graphite text-sm text-brand-ivory">
                       {p.name.split(" ").slice(0, 2).map((x) => x[0]?.toUpperCase()).join("")}
@@ -323,8 +340,13 @@ export default async function ReservarPage({ params }: { params: { slug: string 
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     {r.avatarUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.avatarUrl} alt="" className="h-5 w-5 rounded-full" />
+                      <Image
+                        src={r.avatarUrl}
+                        alt=""
+                        width={20}
+                        height={20}
+                        className="h-5 w-5 rounded-full"
+                      />
                     )}
                     <p className="text-xs text-muted-foreground">{r.author} · en Google</p>
                   </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Check,
   ChevronLeft,
@@ -423,8 +424,14 @@ export function BookingWizard({
               >
                 <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-muted">
                   {b.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={b.avatarUrl} alt={b.name} className="h-full w-full object-cover" />
+                    <Image
+                      src={b.avatarUrl}
+                      alt={b.name}
+                      width={36}
+                      height={36}
+                      sizes="36px"
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <User className="h-4 w-4" />
                   )}

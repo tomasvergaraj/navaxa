@@ -12,6 +12,8 @@ const nextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "placehold.co" },
       { protocol: "https", hostname: "cdn.navaxa.cl" },
+      // Avatares de reseñas de Google (cache diario de Places API).
+      { protocol: "https", hostname: "*.googleusercontent.com" },
       { protocol: "https", hostname: "*.r2.cloudflarestorage.com" },
       { protocol: "https", hostname: "*.amazonaws.com" },
     ],
