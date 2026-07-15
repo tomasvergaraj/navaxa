@@ -166,8 +166,8 @@ export function TenantAdminActions({ tenantId, initial }: Props) {
           disabled={toggling}
           className={
             initial.active
-              ? "w-full border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-700 dark:hover:bg-rose-950"
-              : "w-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:hover:bg-emerald-950"
+              ? "w-full border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-950"
+              : "w-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-950"
           }
         >
           {toggling && <Loader2 className="h-4 w-4 animate-spin" />}

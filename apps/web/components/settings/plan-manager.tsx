@@ -8,6 +8,7 @@ import { Check, Loader2 } from "lucide-react";
 import { PLANS, ANNUAL_MONTHS_CHARGED } from "@navaxa/config";
 import { formatCLP } from "@/lib/format";
 import { IntervalToggle, type Interval } from "@/components/billing/interval-toggle";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Plan = "FREE" | "STARTER" | "PRO" | "ENTERPRISE";
 type Status = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED";
@@ -30,6 +31,7 @@ function fmtDate(iso: string | null): string {
 export function PlanManager({ currentPlan, whatsappUsage, trialEndsAt, subscription }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
   const [interval, setBillingInterval] = useState<Interval>("MONTHLY");
 
   const status = subscription?.status;
@@ -62,7 +64,18 @@ export function PlanManager({ currentPlan, whatsappUsage, trialEndsAt, subscript
 
   const changePlan = (plan: Plan) =>
     action({ action: "checkout", plan, interval }, `pay-${plan}`);
-  const cancel = () => action({ action: "cancel" }, "cancel");
+  const cancel = async () => {
+    // Cambiar a Gratis cancela la suscripción: pedir confirmación explícita.
+    const ok = await confirm({
+      title: "¿Cambiar al plan Gratis?",
+      description:
+        "Tu suscripción se cancela y al terminar el período pagado pierdes las funciones del plan actual (WhatsApp, límites ampliados).",
+      confirmText: "Sí, cambiar a Gratis",
+      destructive: true,
+    });
+    if (!ok) return;
+    await action({ action: "cancel" }, "cancel");
+  };
   const reactivate = () => action({ action: "reactivate" }, "reactivate");
 
   // Texto de estado.
@@ -88,6 +101,7 @@ export function PlanManager({ currentPlan, whatsappUsage, trialEndsAt, subscript
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* Estado actual */}
       <Card className="p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">

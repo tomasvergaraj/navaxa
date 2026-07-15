@@ -237,7 +237,16 @@ export function BookingWizard({
   function validateForm(): boolean {
     const errs: typeof fieldErrors = {};
     if (!form.firstName.trim()) errs.firstName = "Ingresa tu nombre";
-    if (!form.phone.trim()) errs.phone = "Ingresa tu teléfono para confirmarte la hora";
+    const phoneDigits = form.phone.replace(/\D/g, "");
+    if (!phoneDigits) {
+      errs.phone = "Ingresa tu teléfono para confirmarte la hora";
+    } else if (phoneDigits.startsWith("56") && phoneDigits.length !== 11) {
+      // Chile: +56 9 XXXX XXXX = 11 dígitos. Un número mal tecleado mata la
+      // confirmación y los recordatorios por WhatsApp.
+      errs.phone = "El número chileno debe tener 9 dígitos (ej: 9 1234 5678)";
+    } else if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+      errs.phone = "Ese número no parece válido — revísalo";
+    }
     if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim()))
       errs.email = "Ese email no parece válido";
     setFieldErrors(errs);
@@ -558,8 +567,18 @@ export function BookingWizard({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="phone">Teléfono (WhatsApp) *</Label>
-              <PhoneInput id="phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-              {fieldErrors.phone && <p className="text-xs text-destructive">{fieldErrors.phone}</p>}
+              <PhoneInput
+                id="phone"
+                value={form.phone}
+                onChange={(v) => setForm({ ...form, phone: v })}
+                aria-invalid={!!fieldErrors.phone}
+                aria-describedby={fieldErrors.phone ? "phone-error" : undefined}
+              />
+              {fieldErrors.phone && (
+                <p id="phone-error" className="text-xs text-destructive">
+                  {fieldErrors.phone}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="email">Email (opcional)</Label>

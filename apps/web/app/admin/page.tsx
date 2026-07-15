@@ -78,7 +78,7 @@ export default async function AdminIndex({ searchParams }: { searchParams: { pag
                       <span className="text-xs text-muted-foreground">/{t.slug}</span>
                     </div>
                     {!t.active && (
-                      <Badge variant="outline" className="mt-1 border-rose-400 text-rose-600">
+                      <Badge variant="outline" className="mt-1 border-rose-400 text-rose-600 dark:text-rose-300">
                         Suspendida
                       </Badge>
                     )}

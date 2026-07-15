@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { Logo } from "@navaxa/ui";
 
+
+export const metadata = {
+  title: "Términos y privacidad",
+  description: "Términos de servicio y política de privacidad de navaxa.",
+};
 export default function LegalPage() {
   return (
     <div className="min-h-screen bg-background">

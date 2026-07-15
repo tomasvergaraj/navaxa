@@ -17,8 +17,7 @@ interface Props {
   };
 }
 
-const selectCls =
-  "mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:w-72";
+const selectCls = "mt-1.5 md:w-72";
 
 export function PaymentSettingsForm({ tenant }: Props) {
   const router = useRouter();

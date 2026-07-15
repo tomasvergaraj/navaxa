@@ -108,8 +108,9 @@ export function ScheduleManager({ barbers }: { barbers: Barber[] }) {
             <button
               key={b.id}
               onClick={() => setSelectedId(b.id)}
+              aria-pressed={b.id === selectedId}
               className={cn(
-                "rounded-md border px-3 py-1.5 text-sm transition-colors",
+                "rounded-md border px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 b.id === selectedId ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
               )}
             >
@@ -132,19 +133,21 @@ export function ScheduleManager({ barbers }: { barbers: Barber[] }) {
               <Switch checked={d.open} onChange={(v) => setDay(wd, { open: v })} aria-label={label} />
               <span className="w-24 text-sm font-medium">{label}</span>
               {d.open ? (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
                   <input
                     type="time"
                     value={d.from}
+                    aria-label={`${label} desde`}
                     onChange={(e) => setDay(wd, { from: e.target.value })}
-                    className="h-9 rounded-md border border-input bg-background px-2"
+                    className="h-9 rounded-md border border-input bg-background px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                   <span className="text-muted-foreground">a</span>
                   <input
                     type="time"
                     value={d.to}
+                    aria-label={`${label} hasta`}
                     onChange={(e) => setDay(wd, { to: e.target.value })}
-                    className="h-9 rounded-md border border-input bg-background px-2"
+                    className="h-9 rounded-md border border-input bg-background px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
               ) : (

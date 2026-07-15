@@ -247,6 +247,14 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        {/* Si la cita está en un estado fuera de la lista (ej.
+                            PENDING_PAYMENT), lo incluimos para que el Select no
+                            renderice vacío ni fuerce a sacarla de ese estado. */}
+                        {!STATUS_OPTIONS.some((o) => o.value === block.status) && (
+                          <SelectItem value={block.status} disabled>
+                            {APPOINTMENT_STATUS_LABELS[block.status]}
+                          </SelectItem>
+                        )}
                         {STATUS_OPTIONS.map((o) => (
                           <SelectItem key={o.value} value={o.value}>
                             {o.label}

@@ -242,7 +242,7 @@ export default function MarketingPage() {
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
             <Logo size={24} />
             <p className="text-sm text-muted-foreground">
-              © 2026 navaxa · Hecho en Chile.
+              © {new Date().getFullYear()} navaxa · Hecho en Chile.
             </p>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <Link href="/legal" className="hover:text-foreground">Términos</Link>

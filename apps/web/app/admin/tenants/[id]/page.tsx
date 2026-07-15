@@ -68,7 +68,7 @@ export default async function AdminTenantDetail({ params }: PageProps) {
             <span>· creada {formatDate(tenant.createdAt)}</span>
           </div>
           {!tenant.active && (
-            <Badge variant="outline" className="mt-2 border-rose-400 text-rose-600">
+            <Badge variant="outline" className="mt-2 border-rose-400 text-rose-600 dark:text-rose-300">
               Suspendida
             </Badge>
           )}

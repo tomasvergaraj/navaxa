@@ -101,7 +101,7 @@ export function ManageBooking({ token }: { token: string }) {
 
   // Reagendar
   const [rescheduling, setRescheduling] = useState(false);
-  const [day, setDay] = useState<Date | null>(null);
+  const [day, setDay] = useState<string | null>(null); // YYYY-MM-DD en TZ del local
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
@@ -136,17 +136,18 @@ export function ManageBooking({ token }: { token: string }) {
     };
   }, [appt?.timezone]);
 
+  // Próximos 14 días como YYYY-MM-DD en la TZ del LOCAL (mismo fix que el
+  // wizard: con la TZ del dispositivo el número de día podía salir corrido).
   const days = useMemo(() => {
-    const out: Date[] = [];
-    const now = new Date();
+    const tz = appt?.timezone ?? "America/Santiago";
+    const todayYmd = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
+    const [y, m, d] = todayYmd.split("-").map(Number);
+    const out: string[] = [];
     for (let i = 0; i < 14; i++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() + i);
-      d.setHours(12, 0, 0, 0);
-      out.push(d);
+      out.push(new Date(Date.UTC(y, m - 1, d + i, 12)).toISOString().slice(0, 10));
     }
     return out;
-  }, []);
+  }, [appt?.timezone]);
 
   const canModify =
     appt &&
@@ -174,14 +175,12 @@ export function ManageBooking({ token }: { token: string }) {
     }
   }
 
-  async function loadSlots(forDay: Date) {
+  async function loadSlots(forDay: string) {
     if (!appt) return;
     setDay(forDay);
     setLoadingSlots(true);
     try {
-      const iso = `${forDay.getFullYear()}-${String(forDay.getMonth() + 1).padStart(2, "0")}-${String(
-        forDay.getDate(),
-      ).padStart(2, "0")}T12:00:00.000Z`;
+      const iso = `${forDay}T12:00:00.000Z`;
       const d = await apiJson(`/api/public/${appt.slug}/availability`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -366,19 +365,23 @@ export function ManageBooking({ token }: { token: string }) {
             </Button>
           </div>
           <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1">
-            {days.map((d) => {
-              const active = day && d.toDateString() === day.toDateString();
+            {days.map((ymd) => {
+              const active = day === ymd;
+              const noon = new Date(`${ymd}T12:00:00.000Z`);
               return (
                 <button
-                  key={d.toISOString()}
-                  onClick={() => loadSlots(d)}
+                  key={ymd}
+                  onClick={() => loadSlots(ymd)}
+                  aria-pressed={active}
                   className={cn(
-                    "flex shrink-0 flex-col items-center rounded-md border px-3 py-2 transition-colors",
+                    "flex min-h-[44px] shrink-0 flex-col items-center rounded-md border px-3 py-2 transition-colors",
                     active ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted",
                   )}
                 >
-                  <span className="text-[10px] uppercase">{fmt.weekdayShort.format(d)}</span>
-                  <span className="text-sm font-medium">{d.getDate()}</span>
+                  <span className="text-[10px] uppercase">
+                    {new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", weekday: "short" }).format(noon)}
+                  </span>
+                  <span className="text-sm font-medium">{Number(ymd.slice(8, 10))}</span>
                 </button>
               );
             })}

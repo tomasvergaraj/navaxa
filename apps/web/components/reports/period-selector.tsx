@@ -36,8 +36,9 @@ export function PeriodSelector({
           <button
             key={p.key}
             onClick={() => router.push(`/reportes?range=${p.key}`)}
+            aria-pressed={rangeKey === p.key}
             className={cn(
-              "rounded-full border px-3 py-1.5 text-sm transition-colors",
+              "rounded-full border px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               rangeKey === p.key
                 ? "border-foreground bg-foreground text-background"
                 : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",

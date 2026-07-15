@@ -68,11 +68,15 @@ export function PhoneInput({
   onChange,
   id,
   placeholder = "9 1234 5678",
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedby,
 }: {
   value: string;
   onChange: (value: string) => void;
   id?: string;
   placeholder?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }) {
   const [code, setCode] = useState(() => detectCountry(value));
   const country = COUNTRIES.find((c) => c.code === code) ?? COUNTRIES[0];
@@ -94,8 +98,28 @@ export function PhoneInput({
     emit(newCode, local);
   }
   function onLocal(v: string) {
-    setLocal(v);
-    emit(code, v);
+    // Si el usuario pega/tipea el número COMPLETO ("+56 9 1234 5678" o
+    // "56912345678"), quitamos el prefijo del país para no duplicarlo
+    // (antes salía +5656912345678 → WhatsApp jamás llegaba).
+    let clean = v.trim();
+    const dialDigits = country.dial.replace("+", "");
+    if (clean.startsWith(country.dial)) {
+      clean = clean.slice(country.dial.length);
+    } else if (clean.startsWith("+")) {
+      const match = COUNTRIES.find((c) => clean.startsWith(c.dial));
+      if (match) {
+        setCode(match.code);
+        const rest = clean.slice(match.dial.length);
+        setLocal(rest);
+        emit(match.code, rest);
+        return;
+      }
+      clean = clean.slice(1);
+    } else if (clean.replace(/\D/g, "").startsWith(dialDigits) && clean.replace(/\D/g, "").length > 10) {
+      clean = clean.replace(/\D/g, "").slice(dialDigits.length);
+    }
+    setLocal(clean);
+    emit(code, clean);
   }
 
   const SelectedFlag = country.Flag;
@@ -129,6 +153,8 @@ export function PhoneInput({
         type="tel"
         inputMode="numeric"
         autoComplete="tel-national"
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedby}
         placeholder={placeholder}
         value={local}
         onChange={(e) => onLocal(e.target.value)}
