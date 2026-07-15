@@ -57,7 +57,7 @@ export function LogoUpload({ logoUrl, name }: { logoUrl: string | null; name: st
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} alt={name} className="h-16 w-16 rounded-full border border-border object-cover" />
         ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 font-display text-2xl font-medium text-accent-foreground">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 font-display text-2xl font-medium text-foreground">
             {name.charAt(0).toUpperCase()}
           </div>
         )}

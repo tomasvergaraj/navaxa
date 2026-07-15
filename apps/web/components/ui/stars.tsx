@@ -29,7 +29,7 @@ export function Stars({
         ))}
       </span>
       <span
-        className="absolute inset-0 flex overflow-hidden text-accent"
+        className="absolute inset-0 flex overflow-hidden text-accent-ink"
         style={{ width: `${pct}%` }}
       >
         {INDEXES.map((i) => (

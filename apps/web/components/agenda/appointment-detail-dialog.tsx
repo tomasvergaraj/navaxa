@@ -264,7 +264,7 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
                         variant="ghost"
                         onClick={cancelAppointment}
                         disabled={cancelling || acting !== null}
-                        className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950"
+                        className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950 dark:hover:text-rose-300"
                       >
                         {cancelling ? (
                           <Loader2 className="h-4 w-4 animate-spin" />

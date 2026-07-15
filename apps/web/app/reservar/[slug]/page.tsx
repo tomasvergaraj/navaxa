@@ -140,7 +140,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
               className="-mt-12 h-24 w-24 rounded-2xl border-4 border-card bg-card object-cover shadow-sm"
             />
           ) : (
-            <div className="-mt-12 flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-card bg-accent/15 font-display text-4xl font-medium text-accent-foreground shadow-sm">
+            <div className="-mt-12 flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-card bg-accent/15 font-display text-4xl font-medium text-foreground shadow-sm">
               {tenant.name.charAt(0).toUpperCase()}
             </div>
           )}

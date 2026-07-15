@@ -31,9 +31,9 @@ interface Slot {
 }
 
 const STATUS_LABEL: Record<string, { label: string; tone: string }> = {
-  PENDING_PAYMENT: { label: "Pendiente de pago", tone: "bg-amber-500/10 text-amber-600" },
-  SCHEDULED: { label: "Agendada", tone: "bg-accent/15 text-accent-foreground" },
-  CONFIRMED: { label: "Confirmada", tone: "bg-accent/15 text-accent-foreground" },
+  PENDING_PAYMENT: { label: "Pendiente de pago", tone: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
+  SCHEDULED: { label: "Agendada", tone: "bg-accent/15 text-foreground" },
+  CONFIRMED: { label: "Confirmada", tone: "bg-accent/15 text-foreground" },
   IN_PROGRESS: { label: "En curso", tone: "bg-muted text-foreground" },
   COMPLETED: { label: "Completada", tone: "bg-muted text-foreground" },
   NO_SHOW: { label: "No asistió", tone: "bg-destructive/10 text-destructive" },

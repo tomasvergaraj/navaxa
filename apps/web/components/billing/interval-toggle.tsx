@@ -52,7 +52,7 @@ export function IntervalToggle({
         <span
           className={cn(
             "rounded-full px-1.5 py-0.5 text-xs font-medium transition-colors duration-200",
-            annual ? "bg-brand-brass text-brand-graphite" : "bg-brand-brass/15 text-brand-brass",
+            annual ? "bg-brand-brass text-brand-graphite" : "bg-brand-brass/15 text-accent-ink",
           )}
         >
           −17%

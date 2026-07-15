@@ -113,7 +113,7 @@ export default function MarketingPage() {
           <div className="text-center lg:text-left">
             <Badge
               variant="outline"
-              className="mb-6 gap-1.5 border-brand-brass/30 bg-brand-brass/10 text-brand-brass"
+              className="mb-6 gap-1.5 border-brand-brass/30 bg-brand-brass/10 text-accent-ink"
             >
               <Sparkles className="h-3 w-3" />
               Nuevo: recomendación de corte con IA
@@ -267,7 +267,7 @@ function Feature({
 }) {
   return (
     <div className="group h-full rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand-brass/40 hover:shadow-lg">
-      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-brass/10 text-brand-brass transition-colors duration-300 group-hover:bg-brand-brass group-hover:text-brand-graphite">
+      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-brass/10 text-accent-ink transition-colors duration-300 group-hover:bg-brand-brass group-hover:text-brand-graphite">
         <Icon className="h-5 w-5" />
       </div>
       <h3 className="font-medium">{title}</h3>
@@ -308,7 +308,7 @@ function HeroMock() {
             <span className="h-2.5 w-2.5 rounded-full bg-brand-brass" />
             <span className="text-sm font-medium">Agenda · Hoy</span>
           </div>
-          <span className="rounded-full bg-brand-brass/15 px-2 py-0.5 text-xs font-medium text-brand-brass">
+          <span className="rounded-full bg-brand-brass/15 px-2 py-0.5 text-xs font-medium text-accent-ink">
             8 citas
           </span>
         </div>

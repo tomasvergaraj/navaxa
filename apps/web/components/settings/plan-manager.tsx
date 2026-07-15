@@ -190,7 +190,7 @@ export function PlanManager({ currentPlan, whatsappUsage, trialEndsAt, subscript
               <ul className="mt-4 flex-1 space-y-1.5 text-sm text-muted-foreground">
                 {p.features.map((f) => (
                   <li key={f} className="flex gap-2">
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-foreground" />
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-ink" />
                     {f}
                   </li>
                 ))}

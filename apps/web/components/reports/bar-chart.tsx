@@ -6,8 +6,13 @@ export function BarChart({ points }: { points: ChartPoint[] }) {
   const max = Math.max(1, ...points.map((p) => p.value));
   const labelEvery = Math.max(1, Math.ceil(points.length / 8));
 
+  const total = points.reduce((s, p) => s + p.value, 0);
+
   return (
-    <div>
+    <div
+      role="img"
+      aria-label={`Gráfico de barras: ${points.length} períodos, total ${formatCLP(total)}, máximo ${formatCLP(max)}`}
+    >
       <div className="flex h-48 items-end gap-1">
         {points.map((p, i) => (
           <div
@@ -16,7 +21,7 @@ export function BarChart({ points }: { points: ChartPoint[] }) {
             title={`${p.label}: ${formatCLP(p.value)}`}
           >
             <div
-              className="w-full rounded-t bg-accent/80 transition-colors group-hover:bg-accent"
+              className="w-full rounded-t bg-accent-ink/80 transition-colors group-hover:bg-accent-ink"
               style={{ height: `${(p.value / max) * 100}%`, minHeight: p.value > 0 ? 2 : 0 }}
             />
           </div>

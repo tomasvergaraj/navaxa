@@ -24,6 +24,9 @@
 
     --accent: 42 41% 59%;
     --accent-foreground: 220 14% 6%;
+    /* Dorado "tinta": versión del brass con contraste AA para texto, iconos y
+       datos sobre fondo claro (el brass puro 59% queda en ~2.2:1). */
+    --accent-ink: 42 50% 33%;
 
     --destructive: 0 73% 50%;
     --destructive-foreground: 60 6% 98%;
@@ -56,6 +59,8 @@
 
     --accent: 42 41% 59%;
     --accent-foreground: 220 14% 6%;
+    /* En dark el brass original ya contrasta sobre fondo oscuro. */
+    --accent-ink: 42 41% 59%;
 
     --destructive: 0 63% 45%;
     --destructive-foreground: 60 6% 96%;

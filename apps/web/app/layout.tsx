@@ -1,5 +1,5 @@
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Inter, Fraunces } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import type { Metadata, Viewport } from "next";
@@ -10,7 +10,17 @@ const inter = Inter({
   display: "swap",
 });
 
+// Display editorial de la marca: hasta ahora --font-display no se cargaba y
+// todos los `font-display` caían a Inter en silencio.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+  axes: ["opsz"],
+});
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://navaxa.cl"),
   title: {
     default: "navaxa — Cortes que cuentan una historia",
     template: "%s · navaxa",
@@ -49,7 +59,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es-CL" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${fraunces.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

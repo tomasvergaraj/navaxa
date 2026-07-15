@@ -25,7 +25,9 @@ export function StatsCard({ label, value, trend, icon: Icon, className }: StatsC
           <span
             className={cn(
               "text-xs font-medium",
-              trend.positive ? "text-green-600" : "text-red-600",
+              trend.positive
+                ? "text-green-700 dark:text-green-400"
+                : "text-red-700 dark:text-red-400",
             )}
           >
             {trend.value}

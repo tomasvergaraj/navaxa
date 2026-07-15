@@ -220,7 +220,7 @@ export function BookingWizard({
     return (
       <div className="rounded-lg border border-border bg-card p-8 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/15">
-          <CalendarCheck className="h-7 w-7 text-accent-foreground" />
+          <CalendarCheck className="h-7 w-7 text-foreground" />
         </div>
         <h2 className="font-display text-xl font-medium">¡Reserva confirmada!</h2>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -252,7 +252,7 @@ export function BookingWizard({
               className={cn(
                 "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium",
                 i < step
-                  ? "bg-accent/20 text-accent-foreground"
+                  ? "bg-accent/20 text-foreground"
                   : i === step
                     ? "bg-foreground text-background"
                     : "bg-muted text-muted-foreground",

@@ -31,7 +31,7 @@ export function PricingPlans() {
               <Card
                 className={cn(
                   "relative h-full p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
-                  popular ? "border-2 border-brand-brass shadow-md" : "hover:border-brand-brass/40",
+                  popular ? "border-2 border-accent-ink shadow-md" : "hover:border-brand-brass/40",
                 )}
               >
                 {popular && (
@@ -61,7 +61,7 @@ export function PricingPlans() {
                 <ul className="mt-6 space-y-2 text-sm">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-brass" />
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" />
                       <span>{f}</span>
                     </li>
                   ))}

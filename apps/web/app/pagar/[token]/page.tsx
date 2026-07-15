@@ -43,7 +43,7 @@ export default async function PagarPage({ params }: { params: { token: string } 
     const manageToken = signManageToken(payment.appointmentId);
     return (
       <Shell>
-        <CheckCircle2 className="h-10 w-10 text-accent-foreground" />
+        <CheckCircle2 className="h-10 w-10 text-foreground" />
         <h1 className="mt-4 font-display text-xl font-medium">Pago confirmado</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Tu abono de <strong className="text-foreground">{formatCLP(payment.amount)}</strong> en{" "}

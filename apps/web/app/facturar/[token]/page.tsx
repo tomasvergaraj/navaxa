@@ -57,7 +57,7 @@ export default async function FacturarPage({
   if (searchParams?.ok === "1") {
     return (
       <Shell>
-        <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+        <CheckCircle2 className="h-10 w-10 text-emerald-700 dark:text-emerald-400" />
         <h1 className="mt-4 font-display text-xl font-medium">¡Plan activado!</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Quedaste en plan <strong className="text-foreground">{planName(parsed.plan)}</strong> por{" "}
