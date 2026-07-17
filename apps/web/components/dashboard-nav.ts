@@ -11,6 +11,7 @@ import {
   Settings,
   Banknote,
   Package,
+  Gift,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,6 +27,7 @@ const BASE_NAV: NavItem[] = [
   { href: "/caja", label: "Caja", icon: Banknote },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/productos", label: "Productos", icon: Package },
+  { href: "/giftcards", label: "Giftcards", icon: Gift },
   { href: "/barberos", label: "Barberos", icon: Scissors },
   { href: "/comisiones", label: "Comisiones", icon: Wallet },
   { href: "/resenas", label: "Reseñas", icon: Star },
@@ -40,6 +42,7 @@ const BASE_NAV: NavItem[] = [
  */
 const MANAGER_ONLY = new Set([
   "/productos",
+  "/giftcards",
   "/barberos",
   "/comisiones",
   "/resenas",

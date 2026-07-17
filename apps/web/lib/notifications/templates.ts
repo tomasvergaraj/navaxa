@@ -9,7 +9,8 @@ export type TemplateKey =
   | "appointment_cancelled"
   | "barber_invite"
   | "password_reset"
-  | "review_request";
+  | "review_request"
+  | "giftcard_issued";
 
 interface Template {
   subject?: string;
@@ -67,6 +68,11 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     subject: "¿Cómo te fue en {shopName}?",
     body:
       "Hola {firstName} 👋 Gracias por tu visita a {shopName}. ¿Nos dejas tu reseña? Toma menos de un minuto: {reviewUrl}",
+  },
+  giftcard_issued: {
+    subject: "Tienes una giftcard de {shopName} 🎁",
+    body:
+      "Hola {recipientName} 👋 Recibiste una giftcard de {shopName} por ${amount}. Tu código es {code} — preséntalo al reservar o pagar. {message}",
   },
 };
 

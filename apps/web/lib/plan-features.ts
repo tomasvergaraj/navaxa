@@ -12,6 +12,19 @@ export function planHasProducts(plan: Plan): boolean {
   return plan !== "FREE";
 }
 
+/** Gift cards: plan PRO+. */
+export function planHasGiftCards(plan: Plan): boolean {
+  return plan === "PRO" || plan === "ENTERPRISE";
+}
+
+export async function assertGiftCardsPlan(tenantId: string): Promise<Plan> {
+  const plan = await getTenantPlan(tenantId);
+  if (!planHasGiftCards(plan)) {
+    throw new ApiError(403, "Las giftcards están disponibles en el plan Pro.");
+  }
+  return plan;
+}
+
 export async function getTenantPlan(tenantId: string): Promise<Plan> {
   // Tenant no lleva columna tenantId → prisma directo, no scopedDb.
   const tenant = await prisma.tenant.findUnique({

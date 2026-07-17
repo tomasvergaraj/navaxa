@@ -211,6 +211,22 @@ export const saleCreateSchema = z.object({
   note: z.string().trim().max(200).optional(),
 });
 
+// ---- Gift cards ----
+export const giftCardIssueSchema = z.object({
+  amount: z.coerce.number().int().min(1000, "Mínimo $1.000").max(1_000_000),
+  buyerName: z.string().trim().max(80).optional(),
+  recipientName: z.string().trim().max(80).optional(),
+  recipientEmail: z.string().email("Email inválido").optional().or(z.literal("")),
+  message: z.string().trim().max(300).optional(),
+  // Meses de validez (0 = sin vencimiento). Default 12.
+  expiresInMonths: z.coerce.number().int().min(0).max(60).optional(),
+});
+
+export const giftCardRedeemSchema = z.object({
+  amount: z.coerce.number().int().min(1).max(1_000_000),
+  note: z.string().trim().max(200).optional(),
+});
+
 // ---- Campañas de marketing ----
 // El canal SMS no tiene provider real (degrada a WhatsApp/mock): no se ofrece.
 const campaignChannelSchema = z.enum(["WHATSAPP", "EMAIL"]);

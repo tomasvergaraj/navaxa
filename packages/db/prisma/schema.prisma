@@ -72,6 +72,7 @@ model Tenant {
   reviews       Review[]
   products      Product[]
   sales         Sale[]
+  giftCards     GiftCard[]
   subscription  Subscription?
 
   @@map("tenants")
@@ -678,4 +679,53 @@ model SaleItem {
 
   @@index([saleId])
   @@map("sale_items")
+}
+
+// =====================
+// Gift cards (plan PRO+)
+// =====================
+
+model GiftCard {
+  id             String         @id @default(cuid())
+  tenantId       String
+  code           String // corto y legible, único por tenant (ej. NVX-8F3K2A)
+  initialValue   Int
+  balance        Int
+  status         GiftCardStatus @default(ACTIVE)
+  buyerName      String?
+  recipientName  String?
+  recipientEmail String?
+  message        String?
+  expiresAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  redemptions GiftCardRedemption[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+  @@map("gift_cards")
+}
+
+enum GiftCardStatus {
+  ACTIVE
+  REDEEMED // saldo en 0
+  EXPIRED
+  CANCELLED
+}
+
+/// Cada consumo de saldo de una giftcard (canje parcial o total).
+model GiftCardRedemption {
+  id         String   @id @default(cuid())
+  tenantId   String
+  giftCardId String
+  amount     Int
+  note       String?
+  createdAt  DateTime @default(now())
+
+  giftCard GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
+
+  @@index([giftCardId, createdAt])
+  @@map("gift_card_redemptions")
 }
