@@ -7,6 +7,7 @@ import {
   processInactiveRecalls,
   expirePendingPayments,
   processSubscriptionRenewals,
+  processBirthdays,
 } from "@/lib/notifications/jobs";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,10 @@ export async function POST(req: Request) {
     }
     if (job === "renew_subscriptions") {
       const r = await processSubscriptionRenewals();
+      return NextResponse.json({ job, ...r });
+    }
+    if (job === "birthdays") {
+      const r = await processBirthdays();
       return NextResponse.json({ job, ...r });
     }
     return NextResponse.json({ error: "Job desconocido" }, { status: 400 });

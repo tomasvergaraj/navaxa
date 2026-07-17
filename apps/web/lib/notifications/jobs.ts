@@ -1,4 +1,4 @@
-import { prisma, NotificationChannel, AppointmentStatus, Plan } from "@navaxa/db";
+import { prisma, Prisma, NotificationChannel, AppointmentStatus, Plan } from "@navaxa/db";
 import { sendNotification } from "./index";
 import { pickChannel } from "./channel";
 import { addHours, addMinutes, subHours } from "date-fns";
@@ -140,6 +140,102 @@ export async function processSubscriptionRenewals() {
   }
 
   return { downgraded, pastDue };
+}
+
+/** Día/mes/año de "hoy" en la zona horaria del tenant. */
+function todayInTz(timezone: string): { day: number; month: number; year: number } {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    }).formatToParts(new Date());
+  } catch {
+    // Timezone inválida guardada en el tenant: caer al default del producto.
+    parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Santiago",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    }).formatToParts(new Date());
+  }
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return { day: get("day"), month: get("month"), year: get("year") };
+}
+
+/**
+ * Saludo de cumpleaños a los clientes que están de cumpleaños hoy (según la
+ * zona horaria de cada tenant). Requiere campaña activa con trigger BIRTHDAY.
+ * Pensado para correr una vez al día. Idempotente: no reenvía si ya se saludó
+ * a ese destinatario en los últimos ~10 meses (cubre el "cumpleaños anual"
+ * sin depender de la hora exacta en que corra el job).
+ */
+export async function processBirthdays() {
+  const campaigns = await prisma.campaign.findMany({
+    where: { active: true, trigger: "BIRTHDAY" },
+    select: {
+      tenantId: true,
+      channel: true,
+      tenant: { select: { name: true, plan: true, timezone: true } },
+    },
+  });
+
+  let sent = 0;
+  for (const c of campaigns) {
+    const today = todayInTz(c.tenant.timezone);
+    const isLeapYear = (today.year % 4 === 0 && today.year % 100 !== 0) || today.year % 400 === 0;
+    // En años no bisiestos, los nacidos el 29/02 se saludan el 01/03.
+    const includeFeb29 = today.month === 3 && today.day === 1 && !isLeapYear;
+
+    // El filtro por día/mes no es expresable en Prisma; EXTRACT en SQL evita
+    // traer todos los clientes con birthDate a memoria (regla COSTS.md).
+    const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+      SELECT id FROM clients
+      WHERE "tenantId" = ${c.tenantId}
+        AND "birthDate" IS NOT NULL
+        AND (
+          (EXTRACT(MONTH FROM "birthDate") = ${today.month} AND EXTRACT(DAY FROM "birthDate") = ${today.day})
+          ${includeFeb29 ? Prisma.sql`OR (EXTRACT(MONTH FROM "birthDate") = 2 AND EXTRACT(DAY FROM "birthDate") = 29)` : Prisma.empty}
+        )
+      LIMIT 200
+    `);
+    if (rows.length === 0) continue;
+
+    const clients = await prisma.client.findMany({
+      where: { id: { in: rows.map((r) => r.id) } },
+      select: { id: true, firstName: true, phone: true, email: true },
+    });
+
+    for (const client of clients) {
+      const target = await pickChannel({ id: c.tenantId, plan: c.tenant.plan }, client, {
+        preferWhatsApp: c.channel === NotificationChannel.WHATSAPP,
+      });
+      if (!target) continue;
+
+      const already = await prisma.notificationLog.findFirst({
+        where: {
+          tenantId: c.tenantId,
+          recipient: target.recipient,
+          templateKey: "birthday",
+          createdAt: { gte: subHours(new Date(), 300 * 24) },
+        },
+      });
+      if (already) continue;
+
+      const r = await sendNotification({
+        tenantId: c.tenantId,
+        channel: target.channel,
+        recipient: target.recipient,
+        templateKey: "birthday",
+        data: { firstName: client.firstName, shopName: c.tenant.name },
+      });
+      if (r.ok) sent++;
+    }
+  }
+
+  return { sent };
 }
 
 /**
