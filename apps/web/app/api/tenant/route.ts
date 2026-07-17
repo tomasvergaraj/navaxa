@@ -35,7 +35,10 @@ export async function PATCH(req: Request) {
     const gaRaw = emptyToNull(d.gaMeasurementId);
     const gaMeasurementId = typeof gaRaw === "string" ? gaRaw.toUpperCase() : gaRaw;
     const metaPixelId = emptyToNull(d.metaPixelId);
-    const brandColor = emptyToNull(d.brandColor)?.toLowerCase();
+    const brandRaw = emptyToNull(d.brandColor);
+    // null (limpiar) debe llegar a Prisma como null; ?.toLowerCase() lo volvía
+    // undefined y la columna nunca se limpiaba.
+    const brandColor = typeof brandRaw === "string" ? brandRaw.toLowerCase() : brandRaw;
     // GA/Pixel y color de marca son features PRO+: guardar un valor nuevo exige
     // el plan (quitar o dejar igual siempre se permite; si el plan baja, el
     // storefront deja de aplicarlo aunque el valor quede guardado).
