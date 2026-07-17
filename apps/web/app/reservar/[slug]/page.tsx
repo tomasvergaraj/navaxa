@@ -122,11 +122,8 @@ export default async function ReservarPage({ params }: { params: { slug: string 
     >
       <TenantAnalytics tenant={tenant} />
       <nav className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-4xl items-center px-4 py-4">
           <span className="font-display text-lg font-medium tracking-tight">{tenant.name}</span>
-          <Link href="/login" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            Iniciar sesión
-          </Link>
         </div>
       </nav>
 
@@ -439,7 +436,10 @@ export default async function ReservarPage({ params }: { params: { slug: string 
       </div>
 
       <footer className="py-8 text-center text-xs text-muted-foreground">
-        Reservas con <span className="font-medium text-foreground">navaxa</span>
+        Reservas con{" "}
+        <Link href="/" className="font-medium text-foreground hover:underline">
+          navaxa
+        </Link>
       </footer>
     </div>
   );
