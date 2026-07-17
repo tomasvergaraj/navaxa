@@ -243,60 +243,72 @@ export async function processBirthdays() {
  * Pensado para correr una vez al día.
  */
 export async function processInactiveRecalls() {
-  const cutoff = subHours(new Date(), 30 * 24);
-
-  const clients = await prisma.client.findMany({
-    where: {
-      lastVisitAt: { lt: cutoff },
-      phone: { not: null },
-      totalVisits: { gte: 2 },
-    },
-    select: {
-      id: true,
-      firstName: true,
-      phone: true,
-      email: true,
-      tenantId: true,
-      lastVisitAt: true,
-      tenant: { select: { name: true, slug: true, plan: true } },
-    },
-    take: 100,
+  // Cada tenant define su umbral de inactividad en la campaña
+  // (conditions.daysSinceLastVisit); default 30 si no está seteado. Se agrupa
+  // por tenant para no recalcular el cutoff por cliente.
+  const campaigns = await prisma.campaign.findMany({
+    where: { active: true, trigger: "RECALL_INACTIVE" },
+    select: { tenantId: true, channel: true, conditions: true },
   });
+  if (campaigns.length === 0) return { sent: 0 };
 
+  const now = new Date();
   let sent = 0;
-  for (const c of clients) {
-    const campaign = await prisma.campaign.findFirst({
-      where: { tenantId: c.tenantId, active: true, trigger: "RECALL_INACTIVE" },
-    });
-    if (!campaign) continue;
+  for (const campaign of campaigns) {
+    const cond = (campaign.conditions ?? {}) as { daysSinceLastVisit?: number };
+    const days =
+      typeof cond.daysSinceLastVisit === "number" && cond.daysSinceLastVisit > 0
+        ? cond.daysSinceLastVisit
+        : 30;
+    const cutoff = subHours(now, days * 24);
 
-    const target = await pickChannel({ id: c.tenantId, plan: c.tenant.plan }, c, {
-      preferWhatsApp: campaign.channel === NotificationChannel.WHATSAPP,
-    });
-    if (!target) continue;
-
-    const already = await prisma.notificationLog.findFirst({
+    const clients = await prisma.client.findMany({
       where: {
+        tenantId: campaign.tenantId,
+        lastVisitAt: { lt: cutoff },
+        phone: { not: null },
+        totalVisits: { gte: 2 },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        phone: true,
+        email: true,
+        tenantId: true,
+        tenant: { select: { name: true, slug: true, plan: true } },
+      },
+      take: 100,
+    });
+
+    for (const c of clients) {
+      const target = await pickChannel({ id: c.tenantId, plan: c.tenant.plan }, c, {
+        preferWhatsApp: campaign.channel === NotificationChannel.WHATSAPP,
+      });
+      if (!target) continue;
+
+      const already = await prisma.notificationLog.findFirst({
+        where: {
+          tenantId: c.tenantId,
+          recipient: target.recipient,
+          templateKey: "recall_30d",
+          createdAt: { gte: subHours(now, 60 * 24) },
+        },
+      });
+      if (already) continue;
+
+      await sendNotification({
         tenantId: c.tenantId,
+        channel: target.channel,
         recipient: target.recipient,
         templateKey: "recall_30d",
-        createdAt: { gte: subHours(new Date(), 60 * 24) },
-      },
-    });
-    if (already) continue;
-
-    await sendNotification({
-      tenantId: c.tenantId,
-      channel: target.channel,
-      recipient: target.recipient,
-      templateKey: "recall_30d",
-      data: {
-        firstName: c.firstName,
-        barberName: "tu barbero",
-        bookingUrl: `${APP_URL}/reservar/${c.tenant.slug}`,
-      },
-    });
-    sent++;
+        data: {
+          firstName: c.firstName,
+          barberName: "tu barbero",
+          bookingUrl: `${APP_URL}/reservar/${c.tenant.slug}`,
+        },
+      });
+      sent++;
+    }
   }
   return { sent };
 }

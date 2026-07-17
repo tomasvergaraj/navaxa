@@ -171,6 +171,29 @@ export const tenantUpdateSchema = z.object({
   depositValue: z.coerce.number().int().min(0).max(10_000_000).optional(),
 });
 
+// ---- Campañas de marketing ----
+// El canal SMS no tiene provider real (degrada a WhatsApp/mock): no se ofrece.
+const campaignChannelSchema = z.enum(["WHATSAPP", "EMAIL"]);
+
+/** Habilita una automatización del catálogo (ver lib/campaigns.ts). */
+export const campaignCreateSchema = z.object({
+  automationKey: z.enum(["reminder_24h", "reminder_1h", "recall", "birthday"]),
+});
+
+export const campaignUpdateSchema = z.object({
+  active: z.boolean().optional(),
+  channel: campaignChannelSchema.optional(),
+  // Solo se admite el umbral de reactivación; el resto de conditions se preserva.
+  daysSinceLastVisit: z.coerce.number().int().min(15).max(180).optional(),
+});
+
+export const broadcastSchema = z.object({
+  segment: z.enum(["all", "inactive", "birthday_month"]),
+  days: z.coerce.number().int().min(15).max(365).default(30),
+  templateKey: z.enum(["recall_30d", "birthday", "thanks_post_visit"]),
+  channel: campaignChannelSchema,
+});
+
 export const forgotPasswordSchema = z.object({
   email: z.string().email(),
 });
