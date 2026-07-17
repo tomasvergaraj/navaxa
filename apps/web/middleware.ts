@@ -10,6 +10,7 @@ const PUBLIC_EXACT = new Set([
   "/legal",
   "/recuperar", // solicitar reset de contraseña (sin login)
   "/establecer-clave", // definir contraseña por token de invitación/reset (sin login)
+  "/reservar", // directorio público de barberías (el prefijo /reservar/ cubre las vitrinas)
 ]);
 const PUBLIC_PREFIXES = [
   "/legal/",
