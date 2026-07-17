@@ -65,6 +65,7 @@ export const PLANS = {
       "IA: recomendación de corte",
       "Marketing automatizado",
       "Giftcards",
+      "Sitio de reservas con color de marca",
       "Reportes avanzados y control de ocupación",
       "Google Analytics y Meta Pixel en tu sitio",
       "Comisiones automatizadas",
