@@ -3,13 +3,27 @@ import { Download, DollarSign, Scissors, Receipt, UserX, UserPlus } from "lucide
 import { format } from "date-fns";
 import { scopedDb } from "@/lib/tenant";
 import { requireManagerPage } from "@/lib/page-guards";
-import { AppointmentStatus } from "@navaxa/db";
+import { prisma, AppointmentStatus } from "@navaxa/db";
 import { StatsCard } from "@/components/stats-card";
 import { PageHeader } from "@/components/page-header";
 import { formatCLP } from "@/lib/format";
 import { parsePeriod, bucketRevenue, formatPeriodRange } from "@/lib/reports";
+import { computeOccupancy, formatMinutes } from "@/lib/occupancy";
 import { PeriodSelector } from "@/components/reports/period-selector";
 import { BarChart } from "@/components/reports/bar-chart";
+import {
+  OccupancyBarList,
+  OccupancyHeatmap,
+  OccupancyUpsell,
+} from "@/components/reports/occupancy";
+
+/** Estados que ocupan un bloque de agenda (excluye canceladas, no-show y pago pendiente). */
+const OCCUPYING_STATUSES = [
+  AppointmentStatus.SCHEDULED,
+  AppointmentStatus.CONFIRMED,
+  AppointmentStatus.IN_PROGRESS,
+  AppointmentStatus.COMPLETED,
+];
 
 export const dynamic = "force-dynamic";
 
@@ -23,38 +37,66 @@ export default async function ReportesPage({
   const db = scopedDb();
   const range = { gte: period.from, lte: period.to };
 
-  const [completed, statusCounts, newClients, byBarberRows, barbers, byServiceRows, services] =
-    await Promise.all([
-      db.appointment.findMany({
-        where: { status: AppointmentStatus.COMPLETED, startsAt: range },
-        select: { startsAt: true, totalPrice: true },
-        // Tope de seguridad (regla COSTS.md): el rango ya está acotado a 366
-        // días, esto protege ante volúmenes anómalos.
-        take: 20000,
-      }),
-      db.appointment.groupBy({
-        by: ["status"],
-        where: { startsAt: range },
-        _count: true,
-      }),
-      db.client.count({ where: { createdAt: range } }),
-      db.appointment.groupBy({
-        by: ["barberId"],
-        where: { status: AppointmentStatus.COMPLETED, startsAt: range },
-        _sum: { totalPrice: true },
-        _count: true,
-      }),
-      db.barber.findMany({
-        select: { id: true, commissionRate: true, user: { select: { name: true } } },
-      }),
-      db.appointmentService.groupBy({
-        by: ["serviceId"],
-        where: { appointment: { tenantId, status: AppointmentStatus.COMPLETED, startsAt: range } },
-        _sum: { priceCharged: true },
-        _count: true,
-      }),
-      db.service.findMany({ select: { id: true, name: true, category: true } }),
-    ]);
+  const [
+    completed,
+    statusCounts,
+    newClients,
+    byBarberRows,
+    barbers,
+    byServiceRows,
+    services,
+    occupying,
+    tenantPlan,
+  ] = await Promise.all([
+    db.appointment.findMany({
+      where: { status: AppointmentStatus.COMPLETED, startsAt: range },
+      select: { startsAt: true, totalPrice: true },
+      // Tope de seguridad (regla COSTS.md): el rango ya está acotado a 366
+      // días, esto protege ante volúmenes anómalos.
+      take: 20000,
+    }),
+    db.appointment.groupBy({
+      by: ["status"],
+      where: { startsAt: range },
+      _count: true,
+    }),
+    db.client.count({ where: { createdAt: range } }),
+    db.appointment.groupBy({
+      by: ["barberId"],
+      where: { status: AppointmentStatus.COMPLETED, startsAt: range },
+      _sum: { totalPrice: true },
+      _count: true,
+    }),
+    db.barber.findMany({
+      select: {
+        id: true,
+        commissionRate: true,
+        active: true,
+        user: { select: { name: true } },
+        // Horario y bloqueos para la ocupación (BarberSchedule/TimeOff no
+        // llevan tenantId propio: se leen vía la relación con Barber).
+        schedule: { select: { weekday: true, startMin: true, endMin: true } },
+        timeOff: {
+          where: { startsAt: { lte: period.to }, endsAt: { gte: period.from } },
+          select: { startsAt: true, endsAt: true },
+        },
+      },
+    }),
+    db.appointmentService.groupBy({
+      by: ["serviceId"],
+      where: { appointment: { tenantId, status: AppointmentStatus.COMPLETED, startsAt: range } },
+      _sum: { priceCharged: true },
+      _count: true,
+    }),
+    db.service.findMany({ select: { id: true, name: true, category: true } }),
+    db.appointment.findMany({
+      where: { status: { in: OCCUPYING_STATUSES }, startsAt: range },
+      select: { barberId: true, startsAt: true, endsAt: true },
+      take: 20000,
+    }),
+    // Tenant no lleva columna tenantId → prisma directo, no scopedDb.
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { plan: true } }),
+  ]);
 
   const revenue = completed.reduce((s, a) => s + a.totalPrice, 0);
   const completedCount = completed.length;
@@ -89,6 +131,19 @@ export default async function ReportesPage({
       revenue: r._sum.priceCharged ?? 0,
     }))
     .sort((a, b) => b.revenue - a.revenue);
+
+  // Ocupación: solo barberos activos (los inactivos no aportan capacidad).
+  const activeBarbers = barbers.filter((b) => b.active);
+  const occupancy = computeOccupancy({
+    barbers: activeBarbers.map((b) => ({ id: b.id, name: b.user.name })),
+    schedules: activeBarbers.flatMap((b) => b.schedule.map((s) => ({ ...s, barberId: b.id }))),
+    timeOff: activeBarbers.flatMap((b) => b.timeOff.map((t) => ({ ...t, barberId: b.id }))),
+    appointments: occupying,
+    from: period.from,
+    to: period.to,
+  });
+  // Desglose por barbero + mapa de horas: reportes avanzados (plan PRO+).
+  const advancedReports = tenantPlan?.plan === "PRO" || tenantPlan?.plan === "ENTERPRISE";
 
   const exportParams = new URLSearchParams(
     searchParams.from && searchParams.to
@@ -141,6 +196,52 @@ export default async function ReportesPage({
           <p className="py-12 text-center text-sm text-muted-foreground">
             Sin ingresos en este período.
           </p>
+        )}
+      </Card>
+
+      <Card className="mt-6 p-5">
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-medium">
+            Ocupación{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              · agenda reservada vs. horario de atención
+            </span>
+          </h2>
+          {occupancy.pct !== null && (
+            <span
+              className="text-sm text-muted-foreground"
+              title={`${formatMinutes(occupancy.bookedMin)} reservadas de ${formatMinutes(occupancy.capacityMin)} disponibles`}
+            >
+              Total{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {Math.round(occupancy.pct * 100)}%
+              </span>
+            </span>
+          )}
+        </div>
+        {occupancy.pct === null ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Define los horarios de tu equipo en Configuración → Horarios para medir la ocupación.
+          </p>
+        ) : !advancedReports ? (
+          <OccupancyUpsell />
+        ) : (
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.4fr]">
+            <div>
+              <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Por barbero
+              </h3>
+              <OccupancyBarList rows={occupancy.byBarber} />
+            </div>
+            {occupancy.heatmap && (
+              <div className="min-w-0">
+                <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Mapa de horas
+                </h3>
+                <OccupancyHeatmap heatmap={occupancy.heatmap} />
+              </div>
+            )}
+          </div>
         )}
       </Card>
 
