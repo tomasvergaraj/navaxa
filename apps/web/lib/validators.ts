@@ -171,6 +171,46 @@ export const tenantUpdateSchema = z.object({
   depositValue: z.coerce.number().int().min(0).max(10_000_000).optional(),
 });
 
+// ---- Productos, inventario y caja ----
+export const productSchema = z.object({
+  name: z.string().trim().min(2, "Mínimo 2 caracteres").max(80),
+  price: z.coerce.number().int().min(0).max(10_000_000),
+  cost: z.coerce.number().int().min(0).max(10_000_000).nullable().optional(),
+  minStock: z.coerce.number().int().min(0).max(100_000).optional(),
+  active: z.boolean().optional(),
+});
+
+/** Entrada de mercadería o ajuste manual (las ventas mueven stock por su lado). */
+export const stockMovementSchema = z.object({
+  delta: z.coerce
+    .number()
+    .int()
+    .min(-100_000)
+    .max(100_000)
+    .refine((v) => v !== 0, "El movimiento no puede ser 0"),
+  reason: z.enum(["PURCHASE", "ADJUSTMENT"]),
+  note: z.string().trim().max(200).optional(),
+});
+
+const saleItemSchema = z
+  .object({
+    productId: z.string().optional(),
+    serviceId: z.string().optional(),
+    qty: z.coerce.number().int().min(1).max(99),
+  })
+  .refine((i) => (i.productId ? !i.serviceId : !!i.serviceId), {
+    message: "Cada línea es un producto O un servicio",
+  });
+
+export const saleCreateSchema = z.object({
+  items: z.array(saleItemSchema).min(1).max(30),
+  paymentMethod: z.enum(["CASH", "CARD", "TRANSFER", "OTHER"]),
+  clientId: z.string().optional(),
+  appointmentId: z.string().optional(),
+  barberId: z.string().optional(),
+  note: z.string().trim().max(200).optional(),
+});
+
 // ---- Campañas de marketing ----
 // El canal SMS no tiene provider real (degrada a WhatsApp/mock): no se ofrece.
 const campaignChannelSchema = z.enum(["WHATSAPP", "EMAIL"]);

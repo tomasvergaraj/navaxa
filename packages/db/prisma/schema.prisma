@@ -70,6 +70,8 @@ model Tenant {
   commissions   Commission[]
   payments      Payment[]
   reviews       Review[]
+  products      Product[]
+  sales         Sale[]
   subscription  Subscription?
 
   @@map("tenants")
@@ -212,6 +214,7 @@ model Service {
 
   tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   appointments AppointmentService[]
+  saleItems    SaleItem[]
 
   @@index([tenantId])
   @@map("services")
@@ -242,6 +245,7 @@ model Barber {
   commissions  Commission[]
   haircuts     HaircutRecord[]
   reviews      Review[]
+  sales        Sale[]
 
   @@index([tenantId])
   @@map("barbers")
@@ -302,6 +306,7 @@ model Client {
   preferences     ClientPreference?
   recommendations AIRecommendation[]
   reviews         Review[]
+  sales           Sale[]
 
   @@index([tenantId, phone])
   @@index([tenantId, lastVisitAt])
@@ -377,6 +382,7 @@ model Appointment {
   commission Commission?
   payment    Payment?
   review     Review?
+  sales      Sale[]
 
   @@index([tenantId, startsAt])
   @@index([barberId, startsAt])
@@ -573,4 +579,103 @@ model AIRecommendation {
 
   @@index([clientId, generatedAt])
   @@map("ai_recommendations")
+}
+
+// =====================
+// Products, inventory & cash register (plan STARTER+)
+// =====================
+
+model Product {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  price     Int      // CLP entero (precio de venta)
+  cost      Int?     // costo de compra, para margen en reportes
+  stock     Int      @default(0)
+  minStock  Int      @default(0) // umbral de alerta de reposición
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  movements StockMovement[]
+  saleItems SaleItem[]
+
+  @@index([tenantId, active])
+  @@map("products")
+}
+
+/// Historial de stock: cada entrada/venta/ajuste queda registrada; `stock` en
+/// Product es el saldo materializado (se actualiza en la misma transacción).
+model StockMovement {
+  id        String              @id @default(cuid())
+  tenantId  String
+  productId String
+  delta     Int // + entrada, - venta/merma
+  reason    StockMovementReason
+  saleId    String?
+  note      String?
+  createdAt DateTime            @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, productId, createdAt])
+  @@map("stock_movements")
+}
+
+enum StockMovementReason {
+  PURCHASE // entrada de mercadería
+  SALE
+  ADJUSTMENT // corrección manual / merma
+  RETURN // devolución (venta anulada)
+}
+
+/// Venta de caja: productos y/o servicios sueltos, opcionalmente ligada a una
+/// cita (venta adicional al completar) o a un cliente registrado.
+model Sale {
+  id            String            @id @default(cuid())
+  tenantId      String
+  clientId      String?
+  appointmentId String?
+  barberId      String? // quién vendió (comisión de productos, futuro)
+  total         Int
+  paymentMethod SalePaymentMethod
+  note          String?
+  cancelledAt   DateTime?
+  createdAt     DateTime          @default(now())
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client      Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  barber      Barber?      @relation(fields: [barberId], references: [id], onDelete: SetNull)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  items       SaleItem[]
+
+  @@index([tenantId, createdAt])
+  @@map("sales")
+}
+
+enum SalePaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  OTHER
+}
+
+/// Línea de venta con snapshot de nombre y precio (histórico estable aunque el
+/// producto/servicio cambie o se borre después).
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  productId String?
+  serviceId String?
+  name      String
+  unitPrice Int
+  qty       Int
+
+  sale    Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([saleId])
+  @@map("sale_items")
 }

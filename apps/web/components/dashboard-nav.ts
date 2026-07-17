@@ -9,6 +9,8 @@ import {
   Megaphone,
   UserCircle,
   Settings,
+  Banknote,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,7 +23,9 @@ export interface NavItem {
 const BASE_NAV: NavItem[] = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/agenda", label: "Agenda", icon: Calendar },
+  { href: "/caja", label: "Caja", icon: Banknote },
   { href: "/clientes", label: "Clientes", icon: Users },
+  { href: "/productos", label: "Productos", icon: Package },
   { href: "/barberos", label: "Barberos", icon: Scissors },
   { href: "/comisiones", label: "Comisiones", icon: Wallet },
   { href: "/resenas", label: "Reseñas", icon: Star },
@@ -35,6 +39,7 @@ const BASE_NAV: NavItem[] = [
  * barbero no debe verlos (las páginas además redirigen vía requireManagerPage).
  */
 const MANAGER_ONLY = new Set([
+  "/productos",
   "/barberos",
   "/comisiones",
   "/resenas",
@@ -42,6 +47,9 @@ const MANAGER_ONLY = new Set([
   "/marketing",
   "/configuracion",
 ]);
+
+// La caja la operan gestión y recepción (STAFF); un barbero no vende productos.
+const BARBER_HIDDEN = new Set(["/caja"]);
 
 /**
  * Ítems de navegación según rol. Gestión ve todo; barbero/staff solo Inicio,
@@ -56,7 +64,10 @@ export function getNavItems({
 }): NavItem[] {
   const base = isManager ? BASE_NAV : BASE_NAV.filter((i) => !MANAGER_ONLY.has(i.href));
   return isBarber
-    ? [...base, { href: "/mi-perfil", label: "Mi perfil", icon: UserCircle }]
+    ? [
+        ...base.filter((i) => !BARBER_HIDDEN.has(i.href)),
+        { href: "/mi-perfil", label: "Mi perfil", icon: UserCircle },
+      ]
     : base;
 }
 

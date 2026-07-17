@@ -16,6 +16,8 @@ import { StatsCard } from "@/components/stats-card";
 import { EmptyState } from "@/components/empty-state";
 import { OccupancyBarList, OccupancyUpsell } from "@/components/reports/occupancy";
 import { computeOccupancy, formatMinutes } from "@/lib/occupancy";
+import { planHasProducts } from "@/lib/plan-features";
+import { lowStockCount } from "@/lib/sales";
 import { formatCLP, formatTime } from "@/lib/format";
 import {
   startOfDay,
@@ -131,6 +133,13 @@ export default async function DashboardHome() {
         ])
       : [null, 0, 0, [] as never[], [] as never[], [] as never[], null];
 
+  // Alerta de reposición: productos activos en o bajo su stock mínimo. Solo
+  // gestión y solo si el plan incluye productos (FREE ni siquiera consulta).
+  const lowStock =
+    isManager && tenantPlan && planHasProducts(tenantPlan.plan)
+      ? await lowStockCount(ctx.tenantId)
+      : 0;
+
   const occupancyToday = isManager
     ? computeOccupancy({
         barbers: barberStats.map((b) => ({ id: b.id, name: b.user.name })),
@@ -159,6 +168,19 @@ export default async function DashboardHome() {
           Resumen de tu barbería al {new Date().toLocaleDateString("es-CL")}.
         </p>
       </div>
+
+      {lowStock > 0 && (
+        <Link
+          href="/productos"
+          className="mb-6 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm transition-colors hover:bg-amber-500/15"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+          <span>
+            <strong>{lowStock}</strong> producto{lowStock === 1 ? "" : "s"} con stock bajo — revisa el
+            inventario →
+          </span>
+        </Link>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatsCard label="Hoy" value={String(todayAppts)} icon={Calendar} />

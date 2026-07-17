@@ -1,5 +1,5 @@
 import { Card } from "@navaxa/ui";
-import { Download, DollarSign, Scissors, Receipt, UserX, UserPlus } from "lucide-react";
+import { Download, DollarSign, Scissors, Receipt, UserX, UserPlus, ShoppingBag } from "lucide-react";
 import { format } from "date-fns";
 import { scopedDb } from "@/lib/tenant";
 import { requireManagerPage } from "@/lib/page-guards";
@@ -47,6 +47,7 @@ export default async function ReportesPage({
     services,
     occupying,
     tenantPlan,
+    salesAgg,
   ] = await Promise.all([
     db.appointment.findMany({
       where: { status: AppointmentStatus.COMPLETED, startsAt: range },
@@ -96,6 +97,12 @@ export default async function ReportesPage({
     }),
     // Tenant no lleva columna tenantId → prisma directo, no scopedDb.
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { plan: true } }),
+    // Ventas de caja del período (las anuladas no cuentan).
+    db.sale.aggregate({
+      where: { createdAt: range, cancelledAt: null },
+      _sum: { total: true },
+      _count: true,
+    }),
   ]);
 
   const revenue = completed.reduce((s, a) => s + a.totalPrice, 0);
@@ -175,8 +182,14 @@ export default async function ReportesPage({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <StatsCard label="Ingresos" value={formatCLP(revenue)} icon={DollarSign} />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <StatsCard label="Ingresos servicios" value={formatCLP(revenue)} icon={DollarSign} />
+        <StatsCard
+          label="Ventas caja"
+          value={formatCLP(salesAgg._sum.total ?? 0)}
+          trend={salesAgg._count > 0 ? { value: `${salesAgg._count} venta${salesAgg._count === 1 ? "" : "s"}`, positive: true } : undefined}
+          icon={ShoppingBag}
+        />
         <StatsCard label="Cortes" value={String(completedCount)} icon={Scissors} />
         <StatsCard label="Ticket promedio" value={formatCLP(avgTicket)} icon={Receipt} />
         <StatsCard label="No-shows" value={String(noShows)} icon={UserX} />
