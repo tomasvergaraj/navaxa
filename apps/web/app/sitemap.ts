@@ -19,6 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .catch(() => [] as { slug: string; updatedAt: Date }[]);
   return [
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${base}/reservar`, changeFrequency: "daily", priority: 0.9 },
     { url: `${base}/precios`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/legal`, changeFrequency: "yearly", priority: 0.2 },
     ...tenants.map((t) => ({

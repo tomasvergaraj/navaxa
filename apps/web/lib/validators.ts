@@ -164,6 +164,14 @@ export const tenantUpdateSchema = z.object({
     .regex(/^\d{5,20}$/, "ID de Meta Pixel inválido (solo números)")
     .optional()
     .or(z.literal("")),
+  // Color de marca del storefront (PRO+); vacío = paleta navaxa.
+  brandColor: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color inválido (formato #RRGGBB)")
+    .optional()
+    .or(z.literal("")),
+  marketplaceVisible: z.boolean().optional(),
   bookingEnabled: z.boolean().optional(),
   bookingNoticeMin: z.coerce.number().int().min(0).max(10080).optional(), // hasta 7 días
   paymentsEnabled: z.boolean().optional(),

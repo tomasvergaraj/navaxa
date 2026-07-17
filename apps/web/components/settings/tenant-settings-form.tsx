@@ -33,6 +33,8 @@ interface Tenant {
   bookingNoticeMin: number;
   gaMeasurementId: string | null;
   metaPixelId: string | null;
+  brandColor: string | null;
+  marketplaceVisible: boolean;
 }
 
 const TIMEZONES = [
@@ -70,6 +72,8 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
     bookingNoticeMin: tenant.bookingNoticeMin ?? 0,
     gaMeasurementId: tenant.gaMeasurementId ?? "",
     metaPixelId: tenant.metaPixelId ?? "",
+    brandColor: tenant.brandColor ?? "",
+    marketplaceVisible: tenant.marketplaceVisible,
   });
   const [saving, setSaving] = useState(false);
 
@@ -221,6 +225,59 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
       </div>
 
       <div className="border-t border-border pt-5">
+        <h3 className="mb-1 text-sm font-medium">Color de marca del sitio</h3>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Pinta los botones de tu página de reservas con el color de tu barbería. El texto se ajusta
+          solo para que siempre se lea bien.
+        </p>
+        {tenant.plan === "PRO" || tenant.plan === "ENTERPRISE" ? (
+          <div className="flex flex-wrap items-center gap-4">
+            <input
+              type="color"
+              aria-label="Color de marca"
+              value={/^#[0-9a-fA-F]{6}$/.test(form.brandColor) ? form.brandColor : "#0d0f13"}
+              onChange={(e) => set({ brandColor: e.target.value })}
+              className="h-10 w-14 cursor-pointer rounded-md border border-input bg-background p-1"
+            />
+            <BrandPreview color={form.brandColor} />
+            {form.brandColor && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => set({ brandColor: "" })}>
+                <X className="h-4 w-4" />
+                Usar paleta navaxa
+              </Button>
+            )}
+          </div>
+        ) : (
+          <p className="flex items-center gap-2 rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
+            <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>
+              Disponible en el plan Pro.{" "}
+              <a href="/configuracion?tab=plan" className="font-medium underline hover:text-foreground">
+                Ver planes
+              </a>
+            </span>
+          </p>
+        )}
+      </div>
+
+      <div className="border-t border-border pt-5">
+        <div className="flex items-center justify-between rounded-md border border-border p-3">
+          <div className="min-w-0 pr-3">
+            <p className="text-sm font-medium">Aparecer en el directorio de navaxa</p>
+            <p className="text-xs text-muted-foreground">
+              Tu barbería se lista en la vitrina pública de navaxa para que nuevos clientes te
+              encuentren. Tu link propio funciona igual si lo desactivas.
+            </p>
+          </div>
+          <Switch
+            checked={form.marketplaceVisible}
+            onChange={(v) => set({ marketplaceVisible: v })}
+            aria-label="Aparecer en el directorio de navaxa"
+          />
+        </div>
+      </div>
+
+      <div className="border-t border-border pt-5">
         <h3 className="mb-3 text-sm font-medium">Reservas online</h3>
         <div className="flex items-center justify-between rounded-md border border-border p-3">
           <div>
@@ -260,6 +317,31 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
         </Button>
       </div>
     </div>
+  );
+}
+
+/** Vista previa del botón de reserva con el color elegido, con contraste AA. */
+function BrandPreview({ color }: { color: string }) {
+  const valid = /^#[0-9a-fA-F]{6}$/.test(color);
+  const bg = valid ? color : undefined;
+  // Luminancia relativa para elegir texto blanco o casi-negro (mismo criterio
+  // que el server: siempre el de mayor contraste).
+  const fg = (() => {
+    if (!valid) return undefined;
+    const [r, g, b] = [1, 3, 5].map((i) => {
+      const s = parseInt(color.slice(i, i + 2), 16) / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    const lum = 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+    return (1.05 / (lum + 0.05)) >= ((lum + 0.05) / 0.05) ? "#fafaf8" : "#0d0f13";
+  })();
+  return (
+    <span
+      className="inline-flex h-10 items-center rounded-md px-4 text-sm font-medium"
+      style={bg ? { backgroundColor: bg, color: fg } : undefined}
+    >
+      {valid ? "Reservar hora" : "Elige un color"}
+    </span>
   );
 }
 

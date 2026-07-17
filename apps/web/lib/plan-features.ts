@@ -17,6 +17,11 @@ export function planHasGiftCards(plan: Plan): boolean {
   return plan === "PRO" || plan === "ENTERPRISE";
 }
 
+/** Personalización visual del storefront (color de marca): plan PRO+. */
+export function planHasBranding(plan: Plan): boolean {
+  return plan === "PRO" || plan === "ENTERPRISE";
+}
+
 export async function assertGiftCardsPlan(tenantId: string): Promise<Plan> {
   const plan = await getTenantPlan(tenantId);
   if (!planHasGiftCards(plan)) {

@@ -31,6 +31,7 @@ export async function resolveTenantBySlug(slug: string) {
       googlePlaceId: true,
       gaMeasurementId: true,
       metaPixelId: true,
+      brandColor: true,
       googleRating: true,
       googleReviewCount: true,
       googleMapsUri: true,

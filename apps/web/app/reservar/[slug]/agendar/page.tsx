@@ -5,6 +5,8 @@ import { prisma } from "@navaxa/db";
 import { resolveTenantBySlug } from "@/lib/public-booking";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { TenantAnalytics } from "@/components/booking/tenant-analytics";
+import { brandStyle } from "@/lib/brand-color";
+import { planHasBranding } from "@/lib/plan-features";
 import { formatCLP, formatDuration } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +72,10 @@ export default async function AgendarPage({
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div
+      className="min-h-screen bg-muted/30"
+      style={planHasBranding(tenant.plan) ? brandStyle(tenant.brandColor) : undefined}
+    >
       <TenantAnalytics tenant={tenant} />
       <nav className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">

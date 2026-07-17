@@ -55,6 +55,9 @@ model Tenant {
   // Configuración; el storefront inyecta gtag/pixel solo si el plan lo permite.
   gaMeasurementId String? // Google Analytics 4, formato G-XXXXXXXXXX
   metaPixelId     String? // Meta Pixel, numérico
+  // Personalización del sitio público (plan PRO+).
+  brandColor        String? // color de marca en hex (#RRGGBB) para los CTA del storefront
+  marketplaceVisible Boolean @default(true) // listarse en el índice público /reservar
   trialEndsAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

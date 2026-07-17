@@ -35,11 +35,15 @@ export async function PATCH(req: Request) {
     const gaRaw = emptyToNull(d.gaMeasurementId);
     const gaMeasurementId = typeof gaRaw === "string" ? gaRaw.toUpperCase() : gaRaw;
     const metaPixelId = emptyToNull(d.metaPixelId);
-    if (gaMeasurementId || metaPixelId) {
+    const brandColor = emptyToNull(d.brandColor)?.toLowerCase();
+    // GA/Pixel y color de marca son features PRO+: guardar un valor nuevo exige
+    // el plan (quitar o dejar igual siempre se permite; si el plan baja, el
+    // storefront deja de aplicarlo aunque el valor quede guardado).
+    if (gaMeasurementId || metaPixelId || brandColor) {
       const t = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { plan: true } });
       if (t?.plan !== "PRO" && t?.plan !== "ENTERPRISE") {
         return NextResponse.json(
-          { error: "La integración con Google Analytics y Meta Pixel es del plan Pro.", code: "PLAN_LIMIT" },
+          { error: "La personalización visual y las integraciones de analítica son del plan Pro.", code: "PLAN_LIMIT" },
           { status: 403 },
         );
       }
@@ -62,6 +66,8 @@ export async function PATCH(req: Request) {
         bookingNoticeMin: d.bookingNoticeMin,
         gaMeasurementId,
         metaPixelId,
+        brandColor,
+        marketplaceVisible: d.marketplaceVisible,
         paymentsEnabled: d.paymentsEnabled,
         depositType: d.depositType ? (d.depositType as DepositType) : undefined,
         depositValue,
