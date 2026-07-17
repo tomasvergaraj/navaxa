@@ -111,15 +111,19 @@ export default function MarketingPage() {
             <Logo size={28} />
           </Link>
           <nav className="flex items-center gap-3 text-sm text-muted-foreground sm:gap-4 md:gap-8">
-            <a href="#features" className="hover:text-foreground">
+            <a href="#features" className="hidden hover:text-foreground sm:inline">
               <span className="md:hidden">Funciones</span>
               <span className="hidden md:inline">Funcionalidades</span>
             </a>
             <a href="#precios" className="hover:text-foreground">Precios</a>
-            <a href="#faq" className="hover:text-foreground">
+            <a href="#faq" className="hidden hover:text-foreground sm:inline">
               <span className="md:hidden">FAQ</span>
               <span className="hidden md:inline">Preguntas</span>
             </a>
+            {/* Entrada al directorio para clientes finales (el resto del landing es B2B). */}
+            <Link href="/reservar" className="font-medium text-foreground hover:underline">
+              Reservar hora
+            </Link>
           </nav>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ThemeToggle />
@@ -282,6 +286,7 @@ export default function MarketingPage() {
               © {new Date().getFullYear()} navaxa · Hecho en Chile.
             </p>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <Link href="/reservar" className="hover:text-foreground">Reservar hora</Link>
               <Link href="/legal#terminos" className="hover:text-foreground">Términos</Link>
               <Link href="/legal#privacidad" className="hover:text-foreground">Privacidad</Link>
               <a href="mailto:contacto@navaxa.cl" className="hover:text-foreground">
