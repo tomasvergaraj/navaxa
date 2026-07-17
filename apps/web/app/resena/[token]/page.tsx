@@ -53,7 +53,7 @@ export default async function ResenaPage({ params }: { params: { token: string }
     : null;
 
   return (
-    <div id="main" className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
+    <div id="main" className="flex min-h-screen flex-col items-center justify-center bg-muted/30 px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center text-center">
           {appt.tenant.logoUrl ? (
