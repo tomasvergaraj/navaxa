@@ -1,8 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Search, Star, Scissors } from "lucide-react";
+import { MapPin, Search, Scissors } from "lucide-react";
 import { prisma } from "@navaxa/db";
+import { Logo } from "@navaxa/ui";
 import { Stars } from "@/components/ui/stars";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const revalidate = 300; // ISR 5 min: directorio no cambia por request
 
@@ -121,16 +123,19 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
       />
 
       <nav className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Link href="/" className="font-display text-lg font-medium tracking-tight">
-            navaxa
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+          <Link href="/" aria-label="navaxa — inicio" className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card">
+            <Logo size={24} />
           </Link>
-          <Link
-            href="/login"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Soy barbería
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              href="/login"
+              className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Soy barbería
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
       </nav>
 
@@ -205,7 +210,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
                 <li key={t.slug}>
                   <Link
                     href={`/reservar/${t.slug}`}
-                    className="group flex h-full flex-col rounded-lg border border-border bg-card p-5 transition-colors hover:border-foreground/20"
+                    className="group flex h-full flex-col rounded-lg border border-border bg-card p-5 transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted"
                   >
                     <div className="flex items-center gap-3">
                       {t.logoUrl ? (

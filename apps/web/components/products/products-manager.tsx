@@ -257,6 +257,7 @@ export function ProductsManager({ products }: { products: Product[] }) {
                           onClick={() => toggleActive(p)}
                           disabled={busyId === p.id}
                           title={p.active ? "Clic para desactivar" : "Clic para activar"}
+                          className="rounded-full transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
                         >
                           <Badge variant={p.active ? "success" : "outline"}>
                             {p.active ? "Activo" : "Inactivo"}
