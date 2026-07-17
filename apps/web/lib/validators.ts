@@ -151,6 +151,19 @@ export const tenantUpdateSchema = z.object({
   instagram: z.string().max(120).optional().or(z.literal("")),
   website: z.string().max(200).optional().or(z.literal("")),
   googlePlaceId: z.string().trim().max(300).optional().or(z.literal("")),
+  // Analítica del sitio público (plan PRO+).
+  gaMeasurementId: z
+    .string()
+    .trim()
+    .regex(/^G-[A-Z0-9]{4,14}$/i, "ID de Google Analytics inválido (formato G-XXXXXXXXXX)")
+    .optional()
+    .or(z.literal("")),
+  metaPixelId: z
+    .string()
+    .trim()
+    .regex(/^\d{5,20}$/, "ID de Meta Pixel inválido (solo números)")
+    .optional()
+    .or(z.literal("")),
   bookingEnabled: z.boolean().optional(),
   bookingNoticeMin: z.coerce.number().int().min(0).max(10080).optional(), // hasta 7 días
   paymentsEnabled: z.boolean().optional(),

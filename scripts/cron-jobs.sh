@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# Dispara un job del endpoint de cron de navaxa (app corriendo en :3004).
+# Dispara manualmente un job del endpoint de cron de navaxa (app en :3004).
 # Uso: cron-jobs.sh <reminders|reminders1h|expire_payments|renew_subscriptions|recalls|birthdays>
-# El secreto se lee de .env para no dejarlo en el crontab.
+#
+# OJO: NO agendar esto en crontab — la app ya trae scheduler interno
+# (instrumentation.ts, INTERNAL_CRON=true en compose) y un cron externo
+# duplica los disparos. Este script es solo para pruebas/disparos a mano.
+# El secreto se lee de .env para no exponerlo en la línea de comandos.
 set -euo pipefail
 
 JOB="${1:?uso: cron-jobs.sh <job>}"

@@ -29,6 +29,8 @@ export async function resolveTenantBySlug(slug: string) {
       depositType: true,
       depositValue: true,
       googlePlaceId: true,
+      gaMeasurementId: true,
+      metaPixelId: true,
       googleRating: true,
       googleReviewCount: true,
       googleMapsUri: true,

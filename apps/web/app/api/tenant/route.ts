@@ -29,6 +29,22 @@ export async function PATCH(req: Request) {
         ? await prisma.tenant.findUnique({ where: { id: tenantId }, select: { googlePlaceId: true } })
         : null;
 
+    // GA/Meta Pixel es feature PRO+: guardar un ID nuevo exige el plan (quitar
+    // o dejar igual siempre se permite; si el plan baja, el storefront ya no
+    // inyecta los scripts aunque el ID quede guardado).
+    const gaRaw = emptyToNull(d.gaMeasurementId);
+    const gaMeasurementId = typeof gaRaw === "string" ? gaRaw.toUpperCase() : gaRaw;
+    const metaPixelId = emptyToNull(d.metaPixelId);
+    if (gaMeasurementId || metaPixelId) {
+      const t = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { plan: true } });
+      if (t?.plan !== "PRO" && t?.plan !== "ENTERPRISE") {
+        return NextResponse.json(
+          { error: "La integración con Google Analytics y Meta Pixel es del plan Pro.", code: "PLAN_LIMIT" },
+          { status: 403 },
+        );
+      }
+    }
+
     const tenant = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
@@ -44,6 +60,8 @@ export async function PATCH(req: Request) {
         website: emptyToNull(d.website),
         bookingEnabled: d.bookingEnabled,
         bookingNoticeMin: d.bookingNoticeMin,
+        gaMeasurementId,
+        metaPixelId,
         paymentsEnabled: d.paymentsEnabled,
         depositType: d.depositType ? (d.depositType as DepositType) : undefined,
         depositValue,

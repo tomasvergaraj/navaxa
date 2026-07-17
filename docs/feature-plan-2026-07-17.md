@@ -1,5 +1,9 @@
 # Plan de features — cierre de brecha vs AgendaPro (2026-07-17)
 
+> **Estado (2026-07-17): Fase 1 IMPLEMENTADA** (commits en main, pendiente deploy).
+> 1.1 Ocupación: `lib/occupancy.ts` (capacidad = horario − time-off, heatmap día×hora), widget "Ocupación de hoy" en dashboard y sección en reportes; desglose por barbero + mapa gated PRO+ con upsell. 1.2 Cumpleaños: `processBirthdays` en `lib/notifications/jobs.ts` (timezone del tenant, 29/02→01/03, EXTRACT en SQL, idempotente ~10 meses), enganchado al scheduler interno (`instrumentation.ts`) y al endpoint `?job=birthdays`; `scripts/cron-jobs.sh` para disparos manuales (NO crontab: el scheduler interno ya corre). 1.3 GA/Meta Pixel: columnas `Tenant.gaMeasurementId/metaPixelId` (migración `20260717120000`, aplicada en prod), campos en Configuración→Barbería (PRO+, 403 `PLAN_LIMIT` server-side), `<TenantAnalytics/>` inyecta gtag/fbq en `/reservar/[slug]` y `/agendar` con re-validación de formato, evento `reserva_confirmada`/`Schedule` al confirmar reserva (`lib/track.ts`). Features de PRO actualizadas en `constants.ts`.
+> Fases 2–4: pendientes.
+
 Origen: comparación de la tabla de planes de AgendaPro contra el inventario real de navaxa.
 Se implementan 8 features en 4 fases, ordenadas por valor/esfuerzo. Quedan **descartadas** por no aplicar a barberías: ficha clínica, consentimiento informado, videoconferencia y API pública para terceros.
 

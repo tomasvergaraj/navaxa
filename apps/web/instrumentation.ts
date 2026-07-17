@@ -25,6 +25,7 @@ export async function register() {
     processInactiveRecalls,
     expirePendingPayments,
     processSubscriptionRenewals,
+    processBirthdays,
   } = await import("@/lib/notifications/jobs");
   const { syncAllGoogleReviews } = await import("@/lib/google-reviews");
 
@@ -65,6 +66,12 @@ export async function register() {
         }
       } catch (e) {
         console.error("[cron] error renovando suscripciones:", (e as Error).message);
+      }
+      try {
+        const b = await processBirthdays();
+        if (b.sent) console.log(`[cron] saludos de cumpleaños enviados — ${b.sent}`);
+      } catch (e) {
+        console.error("[cron] error en cumpleaños:", (e as Error).message);
       }
       try {
         const gr = await syncAllGoogleReviews();

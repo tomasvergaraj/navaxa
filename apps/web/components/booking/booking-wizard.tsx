@@ -16,6 +16,7 @@ import {
 import { Button, Input, Label, cn } from "@navaxa/ui";
 import { toast } from "sonner";
 import { formatCLP, formatDuration } from "@/lib/format";
+import { trackBookingConfirmed } from "@/lib/track";
 import { PhoneInput } from "@/components/ui/phone-input";
 
 interface Service {
@@ -323,6 +324,8 @@ export function BookingWizard({
         return;
       }
       setResult(d as BookResult);
+      // Conversión hacia la analítica del tenant (GA/Pixel), si la tiene.
+      trackBookingConfirmed({ value: (d as BookResult).totalPrice });
       setStep(4);
     } catch (e) {
       const msg = (e as Error).message;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Check, Search, Star, MapPin, X } from "lucide-react";
+import { Loader2, Check, Search, Star, MapPin, X, Lock } from "lucide-react";
 import { Button, Input, Label, Textarea, NativeSelect } from "@navaxa/ui";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,7 @@ import { CoverUpload } from "@/components/settings/cover-upload";
 import { PhoneInput } from "@/components/ui/phone-input";
 
 interface Tenant {
+  plan: string;
   name: string;
   logoUrl: string | null;
   coverUrl: string | null;
@@ -30,6 +31,8 @@ interface Tenant {
   googleMapsUri: string | null;
   bookingEnabled: boolean;
   bookingNoticeMin: number;
+  gaMeasurementId: string | null;
+  metaPixelId: string | null;
 }
 
 const TIMEZONES = [
@@ -65,6 +68,8 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
     googlePlaceId: tenant.googlePlaceId ?? "",
     bookingEnabled: tenant.bookingEnabled,
     bookingNoticeMin: tenant.bookingNoticeMin ?? 0,
+    gaMeasurementId: tenant.gaMeasurementId ?? "",
+    metaPixelId: tenant.metaPixelId ?? "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -172,6 +177,47 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
           onChange={(placeId) => set({ googlePlaceId: placeId })}
           tenant={tenant}
         />
+      </div>
+
+      <div className="border-t border-border pt-5">
+        <h3 className="mb-1 text-sm font-medium">Analítica del sitio de reservas</h3>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Mide visitas y reservas de tu página pública con tus propias cuentas de Google Analytics
+          y Meta Pixel (para campañas de Instagram/Facebook).
+        </p>
+        {tenant.plan === "PRO" || tenant.plan === "ENTERPRISE" ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field label="Google Analytics (ID de medición)">
+              <Input
+                value={form.gaMeasurementId}
+                onChange={(e) => set({ gaMeasurementId: e.target.value })}
+                placeholder="G-XXXXXXXXXX"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </Field>
+            <Field label="Meta Pixel (ID)">
+              <Input
+                value={form.metaPixelId}
+                onChange={(e) => set({ metaPixelId: e.target.value })}
+                placeholder="123456789012345"
+                inputMode="numeric"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </Field>
+          </div>
+        ) : (
+          <p className="flex items-center gap-2 rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
+            <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>
+              Disponible en el plan Pro.{" "}
+              <a href="/configuracion?tab=plan" className="font-medium underline hover:text-foreground">
+                Ver planes
+              </a>
+            </span>
+          </p>
+        )}
       </div>
 
       <div className="border-t border-border pt-5">

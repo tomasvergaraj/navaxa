@@ -51,6 +51,10 @@ model Tenant {
   googleReviews     Json?
   googleMapsUri     String?
   googleSyncedAt    DateTime?
+  // Analítica del sitio público (plan PRO+): IDs que el tenant pega en
+  // Configuración; el storefront inyecta gtag/pixel solo si el plan lo permite.
+  gaMeasurementId String? // Google Analytics 4, formato G-XXXXXXXXXX
+  metaPixelId     String? // Meta Pixel, numérico
   trialEndsAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

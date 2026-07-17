@@ -5,6 +5,7 @@ import { Globe, Instagram, MapPin, Phone } from "lucide-react";
 import { prisma } from "@navaxa/db";
 import { resolveTenantBySlug, getPublicHours } from "@/lib/public-booking";
 import { ServicesBrowser } from "@/components/booking/services-browser";
+import { TenantAnalytics } from "@/components/booking/tenant-analytics";
 import { HoursToggle } from "@/components/booking/hours-toggle";
 import { WhatsappIcon } from "@/components/ui/whatsapp-icon";
 import { GoogleIcon } from "@/components/ui/google-icon";
@@ -114,6 +115,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
 
   return (
     <div className="min-h-screen bg-muted/30">
+      <TenantAnalytics tenant={tenant} />
       <nav className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <span className="font-display text-lg font-medium tracking-tight">{tenant.name}</span>
