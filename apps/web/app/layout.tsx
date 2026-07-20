@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s · navaxa",
   },
   description:
-    "El sistema operativo para barberías que recuerdan a cada cliente. CRM visual, agenda, comisiones y automatizaciones por WhatsApp.",
+    "El sistema para barberías que recuerdan a cada cliente. Agenda online, historial de cortes con fotos, comisiones y recordatorios por WhatsApp.",
   openGraph: {
     title: "navaxa",
     description:
