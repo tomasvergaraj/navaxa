@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Button, Card, Badge, cn } from "@navaxa/ui";
+import { Button, cn } from "@navaxa/ui";
 import { Check } from "lucide-react";
 import { PLANS, ANNUAL_MONTHS_CHARGED } from "@navaxa/config";
 import { formatCLP } from "@/lib/format";
@@ -22,64 +22,78 @@ export function PricingPlans() {
         <IntervalToggle value={interval} onChange={setInterval} />
       </Reveal>
 
-      <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="mx-auto grid max-w-5xl grid-cols-1 gap-5 md:grid-cols-3">
         {PLAN_LIST.map((plan, i) => {
           const popular = "popular" in plan && plan.popular;
           const yearPrice = plan.priceClp * ANNUAL_MONTHS_CHARGED;
           return (
-            <Reveal key={plan.id} delay={i * 80} className="h-full">
-              <Card
+            <Reveal key={plan.id} variant="scale" delay={i * 90} className="h-full">
+              {/* El plan popular es la card "tinta" (graphite fijo en ambos temas,
+                  como la CTA final); el resto son cards planas radius 24. */}
+              <div
                 className={cn(
-                  "relative h-full p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
-                  popular ? "border-2 border-accent-ink shadow-md" : "hover:border-brand-brass/40",
+                  "relative flex h-full flex-col rounded-3xl p-7",
+                  popular
+                    ? "border border-white/10 bg-brand-graphite text-brand-ivory"
+                    : "border border-border/60 bg-card transition-colors duration-300 hover:border-foreground/25",
                 )}
               >
                 {popular && (
-                  <Badge variant="brand" className="absolute -top-2 right-6">
+                  <span className="absolute -top-3 right-6 rounded-full bg-brand-brass px-2.5 py-1 text-xs font-medium text-brand-graphite">
                     Más popular
-                  </Badge>
+                  </span>
                 )}
                 <h3 className="font-display text-lg font-medium">{plan.name}</h3>
 
                 {annual ? (
                   <div key="annual" className="mt-3 animate-in fade-in duration-300">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-medium tracking-tight">{formatCLP(yearPrice)}</span>
-                      <span className="text-sm text-muted-foreground">/año</span>
+                      <span className="text-4xl font-medium tracking-tight">{formatCLP(yearPrice)}</span>
+                      <span className={cn("text-sm", popular ? "text-brand-ivory/70" : "text-muted-foreground")}>/año</span>
                     </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <p className={cn("mt-0.5 text-xs", popular ? "text-brand-ivory/70" : "text-muted-foreground")}>
                       ≈ {formatCLP(Math.round(yearPrice / 12))}/mes · 2 meses gratis
                     </p>
                   </div>
                 ) : (
                   <div key="monthly" className="mt-3 flex items-baseline gap-1 animate-in fade-in duration-300">
-                    <span className="text-3xl font-medium tracking-tight">{formatCLP(plan.priceClp)}</span>
-                    <span className="text-sm text-muted-foreground">/mes</span>
+                    <span className="text-4xl font-medium tracking-tight">{formatCLP(plan.priceClp)}</span>
+                    <span className={cn("text-sm", popular ? "text-brand-ivory/70" : "text-muted-foreground")}>/mes</span>
                   </div>
                 )}
 
-                <ul className="mt-6 space-y-2 text-sm">
+                <ul className="mt-6 flex-1 space-y-2.5 text-sm">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" />
+                      <Check
+                        className={cn(
+                          "mt-0.5 h-4 w-4 shrink-0",
+                          popular ? "text-brand-brass" : "text-accent-ink",
+                        )}
+                      />
                       <span>{f}</span>
                     </li>
                   ))}
                 </ul>
 
                 <Button
+                  className={cn(
+                    "mt-7 w-full rounded-full",
+                    popular
+                      ? "bg-brand-brass text-brand-graphite hover:bg-brand-brass-soft"
+                      : "border border-foreground/25 bg-transparent text-foreground hover:border-foreground/50 hover:bg-transparent",
+                  )}
                   variant={popular ? "default" : "outline"}
-                  className="mt-6 w-full"
                   asChild
                 >
                   <Link href={`/registro?plan=${plan.id.toLowerCase()}&interval=${interval.toLowerCase()}`}>Empezar</Link>
                 </Button>
-              </Card>
+              </div>
             </Reveal>
           );
         })}
       </div>
-      <p className="mt-6 text-center text-xs text-muted-foreground">
+      <p className="mt-8 text-center text-xs text-muted-foreground">
         Al terminar los 14 días de prueba puedes seguir en el plan{" "}
         <strong className="text-foreground">Gratis</strong> (1 barbero, hasta 50 clientes, agenda
         básica) o elegir un plan pagado. Sin cobros automáticos sorpresa.

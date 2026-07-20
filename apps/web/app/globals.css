@@ -85,8 +85,26 @@
   }
 }
 
+@layer base {
+  :root {
+    /* Curvas de salida exponenciales para el motion editorial del landing/marketplace. */
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* Las entradas coreografiadas (rise/settle) son mejora progresiva: con
+   reduced-motion el contenido aparece sin desplazamiento ni blur. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-rise-blur,
+  .animate-settle {
+    animation: none;
   }
 }

@@ -122,15 +122,15 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <nav className="border-b border-border bg-card">
+      <nav>
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-          <Link href="/" aria-label="navaxa — inicio" className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card">
+          <Link href="/" aria-label="navaxa — inicio" className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             <Logo size={24} />
           </Link>
           <div className="flex items-center gap-1">
             <Link
               href="/login"
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Soy barbería
             </Link>
@@ -139,30 +139,35 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
         </div>
       </nav>
 
-      <header className="mx-auto max-w-5xl px-4 pb-6 pt-10">
-        <h1 className="font-display text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+      <header className="mx-auto max-w-5xl px-4 pb-8 pt-10 md:pt-14">
+        <h1 className="max-w-3xl animate-rise text-balance font-display text-4xl font-normal leading-[1.1] tracking-[-0.015em] sm:text-5xl">
           Reserva tu hora en la barbería que te queda mejor
         </h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
+        <p className="mt-3 max-w-2xl animate-rise text-lg text-muted-foreground" style={{ animationDelay: "100ms" }}>
           Elige servicio, barbero y horario en segundos. Sin llamadas ni esperas.
         </p>
 
-        {/* Búsqueda + ciudad: form GET, funciona sin JS. */}
-        <form className="mt-6 flex flex-wrap gap-2" action="/reservar">
-          <div className="relative flex-1 sm:max-w-xs">
+        {/* Búsqueda + ciudad: form GET, funciona sin JS. Composer único (artifact
+            con sombra sutil), pill de acción a la derecha. */}
+        <form
+          className="mt-8 flex max-w-2xl animate-rise flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-card p-2 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-10px_rgba(0,0,0,0.08)] focus-within:ring-2 focus-within:ring-ring"
+          style={{ animationDelay: "180ms" }}
+          action="/reservar"
+        >
+          <div className="relative min-w-[11rem] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               name="q"
               defaultValue={q}
               placeholder="Buscar por nombre…"
-              className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-10 w-full rounded-xl bg-transparent pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none"
             />
           </div>
           {cities.length > 0 && (
             <select
               name="city"
               defaultValue={city}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-10 rounded-xl bg-transparent px-2 text-sm focus-visible:outline-none"
             >
               <option value="">Todas las ciudades</option>
               {cities.map((c) => (
@@ -174,7 +179,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           )}
           <button
             type="submit"
-            className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="h-10 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             Buscar
           </button>
@@ -183,7 +188,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
 
       <main className="mx-auto max-w-5xl px-4 pb-16">
         {cards.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-card p-12 text-center">
+          <div className="rounded-3xl bg-card p-12 text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
               <Scissors className="h-5 w-5 text-muted-foreground" />
             </div>
@@ -206,11 +211,15 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
               {q ? ` · «${q}»` : ""}
             </p>
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {cards.map((t) => (
-                <li key={t.slug}>
+              {cards.map((t, i) => (
+                <li
+                  key={t.slug}
+                  className="animate-rise"
+                  style={{ animationDelay: `${Math.min(i, 8) * 55}ms` }}
+                >
                   <Link
                     href={`/reservar/${t.slug}`}
-                    className="group flex h-full flex-col rounded-lg border border-border bg-card p-5 transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted"
+                    className="group flex h-full flex-col rounded-3xl border border-border/60 bg-card p-6 transition-colors duration-300 hover:border-foreground/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-muted"
                   >
                     <div className="flex items-center gap-3">
                       {t.logoUrl ? (
@@ -252,9 +261,9 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
                       </p>
                     )}
 
-                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-foreground">
+                    <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-foreground">
                       Reservar
-                      <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                      <span aria-hidden className="transition-transform duration-300 ease-out-quart group-hover:translate-x-1">
                         →
                       </span>
                     </span>
@@ -268,12 +277,12 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
                 {page > 1 ? (
                   <Link
                     href={pageHref(page - 1)}
-                    className="rounded-md border border-input bg-background px-3 py-2 font-medium hover:bg-muted"
+                    className="rounded-full border border-input bg-background px-4 py-2 font-medium transition-colors hover:bg-muted"
                   >
                     ← Anterior
                   </Link>
                 ) : (
-                  <span className="rounded-md border border-input px-3 py-2 text-muted-foreground opacity-50">
+                  <span className="rounded-full border border-input px-4 py-2 text-muted-foreground opacity-50">
                     ← Anterior
                   </span>
                 )}
@@ -283,12 +292,12 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
                 {page < totalPages ? (
                   <Link
                     href={pageHref(page + 1)}
-                    className="rounded-md border border-input bg-background px-3 py-2 font-medium hover:bg-muted"
+                    className="rounded-full border border-input bg-background px-4 py-2 font-medium transition-colors hover:bg-muted"
                   >
                     Siguiente →
                   </Link>
                 ) : (
-                  <span className="rounded-md border border-input px-3 py-2 text-muted-foreground opacity-50">
+                  <span className="rounded-full border border-input px-4 py-2 text-muted-foreground opacity-50">
                     Siguiente →
                   </span>
                 )}

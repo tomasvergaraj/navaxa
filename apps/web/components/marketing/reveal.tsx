@@ -7,14 +7,23 @@ import { cn } from "@navaxa/ui";
  * Revela su contenido con un fade-up cuando entra al viewport (IntersectionObserver,
  * sin dependencias). Respeta prefers-reduced-motion. `delay` escalona elementos.
  */
+const HIDDEN: Record<string, string> = {
+  up: "translate-y-6 opacity-0",
+  fade: "opacity-0",
+  scale: "translate-y-4 scale-[0.98] opacity-0",
+};
+
 export function Reveal({
   children,
   className,
   delay = 0,
+  variant = "up",
 }: {
   children: React.ReactNode;
   className?: string;
   delay?: number;
+  /** Cómo entra: fade-up (default), solo fade, o fade+scale sutil para cards. */
+  variant?: "up" | "fade" | "scale";
 }) {
   const ref = useRef<HTMLDivElement>(null);
   // Visible por defecto: el SSR/no-JS debe mostrar TODO el contenido (antes la
@@ -46,8 +55,8 @@ export function Reveal({
     <div
       ref={ref}
       className={cn(
-        "transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:transform-none",
-        shown ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
+        "transition-all duration-700 ease-out-quart motion-reduce:transition-none motion-reduce:transform-none",
+        shown ? "translate-y-0 scale-100 opacity-100" : HIDDEN[variant],
         className,
       )}
       style={{ transitionDelay: shown ? `${delay}ms` : "0ms" }}

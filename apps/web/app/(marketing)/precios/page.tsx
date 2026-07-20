@@ -53,7 +53,7 @@ export default function PreciosPage() {
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button asChild>
+            <Button className="rounded-full" asChild>
               <Link href="/registro">
                 Empezar gratis
                 <ArrowRight className="hidden h-4 w-4 sm:inline" />
@@ -71,11 +71,11 @@ export default function PreciosPage() {
           <ArrowLeft className="h-4 w-4" />
           Volver al inicio
         </Link>
-        <div className="mb-10 text-center">
-          <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">
+        <div className="mb-12 text-center">
+          <h1 className="animate-rise text-balance font-display text-3xl font-normal tracking-[-0.015em] md:text-5xl">
             Precios simples, en pesos chilenos
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-xl animate-rise text-lg text-muted-foreground" style={{ animationDelay: "100ms" }}>
             14 días de prueba con todo incluido, sin tarjeta. Después eliges el plan que le queda a
             tu barbería.
           </p>
@@ -84,12 +84,12 @@ export default function PreciosPage() {
         <PricingPlans />
 
         <section className="mx-auto mt-16 max-w-2xl">
-          <h2 className="mb-4 font-display text-xl font-medium">Preguntas sobre el pago</h2>
-          <div className="space-y-3">
+          <h2 className="mb-2 font-display text-xl font-medium">Preguntas sobre el pago</h2>
+          <div className="divide-y divide-border">
             {PAYMENT_FAQS.map((f) => (
-              <details key={f.q} className="group rounded-lg border border-border bg-card p-4">
+              <details key={f.q} className="group py-4">
                 <summary className="cursor-pointer text-sm font-medium">{f.q}</summary>
-                <p className="mt-2 text-sm text-muted-foreground">{f.a}</p>
+                <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted-foreground">{f.a}</p>
               </details>
             ))}
           </div>
