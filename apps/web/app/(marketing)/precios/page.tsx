@@ -44,7 +44,7 @@ export default function PreciosPage() {
     <div className="min-h-screen bg-background">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()).replace(/</g, "\\u003c") }}
       />
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
         <div className="container flex h-16 items-center justify-between gap-3">

@@ -59,8 +59,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Rutas públicas pasan
-  if (isPublic(pathname)) return NextResponse.next();
+  // Rutas públicas pasan. Igual borramos los headers internos de confianza que
+  // pudiera haber inyectado el cliente: una ruta pública no debe poder ser engañada
+  // para leer un x-tenant-id/x-platform-admin falso vía getTenantContext().
+  if (isPublic(pathname)) {
+    const h = new Headers(req.headers);
+    for (const k of ["x-tenant-id", "x-user-id", "x-user-role", "x-platform-admin"]) h.delete(k);
+    return NextResponse.next({ request: { headers: h } });
+  }
 
   // Bloqueo de rutas privadas
   if (!token) {

@@ -3,11 +3,17 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@navaxa/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 });
+
+// Hash bcrypt válido pero de una contraseña que nadie tiene. Se usa para gastar
+// un compare aun cuando el usuario no existe → el tiempo de respuesta no revela
+// qué emails están registrados (anti-enumeración por timing).
+const DUMMY_HASH = "$2a$10$hNvkrrIQuvkhEeb6SSuOoutFMZmeyuhymdRsq/t116IrQmwf2wd56";
 
 /**
  * Emails declarados como operadores de la plataforma (super admin). Se setean
@@ -15,7 +21,7 @@ const credentialsSchema = z.object({
  * promovemos su flag `platformAdmin` en BD. Quitar el email del env NO degrada
  * automáticamente — eso queda en BD; bórralo manualmente si quieres revocar.
  */
-function isSuperAdminEmail(email: string): boolean {
+export function isSuperAdminEmail(email: string): boolean {
   const list = (process.env.SUPER_ADMIN_EMAILS ?? "")
     .split(",")
     .map((s) => s.trim().toLowerCase())
@@ -37,21 +43,30 @@ export const authConfig: NextAuthConfig = {
         email: { label: "Email", type: "email" },
         password: { label: "Contraseña", type: "password" },
       },
-      authorize: async (raw) => {
+      authorize: async (raw, req) => {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
 
+        const email = parsed.data.email.toLowerCase().trim();
+
+        // Rate limit anti fuerza-bruta / credential stuffing: por IP (10/15min) y
+        // por email (5/15min). Antes el login no tenía ningún tope (bcrypt cost 10
+        // no frena ataques distribuidos). Devolvemos null (silencioso) al pasarse.
+        const ip = req ? clientIp(req as unknown as Request) : "unknown";
+        if (!rateLimit(`login:ip:${ip}`, 10, 15 * 60 * 1000).ok) return null;
+        if (!rateLimit(`login:email:${email}`, 5, 15 * 60 * 1000).ok) return null;
+
         const user = await prisma.user.findFirst({
-          where: { email: parsed.data.email.toLowerCase().trim(), active: true },
+          where: { email, active: true },
           include: {
             tenant: { select: { id: true, slug: true, active: true } },
           },
         });
 
-        if (!user || !user.passwordHash || !user.tenant.active) return null;
-
-        const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!ok) return null;
+        // Siempre gastamos un bcrypt.compare (contra un hash dummy si el usuario no
+        // existe) para no filtrar por timing qué emails están registrados.
+        const ok = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_HASH);
+        if (!user || !user.passwordHash || !user.tenant.active || !ok) return null;
 
         // Auto-promoción a super admin si el email está en SUPER_ADMIN_EMAILS.
         const shouldBeAdmin = isSuperAdminEmail(user.email);

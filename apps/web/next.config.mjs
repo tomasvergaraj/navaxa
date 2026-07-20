@@ -22,6 +22,27 @@ const nextConfig = {
     serverComponentsExternalPackages: ["@prisma/client", "bcryptjs"],
     instrumentationHook: true,
   },
+  // Headers de seguridad a nivel de app (siguen a la app aunque cambie el proxy;
+  // en prod el edge es nginx, no Caddy). Deliberadamente NO fijamos default-src /
+  // script-src estrictos acá: romperían la hidratación inline de Next y la carga de
+  // imágenes remotas (R2/Unsplash/Google). El anti-clickjacking sí es seguro y
+  // total. Un CSP script-src completo requiere nonces vía middleware (follow-up).
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

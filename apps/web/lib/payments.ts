@@ -103,6 +103,12 @@ const webpayProvider: PaymentProvider = {
 export function getPaymentProvider(): PaymentProvider {
   const p = (process.env.PAYMENT_PROVIDER ?? "mock").toLowerCase();
   if (p === "webpay") return webpayProvider;
+  // Fail-closed: en producción no permitimos caer silenciosamente al proveedor
+  // mock (cobros gratis). Si falta/está mal seteado PAYMENT_PROVIDER, es un error
+  // de despliegue y preferimos romper el checkout antes que regalar el servicio.
+  if (process.env.NODE_ENV === "production" && p !== "mock") {
+    throw new Error(`PAYMENT_PROVIDER inválido en producción: "${p}"`);
+  }
   return mockProvider;
 }
 

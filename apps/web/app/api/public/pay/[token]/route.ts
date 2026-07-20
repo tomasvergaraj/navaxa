@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
-import { loadPaymentByToken } from "@/lib/payments";
+import { loadPaymentByToken, getPaymentProvider } from "@/lib/payments";
 import { signManageToken } from "@/lib/public-booking";
 import { notifyAppointment } from "@/lib/appointment-notify";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
@@ -33,6 +33,19 @@ export async function POST(req: Request, { params }: { params: { token: string }
 
     if (payment.status !== "PENDING") {
       return NextResponse.json({ error: "Este pago ya no está vigente" }, { status: 409 });
+    }
+
+    // Este endpoint solo confirma pagos del proveedor MOCK (botón "Pagar" del
+    // checkout simulado). Con una pasarela real (Webpay) la confirmación llega
+    // exclusivamente por su return handler tras `commitWebpayTransaction`; si no
+    // se gatea acá, un cliente marca su reserva como pagada sin pagar (bypass del
+    // abono). Chequeamos tanto el provider persistido como el activo, para que un
+    // valor viejo en la fila no reabra el hueco.
+    if (payment.provider !== "mock" || getPaymentProvider().name !== "mock") {
+      return NextResponse.json(
+        { error: "Este pago se confirma en la pasarela." },
+        { status: 409 },
+      );
     }
 
     // Expirado: liberar la hora.

@@ -82,6 +82,15 @@ async function handle(req: Request): Promise<Response> {
     return NextResponse.redirect(`${APP_URL}/pagar/${ownToken}`, 303);
   }
 
+  // Reconciliación de monto (defensa en profundidad): el `token_ws` está atado al
+  // monto en la creación, pero verificamos que lo cobrado == el abono esperado
+  // antes de dar la cita por pagada. Un descalce = no confiar en el commit.
+  if (result.amount !== payment.amount) {
+    console.warn(`[webpay/return] monto descalzado payment=${payment.id} esperado=${payment.amount} cobrado=${result.amount}`);
+    await failPaymentAndReleaseSlot(payment.id, payment.appointmentId);
+    return NextResponse.redirect(`${APP_URL}/pagar/${ownToken}`, 303);
+  }
+
   // OK: marca pago + confirma cita (atómico).
   const claimed = await prisma.$transaction(async (tx) => {
     const c = await tx.payment.updateMany({
