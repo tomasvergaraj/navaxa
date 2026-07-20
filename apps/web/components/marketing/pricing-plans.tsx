@@ -93,10 +93,32 @@ export function PricingPlans() {
           );
         })}
       </div>
-      <p className="mt-8 text-center text-xs text-muted-foreground">
-        Al terminar los 14 días de prueba puedes seguir en el plan{" "}
-        <strong className="text-foreground">Gratis</strong> (1 barbero, hasta 50 clientes, agenda
-        básica) o elegir un plan pagado. Sin cobros automáticos sorpresa.
+      {/* Plan Gratis: visible pero sin competir con los pagados (no es 4ª card
+          a propósito: el primer precio de la grilla ancla la percepción). */}
+      <Reveal variant="fade" className="mx-auto mt-6 max-w-5xl">
+        <div className="flex flex-col items-start justify-between gap-4 rounded-3xl border border-border/60 bg-card p-6 sm:flex-row sm:items-center sm:gap-6">
+          <div>
+            <p className="font-medium">
+              Plan Gratis · <span className="text-accent-ink">$0 para siempre</span>
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {PLANS.FREE.limits.barbers} barbero · hasta {PLANS.FREE.limits.clients} clientes ·
+              agenda y reservas online básicas
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="shrink-0 rounded-full border-foreground/25 bg-transparent px-6 hover:border-foreground/50 hover:bg-transparent"
+            asChild
+          >
+            <Link href="/registro">Empezar gratis</Link>
+          </Button>
+        </div>
+      </Reveal>
+
+      <p className="mt-6 text-center text-xs text-muted-foreground">
+        Todos los planes parten con 14 días de prueba con todo incluido, sin tarjeta.
+        Al terminar eliges plan o sigues en Gratis. Sin cobros automáticos sorpresa.
       </p>
     </>
   );
