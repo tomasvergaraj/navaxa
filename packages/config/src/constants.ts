@@ -46,10 +46,10 @@ export const PLANS = {
     features: [
       "Hasta 500 clientes",
       "Hasta 3 barberos",
-      "CRM visual",
+      "Historial de cortes con fotos",
       "Caja, productos e inventario",
       "Recordatorios automáticos por email",
-      "Analítica básica",
+      "Reportes básicos",
     ],
     limits: { clients: 500, barbers: 3, photos: 2_000, whatsappPerMonth: 0 },
   },

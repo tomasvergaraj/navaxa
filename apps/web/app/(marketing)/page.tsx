@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button, Logo, cn } from "@navaxa/ui";
 import {
   Sparkles,
@@ -36,7 +37,7 @@ const FAQS = [
   },
   {
     q: "¿Puedo cargar mis clientes actuales?",
-    a: "Sí. Puedes registrar clientes manualmente y se van enriqueciendo solos con cada visita, foto y rating.",
+    a: "Sí. Puedes registrar clientes manualmente y su ficha se va completando sola con cada visita, foto y evaluación.",
   },
 ];
 
@@ -136,8 +137,9 @@ export default function MarketingPage() {
             className="mt-6 max-w-xl animate-rise text-balance text-lg text-muted-foreground"
             style={{ animationDelay: "220ms" }}
           >
-            El sistema operativo para barberías que recuerdan a cada cliente.
-            Historial visual, agenda inteligente y reactivación automática por WhatsApp.
+            El sistema para barberías que recuerdan a cada cliente.
+            Fotos de cada corte, agenda al día y mensajes de WhatsApp automáticos
+            que hacen volver a tus clientes.
           </p>
           <div
             className="mt-9 flex animate-rise flex-col items-center gap-3 sm:flex-row"
@@ -181,12 +183,12 @@ export default function MarketingPage() {
           </Reveal>
 
           <div className="mx-auto grid max-w-5xl grid-cols-1 gap-5 lg:grid-cols-12">
-            {/* CRM visual: la feature insignia, con su artifact de historial. */}
+            {/* Ficha del cliente: la feature insignia, con su artifact de historial. */}
             <Reveal variant="scale" className="lg:col-span-7">
               <FeatureCard
                 icon={ImageIcon}
-                title="CRM Visual"
-                desc="Cada cliente con su historial de cortes en imágenes. Adiós al cliente que pide «lo mismo de la otra vez» sin saber qué fue."
+                title="Ficha visual del cliente"
+                desc="Cada cliente con sus cortes en fotos. Se acabó el «córtame lo mismo de la otra vez» sin saber qué fue."
               >
                 <HistoryMock />
               </FeatureCard>
@@ -197,7 +199,7 @@ export default function MarketingPage() {
               <FeatureCard
                 icon={MessageSquare}
                 title="WhatsApp automático"
-                desc="Recordatorios 24h antes, reactivación a inactivos, saludo de cumpleaños. Tu cliente vuelve sin que muevas un dedo."
+                desc="Recordatorio 24h antes de la hora, mensaje a los que llevan tiempo sin venir y saludo de cumpleaños. Tu cliente vuelve sin que muevas un dedo."
                 accent
               >
                 <ChatMock />
@@ -208,7 +210,7 @@ export default function MarketingPage() {
               <FeatureCard
                 icon={Calendar}
                 title="Agenda inteligente"
-                desc="Disponibilidad real por barbero, servicios encadenados, drag-to-reschedule. Sin overbookings nunca más."
+                desc="Las horas libres de cada barbero siempre al día, y las citas se mueven arrastrándolas. Nunca más dos clientes a la misma hora."
               >
                 <AgendaMock />
               </FeatureCard>
@@ -218,7 +220,7 @@ export default function MarketingPage() {
               <FeatureCard
                 icon={Sparkles}
                 title="IA: próximo corte"
-                desc="Analiza el historial visual, ratings y preferencias para sugerir el corte ideal del cliente. Ahorra discusiones."
+                desc="Mira las fotos, evaluaciones y gustos del cliente y sugiere el corte ideal. Ahorra discusiones."
               >
                 <AiMock />
               </FeatureCard>
@@ -234,7 +236,7 @@ export default function MarketingPage() {
             <Reveal variant="scale" delay={90} className="lg:col-span-6">
               <FeatureCard
                 icon={Users}
-                title="Multi-barbero"
+                title="Para todo el equipo"
                 desc="Cada barbero ve su agenda y sus clientes; recepción gestiona el local; el dueño ve todo."
               />
             </Reveal>
@@ -358,20 +360,25 @@ function FeatureCard({
   );
 }
 
-/** Mini-artifact: historial visual de un cliente (puro CSS). */
+/** Mini-artifact: historial visual de un cliente con fotos reales (Unsplash, servidas locales). */
 function HistoryMock() {
   const cuts = [
-    { d: "Mar", n: "Fade medio", r: 5 },
-    { d: "Ene", n: "Clásico tijera", r: 4 },
-    { d: "Nov", n: "Buzz corto", r: 2 },
+    { img: "/landing/corte-fade-medio.jpg", d: "Mar", n: "Fade medio", r: 5 },
+    { img: "/landing/corte-clasico-tijera.jpg", d: "Ene", n: "Clásico tijera", r: 4 },
+    { img: "/landing/corte-buzz.jpg", d: "Nov", n: "Buzz corto", r: 2 },
   ];
   return (
     <div className="grid grid-cols-3 gap-3" aria-hidden>
       {cuts.map((c) => (
         <div key={c.n} className="overflow-hidden rounded-xl bg-muted">
-          <div className="flex aspect-[4/3] items-center justify-center bg-gradient-to-b from-muted to-muted-foreground/10">
-            <ImageIcon className="h-5 w-5 text-muted-foreground/50" />
-          </div>
+          <Image
+            src={c.img}
+            alt=""
+            width={480}
+            height={360}
+            sizes="(min-width: 1024px) 200px, 30vw"
+            className="aspect-[4/3] w-full object-cover"
+          />
           <div className="px-2.5 py-2">
             <div className="truncate text-xs font-medium">{c.n}</div>
             <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -438,7 +445,7 @@ function AiMock() {
       </div>
       <p className="mt-1.5 text-sm">
         Fade medio con textura arriba — su corte mejor evaluado. Evitar buzz corto
-        (rating 2/5 en noviembre).
+        (2 estrellas en noviembre).
       </p>
     </div>
   );
