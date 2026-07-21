@@ -48,8 +48,10 @@ export function rateLimit(key: string, limit: number, windowMs: number): { ok: b
  * por eso es la fuente confiable. Caemos a XFF/x-real-ip solo si no hay CF
  * (dev local / acceso directo al origen).
  *
- * Nota: si la IP de origen es alcanzable sin pasar por Cloudflare, CF-Connecting-IP
- * sí se puede spoofear — endurecer con firewall a rangos CF en nginx.
+ * El origen está cerrado a los rangos de CF en nginx (403 a cualquier otra IP) y
+ * nginx reescribe CF-Connecting-IP con la IP que validó, así que el header no se
+ * puede inventar pegándole directo al VPS. Ver DEPLOY.md § "Origen cerrado a
+ * Cloudflare"; si ese candado se saca, este rate-limit se evade.
  */
 export function clientIp(req: Request): string {
   const cf = req.headers.get("cf-connecting-ip");

@@ -83,14 +83,53 @@ Verifica local: `curl -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3004/` �
 4. **HSTS** (SSL/TLS → Edge Certificates → HSTS): Enable ON, Max Age 12 months,
    includeSubDomains ON, **Preload OFF** (es semi-irreversible), No-Sniff ON.
 5. **vhost nginx** en `/etc/nginx/sites-available/navaxa` (proxy a `127.0.0.1:3004`,
-   TLS con el cert Origin), luego:
+   TLS con el cert Origin). La copia versionada está en [deploy/nginx/](deploy/nginx/):
 
 ```sh
+cp deploy/nginx/navaxa.conf            /etc/nginx/sites-available/navaxa
+cp deploy/nginx/cloudflare-realip.conf /etc/nginx/snippets/
+cp deploy/nginx/cloudflare-geo.conf    /etc/nginx/conf.d/
 ln -s /etc/nginx/sites-available/navaxa /etc/nginx/sites-enabled/navaxa
 nginx -t && systemctl reload nginx
 ```
 
 Verifica público: `curl -I https://navaxa.cl/` → `200`; `http://navaxa.cl` redirige a https.
+
+### Origen cerrado a Cloudflare
+
+El vhost responde **403 a todo lo que no venga de un edge de Cloudflare** (o de
+loopback). Es lo que sostiene el rate-limit de login: `clientIp()`
+([apps/web/lib/rate-limit.ts](apps/web/lib/rate-limit.ts)) confía en
+`CF-Connecting-IP`, y ese header se puede inventar si la IP del VPS es alcanzable
+directo. Dos piezas:
+
+- `snippets/cloudflare-realip.conf` — `set_real_ip_from` con los rangos CF +
+  `real_ip_header CF-Connecting-IP`. Solo define confianza, no filtra.
+- `conf.d/cloudflare-geo.conf` — `geo $realip_remote_addr $cf_edge`, y el vhost
+  hace `if ($cf_edge = 0) { return 403; }`.
+
+**El geo va contra `$realip_remote_addr`, no `$remote_addr`.** Con
+`real_ip_header` activo, `$remote_addr` ya es la IP del visitante final, así que
+un `allow <rangos CF>; deny all;` normal (módulo access, que mira la IP
+reescrita) bloquearía a todo el mundo. `$realip_remote_addr` guarda la IP del
+peer real y cae a `$remote_addr` cuando no hubo reescritura, que es justo el hit
+directo que queremos cortar.
+
+Regenerar los rangos cuando CF los cambie (raro, pero pasa):
+
+```sh
+curl -s https://www.cloudflare.com/ips-v4 https://www.cloudflare.com/ips-v6
+```
+
+Verificar:
+
+```sh
+curl -s -o /dev/null -w '%{http_code}\n' https://navaxa.cl/                                    # 200
+curl -sk --resolve navaxa.cl:443:<IP_DEL_VPS> -o /dev/null -w '%{http_code}\n' https://navaxa.cl/  # 403
+```
+
+Ojo: cualquier monitor de uptime que pegue directo a la IP del origen empieza a
+ver 403; hay que apuntarlo al dominio.
 
 ## 5. Reemplazar los proveedores mock
 
