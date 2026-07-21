@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+import { FRAUNCES_600_BASE64, decodeBase64 } from "../assets/fraunces-latin-600.base64";
+
 // Imagen OG de la marca: los links se comparten sobre todo por WhatsApp y sin
 // esto el preview salía sin imagen.
 export const runtime = "edge";
@@ -8,10 +10,10 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 // Fraunces (la display de la marca) embebida: sin esto el preview salía con
-// serif genérica del sistema.
-const frauncesData = fetch(new URL("../assets/fraunces-latin-600.ttf", import.meta.url)).then(
-  (r) => r.arrayBuffer(),
-);
+// serif genérica del sistema. Va inline en base64 y no por fetch del .ttf: en el
+// build standalone new URL(..., import.meta.url) resuelve a un path relativo y
+// undici no lo puede parsear.
+const frauncesData = decodeBase64(FRAUNCES_600_BASE64);
 
 export default async function OgImage() {
   return new ImageResponse(
@@ -50,7 +52,7 @@ export default async function OgImage() {
     ),
     {
       ...size,
-      fonts: [{ name: "Fraunces", data: await frauncesData, weight: 600, style: "normal" }],
+      fonts: [{ name: "Fraunces", data: frauncesData, weight: 600, style: "normal" }],
     },
   );
 }
