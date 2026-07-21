@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /** Listado para gestión y caja (STAFF también vende, por eso no es manager-only). */
 export async function GET() {
   try {
-    const { tenantId } = requireRole(["OWNER", "ADMIN", "STAFF"]);
+    const { tenantId } = await requireRole(["OWNER", "ADMIN", "STAFF"]);
     await assertProductsPlan(tenantId);
     const db = scopedDb();
     const products = await db.product.findMany({
@@ -24,7 +24,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     await assertProductsPlan(tenantId);
     const parsed = productSchema.safeParse(await req.json());
     if (!parsed.success) {

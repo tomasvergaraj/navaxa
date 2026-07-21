@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    requireManager();
+    await requireManager();
     const parsed = serviceCreateSchema.partial().safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -25,7 +25,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
   try {
-    requireManager();
+    await requireManager();
     const db = scopedDb();
     await db.service.update({
       where: { id: params.id },

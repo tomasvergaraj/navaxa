@@ -10,7 +10,7 @@ import { ProductsManager } from "@/components/products/products-manager";
 export const dynamic = "force-dynamic";
 
 export default async function ProductosPage() {
-  const { tenantId } = requireManagerPage();
+  const { tenantId } = await requireManagerPage();
   const plan = await getTenantPlan(tenantId);
 
   if (!planHasProducts(plan)) {

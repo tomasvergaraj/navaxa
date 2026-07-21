@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     await assertGiftCardsPlan(tenantId);
     const db = scopedDb();
     const giftCards = await db.giftCard.findMany({
@@ -26,7 +26,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     await assertGiftCardsPlan(tenantId);
     const parsed = giftCardIssueSchema.safeParse(await req.json());
     if (!parsed.success) {

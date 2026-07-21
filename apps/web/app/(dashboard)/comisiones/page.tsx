@@ -39,7 +39,7 @@ type Period = {
 };
 
 export default async function ComisionesPage() {
-  requireManagerPage();
+  await requireManagerPage();
   const db = scopedDb();
 
   const [grouped, barbers] = await Promise.all([

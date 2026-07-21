@@ -24,7 +24,7 @@ async function assertProPlan(tenantId: string): Promise<"PRO" | "ENTERPRISE"> {
 /** Vista previa: cuántos clientes recibiría el envío (?segment=&days=). */
 export async function GET(req: Request) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     await assertProPlan(tenantId);
     const { searchParams } = new URL(req.url);
     const segment = (searchParams.get("segment") ?? "all") as BroadcastSegment;
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     const plan = await assertProPlan(tenantId);
 
     // Tope de envíos manuales por tenant: cada uno puede tocar cientos de

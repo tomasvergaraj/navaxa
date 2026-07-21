@@ -21,7 +21,7 @@ export default async function ResenasPage({
 }: {
   searchParams: { page?: string };
 }) {
-  const { tenantId } = requireManagerPage();
+  const { tenantId } = await requireManagerPage();
   const db = scopedDb();
   const page = Math.max(1, Number(searchParams.page) || 1);
 

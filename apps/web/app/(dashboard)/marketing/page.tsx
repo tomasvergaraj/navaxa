@@ -19,7 +19,7 @@ const CHANNEL_LABEL: Record<NotificationChannel, string> = {
 };
 
 export default async function MarketingPage() {
-  const { tenantId } = requireManagerPage();
+  const { tenantId } = await requireManagerPage();
   const db = scopedDb();
   const last30 = subDays(new Date(), 30);
 

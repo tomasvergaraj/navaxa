@@ -11,7 +11,7 @@ const MAX_BYTES = 6 * 1024 * 1024; // 6 MB
 
 export async function POST(req: Request) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     guardUploadSize(req, MAX_BYTES);
 
     const form = await req.formData();
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
 export async function DELETE() {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     await prisma.tenant.update({ where: { id: tenantId }, data: { coverUrl: null } });
     return NextResponse.json({ ok: true });
   } catch (e) {

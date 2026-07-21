@@ -14,7 +14,7 @@ const CASHIER_ROLES = ["OWNER", "ADMIN", "STAFF"] as const;
 /** Ventas de un día (?date=YYYY-MM-DD, default hoy en el TZ del server = local). */
 export async function GET(req: Request) {
   try {
-    const { tenantId } = requireRole(CASHIER_ROLES);
+    const { tenantId } = await requireRole(CASHIER_ROLES);
     await assertProductsPlan(tenantId);
     const { searchParams } = new URL(req.url);
     const dateParam = searchParams.get("date");
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { tenantId } = requireRole(CASHIER_ROLES);
+    const { tenantId } = await requireRole(CASHIER_ROLES);
     await assertProductsPlan(tenantId);
     const parsed = saleCreateSchema.safeParse(await req.json());
     if (!parsed.success) {

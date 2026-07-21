@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(_req: Request, { params }: { params: { token: string } }) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
 
     const parsed = verifyBillingToken(params.token);
     if (!parsed || parsed.tenantId !== tenantId) {

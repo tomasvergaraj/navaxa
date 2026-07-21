@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     const db = scopedDb();
     const now = new Date();
     const monthStart = startOfMonth(now);

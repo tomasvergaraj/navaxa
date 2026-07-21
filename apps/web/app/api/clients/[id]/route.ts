@@ -98,7 +98,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
   try {
-    requireManager(); // Borrar clientes es acción de gestión; un barbero no puede.
+    await requireManager(); // Borrar clientes es acción de gestión; un barbero no puede.
     const db = scopedDb();
     await db.client.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });

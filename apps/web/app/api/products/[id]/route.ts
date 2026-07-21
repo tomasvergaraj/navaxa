@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     await assertProductsPlan(tenantId);
     const parsed = productSchema.partial().safeParse(await req.json());
     if (!parsed.success) {
@@ -42,7 +42,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
  */
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     await assertProductsPlan(tenantId);
     const db = scopedDb();
     const existing = await db.product.findFirst({

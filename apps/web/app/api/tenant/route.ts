@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // Tenant no lleva columna tenantId (su id ES el tenant) → se usa prisma directo, no scopedDb.
 export async function PATCH(req: Request) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     const parsed = tenantUpdateSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

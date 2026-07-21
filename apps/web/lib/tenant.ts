@@ -35,17 +35,36 @@ export function getTenantContext(): TenantContext {
 
 /**
  * Verifica contra BD (cacheado 60s) que la sesión del request siga viva: cuenta
- * activa, tenant activo y token posterior al corte de revocación.
+ * activa, tenant activo y token posterior al corte de revocación. Devuelve el
+ * estado fresco del usuario.
  *
  * Hace falta porque el middleware solo decodifica el JWT — corre en Edge y no
  * alcanza Postgres —, así que sin esto un usuario desactivado o al que le
  * cambiaron la clave seguiría entrando hasta que expire el token (7 días).
  */
-export async function assertSessionValid(ctx: TenantContext): Promise<void> {
+async function loadValidState(ctx: TenantContext) {
   const state = await getSessionState(ctx.userId);
   if (isSessionRevoked(state, ctx.authAt)) {
     throw new TenantError("Sesión expirada o revocada");
   }
+  return state!;
+}
+
+export async function assertSessionValid(ctx: TenantContext): Promise<void> {
+  await loadValidState(ctx);
+}
+
+/**
+ * Contexto del request con el **rol leído de la BD**, no el del JWT.
+ *
+ * El rol del token queda obsoleto en cuanto se lo cambian y el JWT dura 7 días:
+ * sin esto, a un OWNER degradado a BARBER le seguían pasando los guards de
+ * gestión. Es la puerta que usan `requireRole`/`requireManager`.
+ */
+export async function requireSession(): Promise<TenantContext> {
+  const ctx = getTenantContext();
+  const state = await loadValidState(ctx);
+  return { ...ctx, role: state.role as TenantContext["role"] };
 }
 
 /**

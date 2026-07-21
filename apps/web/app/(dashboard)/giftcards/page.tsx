@@ -10,7 +10,7 @@ import { GiftCardsManager } from "@/components/giftcards/giftcards-manager";
 export const dynamic = "force-dynamic";
 
 export default async function GiftcardsPage() {
-  const { tenantId } = requireManagerPage();
+  const { tenantId } = await requireManagerPage();
   const plan = await getTenantPlan(tenantId);
 
   if (!planHasGiftCards(plan)) {

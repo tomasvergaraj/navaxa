@@ -22,7 +22,7 @@ function csvRow(cells: (string | number)[]): string {
 
 export async function GET(req: Request) {
   try {
-    requireManager();
+    await requireManager();
 
     const { searchParams } = new URL(req.url);
     const period = parsePeriod({

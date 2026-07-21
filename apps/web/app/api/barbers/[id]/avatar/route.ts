@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
-import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { scopedDb, requireSession } from "@/lib/tenant";
 import { apiError } from "@/lib/api-errors";
 import { storage } from "@/lib/storage";
 import { compressImage } from "@/lib/images";
@@ -12,7 +12,8 @@ const MAX_BYTES = 4 * 1024 * 1024;
 
 // El dueño/admin puede gestionar cualquier avatar; un barbero puede gestionar el suyo.
 async function authorize(barberId: string) {
-  const ctx = getTenantContext();
+  // Rol desde BD, no desde el JWT (ver requireSession).
+  const ctx = await requireSession();
   const db = scopedDb();
   const barber = await db.barber.findFirst({ where: { id: barberId }, select: { id: true, userId: true } });
   if (!barber) return { error: "Barbero no encontrado", status: 404 as const };

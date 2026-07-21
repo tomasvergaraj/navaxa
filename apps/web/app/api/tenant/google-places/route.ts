@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // Búsqueda de locales en Google Maps para vincular reseñas (Configuración > Barbería).
 export async function GET(req: Request) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     if (!googleReviewsEnabled()) {
       return NextResponse.json({ error: "Reseñas de Google no disponibles" }, { status: 503 });
     }

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // Reemplaza el horario semanal completo del barbero por el conjunto de ventanas recibido.
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
-    requireManager();
+    await requireManager();
     const parsed = scheduleSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

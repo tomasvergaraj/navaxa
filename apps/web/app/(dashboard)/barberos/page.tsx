@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/page-header";
 export const dynamic = "force-dynamic";
 
 export default async function BarberosPage() {
-  const { role } = requireManagerPage();
+  const { role } = await requireManagerPage();
   const canManage = role === "OWNER" || role === "ADMIN";
   const db = scopedDb();
   const last30 = subDays(new Date(), 30);

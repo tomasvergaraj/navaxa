@@ -33,7 +33,7 @@ export default async function ReportesPage({
   searchParams: { range?: string; from?: string; to?: string };
 }) {
   const period = parsePeriod(searchParams);
-  const { tenantId } = requireManagerPage();
+  const { tenantId } = await requireManagerPage();
   const db = scopedDb();
   const range = { gte: period.from, lte: period.to };
 

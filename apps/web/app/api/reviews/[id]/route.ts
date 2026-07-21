@@ -9,7 +9,7 @@ const updateSchema = z.object({ hidden: z.boolean() });
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    requireManager();
+    await requireManager();
     const parsed = updateSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

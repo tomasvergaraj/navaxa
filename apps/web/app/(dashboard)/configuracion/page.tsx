@@ -21,7 +21,7 @@ export default async function ConfiguracionPage({
 }: {
   searchParams: { tab?: string };
 }) {
-  const { tenantId, userId } = requireManagerPage();
+  const { tenantId, userId } = await requireManagerPage();
   const db = scopedDb();
   const activeTab = searchParams.tab && TABS.includes(searchParams.tab) ? searchParams.tab : "barberia";
 

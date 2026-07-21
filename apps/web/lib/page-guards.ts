@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@navaxa/db";
-import { getTenantContext, type TenantContext } from "@/lib/tenant";
+import { requireSession, type TenantContext } from "@/lib/tenant";
 
 export type Role = TenantContext["role"];
 
@@ -13,9 +13,11 @@ export function isManagerRole(role: Role): boolean {
  * Guarda de página (server component): redirige a /dashboard si el usuario no es
  * OWNER/ADMIN. Para páginas de gestión (reportes, comisiones, equipo, etc.) que
  * no deben ser visibles para barberos. Devuelve el ctx para conveniencia.
+ *
+ * Async porque el rol lo decide la BD y no el JWT (ver `requireSession`).
  */
-export function requireManagerPage(): TenantContext {
-  const ctx = getTenantContext();
+export async function requireManagerPage(): Promise<TenantContext> {
+  const ctx = await requireSession();
   if (!isManagerRole(ctx.role)) redirect("/dashboard");
   return ctx;
 }
@@ -43,7 +45,7 @@ export async function viewerScope(): Promise<{
   ownOnly: boolean;
   barberId: string | null;
 }> {
-  const ctx = getTenantContext();
+  const ctx = await requireSession();
   const isManager = isManagerRole(ctx.role);
   const ownOnly = ctx.role === "BARBER";
   const barberId = ownOnly ? await currentBarberId(ctx.userId) : null;

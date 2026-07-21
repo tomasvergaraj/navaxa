@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** Anular venta (devuelve stock). Solo gestión: STAFF crea ventas, no las anula. */
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     await assertProductsPlan(tenantId);
     const sale = await cancelSale(tenantId, params.id);
     return NextResponse.json({ sale });

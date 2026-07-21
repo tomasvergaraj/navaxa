@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 /** Entrada de mercadería o ajuste manual. Las ventas descuentan stock por su lado. */
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     await assertProductsPlan(tenantId);
     const parsed = stockMovementSchema.safeParse(await req.json());
     if (!parsed.success) {

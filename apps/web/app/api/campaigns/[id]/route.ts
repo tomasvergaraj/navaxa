@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    requireManager();
+    await requireManager();
     const parsed = campaignUpdateSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -46,7 +46,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
-    requireManager();
+    await requireManager();
     const db = scopedDb();
     const campaign = await db.campaign.findFirst({
       where: { id: params.id },

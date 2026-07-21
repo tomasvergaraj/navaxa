@@ -20,7 +20,7 @@ const settleSchema = z.object({
  */
 export async function POST(req: Request) {
   try {
-    requireManager();
+    await requireManager();
 
     const parsed = settleSchema.safeParse(await req.json());
     if (!parsed.success) {

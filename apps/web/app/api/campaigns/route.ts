@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    requireManager();
+    await requireManager();
     const db = scopedDb();
     const campaigns = await db.campaign.findMany({
       orderBy: { createdAt: "asc" },
@@ -28,7 +28,7 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   try {
-    const { tenantId } = requireManager();
+    const { tenantId } = await requireManager();
     const parsed = campaignCreateSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

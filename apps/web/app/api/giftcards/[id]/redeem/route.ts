@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // Recepción (STAFF) también canjea giftcards en el mostrador; BARBER no.
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { tenantId } = requireRole(["OWNER", "ADMIN", "STAFF"]);
+    const { tenantId } = await requireRole(["OWNER", "ADMIN", "STAFF"]);
     await assertGiftCardsPlan(tenantId);
     const parsed = giftCardRedeemSchema.safeParse(await req.json());
     if (!parsed.success) {

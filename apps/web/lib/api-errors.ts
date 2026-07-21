@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { getTenantContext, TenantError, type TenantContext } from "@/lib/tenant";
+import { requireSession, TenantError, type TenantContext } from "@/lib/tenant";
 import { PlatformAdminError } from "@/lib/platform";
 import { PlanLimitError } from "@/lib/plan-limits";
 
@@ -50,11 +50,15 @@ type Role = TenantContext["role"];
 const MANAGER_ROLES: readonly Role[] = ["OWNER", "ADMIN"];
 
 /**
- * Exige una sesión cuyo rol esté entre los permitidos. Lanza `TenantError` si no
- * hay contexto de tenant y `ApiError(403)` si el rol no alcanza. Devuelve el ctx.
+ * Exige una sesión viva cuyo rol esté entre los permitidos. Lanza `TenantError`
+ * si no hay contexto de tenant o la sesión fue revocada, y `ApiError(403)` si el
+ * rol no alcanza. Devuelve el ctx.
+ *
+ * Es async porque el rol se contrasta con la BD (`requireSession`), no con el
+ * JWT: el token dura 7 días y conserva el rol que tenía al firmarse.
  */
-export function requireRole(roles: readonly Role[]): TenantContext {
-  const ctx = getTenantContext();
+export async function requireRole(roles: readonly Role[]): Promise<TenantContext> {
+  const ctx = await requireSession();
   if (!roles.includes(ctx.role)) {
     throw new ApiError(403, "No tienes permiso para esta acción");
   }
@@ -62,6 +66,6 @@ export function requireRole(roles: readonly Role[]): TenantContext {
 }
 
 /** Atajo para acciones de gestión (dueño o administrador). */
-export function requireManager(): TenantContext {
+export function requireManager(): Promise<TenantContext> {
   return requireRole(MANAGER_ROLES);
 }

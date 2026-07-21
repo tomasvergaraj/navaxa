@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** Busca una giftcard por código para canjearla en el mostrador (?code=NVX-XXXX). */
 export async function GET(req: Request) {
   try {
-    const { tenantId } = requireRole(["OWNER", "ADMIN", "STAFF"]);
+    const { tenantId } = await requireRole(["OWNER", "ADMIN", "STAFF"]);
     await assertGiftCardsPlan(tenantId);
     const code = new URL(req.url).searchParams.get("code") ?? "";
     if (code.trim().length < 4) {

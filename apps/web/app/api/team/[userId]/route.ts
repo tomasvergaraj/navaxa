@@ -11,7 +11,7 @@ const PRIVILEGED = new Set<Role>([Role.OWNER, Role.ADMIN]);
 
 export async function PATCH(req: Request, { params }: { params: { userId: string } }) {
   try {
-    const ctx = requireManager();
+    const ctx = await requireManager();
     if (params.userId === ctx.userId) {
       return NextResponse.json({ error: "No puedes modificar tu propia cuenta" }, { status: 400 });
     }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { scopedDb, requireSession } from "@/lib/tenant";
 import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { role, userId } = getTenantContext();
+    // Rol desde BD, no desde el JWT: si no, a un ADMIN degradado le seguía
+    // alcanzando el token viejo para editar a cualquier barbero.
+    const { role, userId } = await requireSession();
     const isManager = role === "OWNER" || role === "ADMIN";
 
     const db = scopedDb();
