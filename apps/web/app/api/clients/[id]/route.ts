@@ -1,15 +1,27 @@
 import { NextResponse } from "next/server";
 import { scopedDb } from "@/lib/tenant";
 import { apiError, requireManager } from "@/lib/api-errors";
+import { viewerScope } from "@/lib/page-guards";
 import { clientUpdateSchema, clientPreferenceSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Filtro de "cliente propio" para el BARBER: solo los que atendió alguna vez.
+ * Misma definición que el listado (api/clients/route.ts) — si no, el listado le
+ * muestra 3 clientes pero adivinando el id entraba a la ficha de cualquiera.
+ * Gestión (OWNER/ADMIN) y recepción (STAFF) no se filtran.
+ */
+async function ownClientFilter(): Promise<Record<string, unknown>> {
+  const { ownOnly, barberId } = await viewerScope();
+  return ownOnly ? { appointments: { some: { barberId: barberId ?? "__none__" } } } : {};
+}
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   try {
     const db = scopedDb();
     const client = await db.client.findFirst({
-      where: { id: params.id },
+      where: { id: params.id, ...(await ownClientFilter()) },
       include: {
         preferences: true,
         haircuts: {
@@ -41,7 +53,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
     const db = scopedDb();
-    const exists = await db.client.findFirst({ where: { id: params.id } });
+    // Mismo alcance que el GET: un barbero no edita la ficha de un cliente que
+    // nunca atendió (el update de abajo ya va por id, así que el chequeo es acá).
+    const exists = await db.client.findFirst({
+      where: { id: params.id, ...(await ownClientFilter()) },
+    });
     if (!exists) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
     const { birthDate, tags, ...rest } = parsed.data;

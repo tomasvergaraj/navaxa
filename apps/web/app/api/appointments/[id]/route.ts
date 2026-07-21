@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { scopedDb, getTenantContext } from "@/lib/tenant";
+import { scopedDb } from "@/lib/tenant";
 import { apiError, ApiError } from "@/lib/api-errors";
 import { viewerScope } from "@/lib/page-guards";
 import { completeAppointment, rescheduleAppointment } from "@/lib/booking";
@@ -40,6 +40,10 @@ async function assertCanModify(apptId: string): Promise<{ tenantId: string; ownO
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   try {
+    // Leer también es gestionar: la ficha trae nombre y teléfono del cliente, así
+    // que un barbero no debe poder abrir la cita de otro adivinando el id (la
+    // agenda ya se le filtra en api/appointments).
+    await assertCanModify(params.id);
     const db = scopedDb();
     const appt = await db.appointment.findFirst({
       where: { id: params.id },
