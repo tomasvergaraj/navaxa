@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
 import { requireManager, apiError } from "@/lib/api-errors";
-import { storage } from "@/lib/storage";
+import { storage, deleteStoredObject } from "@/lib/storage";
 import { compressImage } from "@/lib/images";
 import { guardUploadSize } from "@/lib/upload";
 
@@ -26,8 +26,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Solo se aceptan imágenes" }, { status: 400 });
     }
 
+    const previous = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { logoUrl: true, logoKey: true },
+    });
+
     const img = await compressImage(Buffer.from(await file.arrayBuffer()));
-    const { url } = await storage.upload({
+    const { key, url } = await storage.upload({
       buffer: img.main,
       contentType: img.contentType,
       prefix: `logos/${tenantId}`,
@@ -36,9 +41,12 @@ export async function POST(req: Request) {
 
     const tenant = await prisma.tenant.update({
       where: { id: tenantId },
-      data: { logoUrl: url },
+      data: { logoUrl: url, logoKey: key },
       select: { logoUrl: true },
     });
+    // Recién con la fila apuntando al nuevo objeto borramos el viejo: al revés,
+    // un fallo en el update dejaría al tenant sin logo y sin archivo.
+    await deleteStoredObject({ key: previous?.logoKey, url: previous?.logoUrl });
     return NextResponse.json({ logoUrl: tenant.logoUrl });
   } catch (e) {
     return apiError(e);
@@ -48,7 +56,16 @@ export async function POST(req: Request) {
 export async function DELETE() {
   try {
     const { tenantId } = await requireManager();
-    await prisma.tenant.update({ where: { id: tenantId }, data: { logoUrl: null } });
+    // Leer antes de limpiar: `update` devuelve la fila ya actualizada.
+    const previous = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { logoUrl: true, logoKey: true },
+    });
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { logoUrl: null, logoKey: null },
+    });
+    await deleteStoredObject({ key: previous?.logoKey, url: previous?.logoUrl });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return apiError(e);

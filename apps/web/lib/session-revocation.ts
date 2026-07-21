@@ -19,6 +19,7 @@ import { prisma, type Role } from "@navaxa/db";
 
 export type SessionState = {
   active: boolean;
+  email: string;
   role: Role;
   tenantId: string;
   tenantActive: boolean;
@@ -49,6 +50,7 @@ export async function getSessionState(userId: string): Promise<SessionState | nu
     where: { id: userId },
     select: {
       active: true,
+      email: true,
       role: true,
       tenantId: true,
       platformAdmin: true,
@@ -60,6 +62,7 @@ export async function getSessionState(userId: string): Promise<SessionState | nu
   const state: SessionState | null = user
     ? {
         active: user.active,
+        email: user.email,
         role: user.role,
         tenantId: user.tenantId,
         tenantActive: user.tenant.active,
@@ -85,6 +88,16 @@ export async function getSessionState(userId: string): Promise<SessionState | nu
 export function isSessionRevoked(state: SessionState | null, authAt: number): boolean {
   if (!state) return true;
   if (!state.active || !state.tenantActive) return true;
+  return isTokenStale(state, authAt);
+}
+
+/**
+ * ¿Este token quedó por detrás del corte de revocación del usuario?
+ *
+ * Aparte de {@link isSessionRevoked} porque el panel de plataforma necesita este
+ * pedazo sin el chequeo de tenant (ver lib/platform.ts).
+ */
+export function isTokenStale(state: SessionState, authAt: number): boolean {
   if (!state.sessionInvalidBefore) return false;
   const issuedAt = Number.isFinite(authAt) ? authAt : 0;
   // Margen de 1s: el corte se escribe con la hora de la app y el token pudo

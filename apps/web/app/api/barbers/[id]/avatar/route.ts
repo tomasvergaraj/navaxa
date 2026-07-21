@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
 import { scopedDb, requireSession } from "@/lib/tenant";
 import { apiError } from "@/lib/api-errors";
-import { storage } from "@/lib/storage";
+import { storage, deleteStoredObject } from "@/lib/storage";
 import { compressImage } from "@/lib/images";
 import { guardUploadSize } from "@/lib/upload";
 
@@ -15,7 +15,10 @@ async function authorize(barberId: string) {
   // Rol desde BD, no desde el JWT (ver requireSession).
   const ctx = await requireSession();
   const db = scopedDb();
-  const barber = await db.barber.findFirst({ where: { id: barberId }, select: { id: true, userId: true } });
+  const barber = await db.barber.findFirst({
+    where: { id: barberId },
+    select: { id: true, userId: true, avatarUrl: true, avatarKey: true },
+  });
   if (!barber) return { error: "Barbero no encontrado", status: 404 as const };
   const allowed = ctx.role === "OWNER" || ctx.role === "ADMIN" || barber.userId === ctx.userId;
   if (!allowed) return { error: "Sin permiso", status: 403 as const };
@@ -37,7 +40,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     const img = await compressImage(Buffer.from(await file.arrayBuffer()), 600);
-    const { url } = await storage.upload({
+    const { key, url } = await storage.upload({
       buffer: img.main,
       contentType: img.contentType,
       prefix: `avatars/${auth.tenantId}/${params.id}`,
@@ -46,9 +49,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     const barber = await prisma.barber.update({
       where: { id: params.id },
-      data: { avatarUrl: url },
+      data: { avatarUrl: url, avatarKey: key },
       select: { avatarUrl: true },
     });
+    // El avatar viejo ya no lo referencia nadie (`authorize` lo trajo antes del update).
+    await deleteStoredObject({ key: auth.barber.avatarKey, url: auth.barber.avatarUrl });
     return NextResponse.json({ avatarUrl: barber.avatarUrl });
   } catch (e) {
     return apiError(e);
@@ -59,7 +64,11 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   try {
     const auth = await authorize(params.id);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
-    await prisma.barber.update({ where: { id: params.id }, data: { avatarUrl: null } });
+    await prisma.barber.update({
+      where: { id: params.id },
+      data: { avatarUrl: null, avatarKey: null },
+    });
+    await deleteStoredObject({ key: auth.barber.avatarKey, url: auth.barber.avatarUrl });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return apiError(e);

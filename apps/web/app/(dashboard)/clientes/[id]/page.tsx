@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, Card } from "@navaxa/ui";
@@ -9,9 +8,9 @@ import { scopedDb } from "@/lib/tenant";
 import { AIRecommendationCard } from "@/components/ai-recommendation-card";
 import { UploadPhotoDialog } from "@/components/upload-photo-dialog";
 import { EditClientDialog } from "@/components/clients/edit-client-dialog";
+import { HaircutGallery } from "@/components/clients/haircut-gallery";
 import {
   formatCLP,
-  formatDateShort,
   formatDateTime,
   formatRelative,
 } from "@/lib/format";
@@ -133,42 +132,16 @@ export default async function ClientePage({ params }: PageProps) {
             </span>
           </div>
 
-          {client.haircuts.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
-              Aún no hay fotos de cortes registradas para este cliente.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {client.haircuts.map((h) => (
-                <figure
-                  key={h.id}
-                  className="group relative overflow-hidden rounded-lg border border-border bg-muted/20"
-                >
-                  <div className="relative aspect-square">
-                    <Image
-                      src={h.imageUrl}
-                      alt={h.style ?? "Corte"}
-                      fill
-                      sizes="(max-width: 640px) 50vw, 220px"
-                      className="object-cover transition group-hover:scale-105"
-                    />
-                  </div>
-                  <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-3 text-xs text-white">
-                    <div className="font-medium">{h.style ?? "Sin estilo"}</div>
-                    <div className="opacity-80">{formatDateShort(h.performedAt)}</div>
-                    {h.rating && (
-                      <div className="mt-1 tracking-wider text-amber-300">
-                        {"★".repeat(h.rating)}
-                        <span className="opacity-30">
-                          {"★".repeat(5 - h.rating)}
-                        </span>
-                      </div>
-                    )}
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          )}
+          <HaircutGallery
+            clientId={client.id}
+            photos={client.haircuts.map((h) => ({
+              id: h.id,
+              imageUrl: h.imageUrl,
+              style: h.style,
+              performedAt: h.performedAt,
+              rating: h.rating,
+            }))}
+          />
 
           {/* Citas */}
           <div className="mt-10">

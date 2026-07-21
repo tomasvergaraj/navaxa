@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@navaxa/db";
 import { requireSession, type TenantContext } from "@/lib/tenant";
+import { requireSuperAdmin, type PlatformActor } from "@/lib/platform";
 
 export type Role = TenantContext["role"];
 
@@ -20,6 +21,21 @@ export async function requireManagerPage(): Promise<TenantContext> {
   const ctx = await requireSession();
   if (!isManagerRole(ctx.role)) redirect("/dashboard");
   return ctx;
+}
+
+/**
+ * Guarda de página del panel de plataforma (/admin), decidida por BD.
+ *
+ * Va en el layout **y** en cada page: en el App Router el layout y la page se
+ * renderizan en paralelo, así que el redirect del layout no impide que la page
+ * corra sus queries — y las de /admin son cross-tenant.
+ */
+export async function requireSuperAdminPage(): Promise<PlatformActor> {
+  try {
+    return await requireSuperAdmin();
+  } catch {
+    redirect("/dashboard");
+  }
 }
 
 /** barberId del usuario actual, o null si no tiene registro de barbero (p. ej. STAFF). */

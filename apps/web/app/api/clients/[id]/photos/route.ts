@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { scopedDb, getTenantContext } from "@/lib/tenant";
 import { apiError } from "@/lib/api-errors";
 import { assertWithinPlanLimit } from "@/lib/plan-limits";
-import { storage } from "@/lib/storage";
+import { storage, deleteStoredObjects } from "@/lib/storage";
 import { compressImageWithThumb } from "@/lib/images";
 import { haircutPhotoMetaSchema } from "@/lib/validators";
 import { buildHaircutRatingUrl } from "@/lib/haircut-rating";
@@ -86,17 +86,27 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       : null;
     const appointmentId = appt && !apptTaken ? appt.id : null;
 
-    const record = await db.haircutRecord.create({
-      data: {
-        clientId: params.id,
-        barberId: meta.data.barberId,
-        appointmentId,
-        imageUrl: main.url,
-        thumbnailUrl: thumb.url,
-        notes: meta.data.notes,
-        style: meta.data.style,
-      } as any,
-    });
+    let record;
+    try {
+      record = await db.haircutRecord.create({
+        data: {
+          clientId: params.id,
+          barberId: meta.data.barberId,
+          appointmentId,
+          imageUrl: main.url,
+          imageKey: main.key,
+          thumbnailUrl: thumb.url,
+          thumbnailKey: thumb.key,
+          notes: meta.data.notes,
+          style: meta.data.style,
+        } as any,
+      });
+    } catch (e) {
+      // Si la fila no se creó, las 2 imágenes que ya subimos no las referencia
+      // nadie: sin esto quedan pagándose en R2 para siempre.
+      await deleteStoredObjects([{ key: main.key }, { key: thumb.key }]);
+      throw e;
+    }
 
     // Link para compartir a mano (copiar/WhatsApp en el diálogo de subida).
     // Si la foto quedó ligada a una cita va al flujo unificado de reseña;

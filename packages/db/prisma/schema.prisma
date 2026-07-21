@@ -31,7 +31,12 @@ model Tenant {
   currency    String    @default("CLP")
   locale      String    @default("es-CL")
   logoUrl     String?
+  // Key del objeto en storage (R2/S3) detrás de logoUrl/coverUrl: sin ella no se
+  // puede borrar el archivo al reemplazarlo o quitarlo. Las filas previas a la
+  // columna la derivan de la URL (ver storageKeyFromUrl en lib/storage.ts).
+  logoKey     String?
   coverUrl    String?
+  coverKey    String?
   description String?
   instagram   String?
   website     String?
@@ -238,6 +243,7 @@ model Barber {
   userId         String   @unique
   bio            String?
   avatarUrl      String?
+  avatarKey      String? // key en storage; ver Tenant.logoKey
   commissionRate Float    @default(0.4)
   specialties    String[]
   instagram      String?
@@ -346,7 +352,9 @@ model HaircutRecord {
   barberId      String?
   appointmentId String?  @unique
   imageUrl      String
+  imageKey      String? // key en storage; ver Tenant.logoKey
   thumbnailUrl  String?
+  thumbnailKey  String?
   notes         String?
   rating        Int?      // 1-5; lo deja el cliente vía link público (/foto/[token])
   ratedAt       DateTime? // cuándo el cliente envió el rating
@@ -735,4 +743,29 @@ model GiftCardRedemption {
 
   @@index([giftCardId, createdAt])
   @@map("gift_card_redemptions")
+}
+
+// =====================
+// Plataforma (super admin)
+// =====================
+
+/// Rastro de auditoría de las acciones del panel /admin, que operan cross-tenant
+/// y fuera de scopedDb(). Sin FK a User a propósito: el registro debe sobrevivir
+/// al borrado de la cuenta que lo generó, por eso se copia el email del actor.
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String
+  actorEmail  String
+  action      String // p. ej. "tenant.update"
+  targetType  String // p. ej. "Tenant"
+  targetId    String
+  before      Json? // estado previo, solo los campos tocados
+  after       Json? // estado pedido, solo los campos tocados
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetType, targetId, createdAt])
+  @@map("admin_audit_logs")
 }

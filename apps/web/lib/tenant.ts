@@ -73,6 +73,8 @@ export async function requireSession(): Promise<TenantContext> {
  */
 const SKIP_TENANT_FILTER = new Set([
   "Session",
+  "AdminAuditLog", // es de plataforma: cruza tenants por definición
+
   "BarberSchedule",
   "BarberTimeOff",
   "AppointmentService",

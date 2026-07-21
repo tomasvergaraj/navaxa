@@ -2,13 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Shield, Building2, ArrowLeft } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { requireSuperAdminPage } from "@/lib/page-guards";
 import { AuthSessionProvider } from "@/components/session-provider";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   // El middleware ya gateó esto, pero defensa en profundidad por si la matcher cambia.
   if (!session?.user) redirect("/login");
-  if (!session.user.platformAdmin) redirect("/dashboard");
+  // El flag del JWT puede ir hasta 7 días atrasado; el privilegio lo decide la BD.
+  await requireSuperAdminPage();
 
   return (
     <AuthSessionProvider>

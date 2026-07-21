@@ -95,3 +95,60 @@ class MockProvider implements StorageProvider {
 
 export const storage: StorageProvider =
   provider === "r2" || provider === "s3" ? new S3Provider() : new MockProvider();
+
+/**
+ * Deriva la key del objeto desde su URL pública.
+ *
+ * Las filas creadas antes de que se guardara la key (logoKey, avatarKey,
+ * imageKey…) solo tienen la URL; sin esto sus archivos quedarían huérfanos en el
+ * bucket para siempre. Devuelve null si la URL no cuelga de STORAGE_PUBLIC_URL
+ * — p. ej. los placeholders de placehold.co que emite el MockProvider, que no
+ * son nuestros y no hay que intentar borrar.
+ */
+export function storageKeyFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const base = (process.env.STORAGE_PUBLIC_URL ?? "").replace(/\/+$/, "");
+  if (!base || !url.startsWith(`${base}/`)) return null;
+  const path = url.slice(base.length + 1).split(/[?#]/)[0];
+  if (!path) return null;
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path; // URL mal codificada: mejor intentar con el crudo que no borrar.
+  }
+}
+
+/**
+ * Borra el objeto del bucket sin poder tumbar el request.
+ *
+ * El borrado en storage siempre corre DESPUÉS de escribir la BD: si R2 falla, el
+ * usuario ya no ve la imagen y lo único que queda es un archivo huérfano (un
+ * costo menor), mientras que propagar el error le mostraría un 500 sobre una
+ * operación que en realidad se completó.
+ */
+export async function deleteStoredObject(ref: {
+  key?: string | null;
+  url?: string | null;
+}): Promise<void> {
+  const key = ref.key ?? storageKeyFromUrl(ref.url);
+  if (!key) return;
+  try {
+    await storage.delete(key);
+  } catch (e) {
+    console.error("[storage] no se pudo borrar el objeto", key, e);
+  }
+}
+
+/**
+ * {@link deleteStoredObject} sobre varios objetos, de a tandas: borrar la galería
+ * entera de un cliente puede ser cientos de archivos y no queremos abrir cientos
+ * de conexiones a R2 de golpe.
+ */
+export async function deleteStoredObjects(
+  refs: Array<{ key?: string | null; url?: string | null }>,
+): Promise<void> {
+  const BATCH = 20;
+  for (let i = 0; i < refs.length; i += BATCH) {
+    await Promise.all(refs.slice(i, i + BATCH).map((r) => deleteStoredObject(r)));
+  }
+}

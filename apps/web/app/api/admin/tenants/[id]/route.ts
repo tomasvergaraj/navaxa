@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma, Plan, SubscriptionStatus } from "@navaxa/db";
 import { requireSuperAdmin } from "@/lib/platform";
+import { logAdminAction } from "@/lib/audit";
 import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
@@ -24,13 +25,23 @@ const updateSchema = z
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    requireSuperAdmin();
+    const actor = await requireSuperAdmin();
     const parsed = updateSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const exists = await prisma.tenant.findUnique({ where: { id: params.id }, select: { id: true } });
+    // Estado previo completo de lo auditable: se registra junto al cambio para
+    // que el log diga qué se tocó, no solo qué se pidió.
+    const exists = await prisma.tenant.findUnique({
+      where: { id: params.id },
+      select: {
+        id: true,
+        active: true,
+        plan: true,
+        subscription: { select: { status: true, currentPeriodEnd: true } },
+      },
+    });
     if (!exists) return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
 
     // Tenant: active + plan se mantienen en sync con Subscription.plan cuando se actualiza.
@@ -65,6 +76,42 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
           },
         });
       }
+    });
+
+    // Solo los campos que el PATCH tocó, en su valor de antes y de después.
+    const touched = {
+      ...(parsed.data.active !== undefined
+        ? { active: { before: exists.active, after: parsed.data.active } }
+        : {}),
+      ...(parsed.data.plan !== undefined
+        ? { plan: { before: exists.plan, after: parsed.data.plan } }
+        : {}),
+      ...(parsed.data.subscription?.status !== undefined
+        ? {
+            status: {
+              before: exists.subscription?.status ?? null,
+              after: parsed.data.subscription.status,
+            },
+          }
+        : {}),
+      ...(parsed.data.subscription?.currentPeriodEnd !== undefined
+        ? {
+            currentPeriodEnd: {
+              before: exists.subscription?.currentPeriodEnd?.toISOString() ?? null,
+              after: parsed.data.subscription.currentPeriodEnd,
+            },
+          }
+        : {}),
+    };
+
+    await logAdminAction({
+      actor,
+      action: "tenant.update",
+      targetType: "Tenant",
+      targetId: params.id,
+      before: Object.fromEntries(Object.entries(touched).map(([k, v]) => [k, v.before])),
+      after: Object.fromEntries(Object.entries(touched).map(([k, v]) => [k, v.after])),
+      req,
     });
 
     return NextResponse.json({ ok: true });

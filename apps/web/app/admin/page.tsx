@@ -3,6 +3,7 @@ import { prisma } from "@navaxa/db";
 import { Badge, Card } from "@navaxa/ui";
 import { ChevronRight } from "lucide-react";
 import { formatDate, formatNumber } from "@/lib/format";
+import { requireSuperAdminPage } from "@/lib/page-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ const STATUS_COLOR: Record<string, string> = {
 const PAGE_SIZE = 50;
 
 export default async function AdminIndex({ searchParams }: { searchParams: { page?: string } }) {
+  await requireSuperAdminPage();
   const page = Math.max(1, Number(searchParams.page) || 1);
   // No usa scopedDb: el panel super admin opera cross-tenant. Paginado: la
   // lista crece con el negocio (regla COSTS.md).

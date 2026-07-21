@@ -3,6 +3,7 @@ import { scopedDb } from "@/lib/tenant";
 import { apiError, requireManager } from "@/lib/api-errors";
 import { viewerScope } from "@/lib/page-guards";
 import { clientUpdateSchema, clientPreferenceSchema } from "@/lib/validators";
+import { deleteStoredObjects } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +101,19 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
   try {
     await requireManager(); // Borrar clientes es acción de gestión; un barbero no puede.
     const db = scopedDb();
+    // Las fotos de la galería se van por cascada en la BD, pero los archivos en
+    // R2 no: hay que juntar sus keys antes de que desaparezcan las filas.
+    const photos = await db.haircutRecord.findMany({
+      where: { clientId: params.id },
+      select: { imageUrl: true, imageKey: true, thumbnailUrl: true, thumbnailKey: true },
+    });
     await db.client.delete({ where: { id: params.id } });
+    await deleteStoredObjects(
+      photos.flatMap((p) => [
+        { key: p.imageKey, url: p.imageUrl },
+        { key: p.thumbnailKey, url: p.thumbnailUrl },
+      ]),
+    );
     return NextResponse.json({ ok: true });
   } catch (e) {
     return apiError(e);

@@ -6,6 +6,7 @@ import { Badge, Card } from "@navaxa/ui";
 import { ArrowLeft } from "lucide-react";
 import { formatCLP, formatDate, formatNumber } from "@/lib/format";
 import { TenantAdminActions } from "@/components/admin/tenant-admin-actions";
+import { requireSuperAdminPage } from "@/lib/page-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ interface PageProps {
 }
 
 export default async function AdminTenantDetail({ params }: PageProps) {
+  await requireSuperAdminPage();
   const tenant = await prisma.tenant.findUnique({
     where: { id: params.id },
     include: {
