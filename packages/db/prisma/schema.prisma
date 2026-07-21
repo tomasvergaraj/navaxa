@@ -140,6 +140,10 @@ model User {
   // Operador de la plataforma navaxa (fuera del scope tenant): da acceso a /admin.
   // Se promueve por SUPER_ADMIN_EMAILS al login, no se setea desde UI.
   platformAdmin Boolean   @default(false)
+  // Corte de revocación de sesiones JWT: todo token emitido antes de esta marca
+  // deja de valer (se bumpea al cambiar clave/rol o desactivar la cuenta).
+  // Ver apps/web/lib/session-revocation.ts.
+  sessionInvalidBefore DateTime?
   lastLoginAt   DateTime?
   emailVerified DateTime?
   createdAt     DateTime  @default(now())

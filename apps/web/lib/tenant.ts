@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { prisma } from "@navaxa/db";
+import { getSessionState, isSessionRevoked } from "@/lib/session-revocation";
 
 export class TenantError extends Error {
   status = 401;
@@ -12,6 +13,8 @@ export type TenantContext = {
   tenantId: string;
   userId: string;
   role: "OWNER" | "ADMIN" | "BARBER" | "STAFF";
+  /** Instante de emisión del JWT (ms epoch); 0 en tokens previos al claim. */
+  authAt: number;
 };
 
 export function getTenantContext(): TenantContext {
@@ -26,7 +29,23 @@ export function getTenantContext(): TenantContext {
     tenantId,
     userId,
     role: (role ?? "STAFF") as TenantContext["role"],
+    authAt: Number(h.get("x-auth-at") ?? 0),
   };
+}
+
+/**
+ * Verifica contra BD (cacheado 60s) que la sesión del request siga viva: cuenta
+ * activa, tenant activo y token posterior al corte de revocación.
+ *
+ * Hace falta porque el middleware solo decodifica el JWT — corre en Edge y no
+ * alcanza Postgres —, así que sin esto un usuario desactivado o al que le
+ * cambiaron la clave seguiría entrando hasta que expire el token (7 días).
+ */
+export async function assertSessionValid(ctx: TenantContext): Promise<void> {
+  const state = await getSessionState(ctx.userId);
+  if (isSessionRevoked(state, ctx.authAt)) {
+    throw new TenantError("Sesión expirada o revocada");
+  }
 }
 
 /**
@@ -67,13 +86,19 @@ const SCOPED_OPS = new Set([
  * Imposibilita que un route handler olvide filtrar por tenant.
  */
 export function scopedDb() {
-  const { tenantId } = getTenantContext();
+  const ctx = getTenantContext();
+  const { tenantId } = ctx;
 
   return prisma.$extends({
     name: "tenant-scope",
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
+          // Puerta de revocación: ningún dato del tenant se lee ni escribe con
+          // una sesión muerta. Va acá y no en el middleware porque este cliente
+          // es el único punto por el que pasan todas las queries del request.
+          await assertSessionValid(ctx);
+
           if (!SCOPED_OPS.has(operation) || SKIP_TENANT_FILTER.has(model)) {
             return query(args);
           }

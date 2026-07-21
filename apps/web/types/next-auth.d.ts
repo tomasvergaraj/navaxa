@@ -29,5 +29,7 @@ declare module "next-auth/jwt" {
     tenantSlug: string;
     role: Role;
     platformAdmin: boolean;
+    /** Instante de emisión (ms epoch) para la revocación por sessionInvalidBefore. */
+    authAt?: number;
   }
 }

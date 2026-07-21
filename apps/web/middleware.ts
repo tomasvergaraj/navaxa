@@ -24,6 +24,16 @@ const PUBLIC_PREFIXES = [
   "/api/public/", // API pública de reservas y pagos
 ];
 
+// Headers de confianza que fija el middleware a partir del JWT. Se borran de la
+// entrada (el cliente no debe poder inyectarlos) y se re-setean abajo.
+const INTERNAL_HEADERS = [
+  "x-tenant-id",
+  "x-user-id",
+  "x-user-role",
+  "x-platform-admin",
+  "x-auth-at",
+] as const;
+
 function isPublic(pathname: string): boolean {
   if (PUBLIC_EXACT.has(pathname)) return true;
   return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
@@ -64,7 +74,7 @@ export async function middleware(req: NextRequest) {
   // para leer un x-tenant-id/x-platform-admin falso vía getTenantContext().
   if (isPublic(pathname)) {
     const h = new Headers(req.headers);
-    for (const k of ["x-tenant-id", "x-user-id", "x-user-role", "x-platform-admin"]) h.delete(k);
+    for (const k of INTERNAL_HEADERS) h.delete(k);
     return NextResponse.next({ request: { headers: h } });
   }
 
@@ -87,12 +97,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Propagar contexto en headers internos
+  // Propagar contexto en headers internos. `set` pisa cualquier valor entrante,
+  // así que el cliente no puede falsearlos aunque nginx los deje pasar.
   const headers = new Headers(req.headers);
   headers.set("x-tenant-id", String(token.tenantId ?? ""));
   headers.set("x-user-id", String(token.sub ?? ""));
   headers.set("x-user-role", String(token.role ?? "STAFF"));
   headers.set("x-platform-admin", token.platformAdmin ? "1" : "0");
+  // Emisión del token: la capa Node la contrasta con users.sessionInvalidBefore.
+  // El middleware corre en Edge y no puede consultar Postgres, por eso solo lo
+  // transporta (ver lib/session-revocation.ts).
+  headers.set("x-auth-at", String(token.authAt ?? 0));
 
   return NextResponse.next({ request: { headers } });
 }

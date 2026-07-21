@@ -4,6 +4,7 @@ import { prisma } from "@navaxa/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { getSessionState, isSessionRevoked } from "@/lib/session-revocation";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -94,14 +95,30 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    jwt: ({ token, user }) => {
+    jwt: async ({ token, user }) => {
       if (user) {
         token.sub = user.id;
         token.tenantId = (user as any).tenantId;
         token.tenantSlug = (user as any).tenantSlug;
         token.role = (user as any).role;
         token.platformAdmin = Boolean((user as any).platformAdmin);
+        // Instante de emisión real. No usamos token.iat: Auth.js re-firma el JWT
+        // en cada lectura de sesión, así que su iat se refresca solo y nunca
+        // quedaría por detrás del corte de revocación.
+        token.authAt = Date.now();
+        return token;
       }
+
+      // Token existente: revalidar contra BD (cacheado 60s). Devolver null borra
+      // la cookie de sesión → el usuario queda deslogueado de verdad.
+      if (!token.sub) return null;
+      const state = await getSessionState(token.sub);
+      if (isSessionRevoked(state, Number(token.authAt ?? 0))) return null;
+
+      // Refrescar rol/admin: si se los cambiaron, el token deja de ir obsoleto
+      // sin obligar a re-loguear.
+      token.role = state!.role;
+      token.platformAdmin = state!.platformAdmin;
       return token;
     },
     session: ({ session, token }) => {

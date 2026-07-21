@@ -3,6 +3,7 @@ import { prisma, Role } from "@navaxa/db";
 import { scopedDb } from "@/lib/tenant";
 import { apiError, requireManager } from "@/lib/api-errors";
 import { teamUpdateSchema } from "@/lib/validators";
+import { invalidateSessionState } from "@/lib/session-revocation";
 
 export const dynamic = "force-dynamic";
 
@@ -47,16 +48,26 @@ export async function PATCH(req: Request, { params }: { params: { userId: string
       }
     }
 
+    // Bajar el rol o desactivar la cuenta no sirve de nada si el JWT que ya tiene
+    // en el navegador sigue diciendo lo contrario: cortamos sus sesiones.
+    const revokes = (role && role !== target.role) || (active !== undefined && active !== target.active);
+
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: target.id },
-        data: { ...(role ? { role: role as Role } : {}), ...(active !== undefined ? { active } : {}) },
+        data: {
+          ...(role ? { role: role as Role } : {}),
+          ...(active !== undefined ? { active } : {}),
+          ...(revokes ? { sessionInvalidBefore: new Date() } : {}),
+        },
       });
       // Si el miembro es barbero, sincroniza su disponibilidad con el estado de la cuenta.
       if (active !== undefined && target.barber) {
         await tx.barber.update({ where: { id: target.barber.id }, data: { active } });
       }
     });
+
+    if (revokes) invalidateSessionState(target.id);
 
     return NextResponse.json({ ok: true });
   } catch (e) {
