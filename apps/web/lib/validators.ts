@@ -114,6 +114,9 @@ export const publicBookSchema = z.object({
     phone: requiredPhoneSchema,
     email: emailSchema,
   }),
+  // Token del widget de Turnstile. Opcional en el schema porque el captcha es
+  // opt-in por entorno; si hay llaves, la ruta lo exige (ver lib/turnstile.ts).
+  captchaToken: z.string().max(4096).optional(),
 });
 
 export const rescheduleSchema = z.object({

@@ -146,6 +146,13 @@ Dos categorías:
   `WHATSAPP_ACCESS_TOKEN`. Feature de plan PRO/ENTERPRISE. Las plantillas deben aprobarse como
   **Utility** en Meta (no Marketing) — textos y orden de variables en `docs/whatsapp-templates.md`.
 - **IA:** `ANTHROPIC_API_KEY=...` (gateado a PRO/ENTERPRISE; default modelo Haiku).
+- **Captcha (Cloudflare Turnstile):** `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`, sacadas de
+  Cloudflare → Turnstile → *Add site* (hostname `navaxa.cl`, widget *Managed*). Protege el POST
+  de reserva pública (`/api/public/[slug]/book`). Con una sola de las dos llaves el captcha queda
+  **apagado** (no-op: el widget no se renderiza y el servidor no verifica), así que hay que poner
+  ambas. No son `NEXT_PUBLIC_*`: la site key la inyecta el Server Component como prop, así que
+  basta `docker compose up -d web` — sin rebuild. Para verificar: abrir la reserva pública y ver
+  el widget bajo el formulario; un POST a `/book` sin `captchaToken` debe responder 400.
 
 Tras cambiar `.env`: `docker compose up -d` (recrea el contenedor). Si tocaste
 `NEXT_PUBLIC_*`, además `docker compose build web`.

@@ -8,6 +8,7 @@ import { TenantAnalytics } from "@/components/booking/tenant-analytics";
 import { brandStyle } from "@/lib/brand-color";
 import { planHasBranding } from "@/lib/plan-features";
 import { formatCLP, formatDuration } from "@/lib/format";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +110,7 @@ export default async function AgendarPage({
           initialServices={services}
           initialBarbers={barbers}
           weekdaysByBarber={weekdaysByBarber}
+          turnstileSiteKey={turnstileSiteKey()}
           deposit={
             tenant.paymentsEnabled && tenant.depositType !== "NONE"
               ? { type: tenant.depositType, value: tenant.depositValue }

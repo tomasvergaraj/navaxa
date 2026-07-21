@@ -21,12 +21,14 @@ import {
   PAYMENT_TTL_MIN,
 } from "@/lib/payments";
 import { apiError } from "@/lib/api-errors";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
   try {
-    const limit = rateLimit(`book:${params.slug}:${clientIp(req)}`, 8, 10 * 60 * 1000);
+    const ip = clientIp(req);
+    const limit = rateLimit(`book:${params.slug}:${ip}`, 8, 10 * 60 * 1000);
     if (!limit.ok) {
       return NextResponse.json(
         { error: "Demasiados intentos. Espera unos minutos." },
@@ -41,6 +43,14 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
+    // Captcha antes de crear cliente/cita: sin llaves configuradas es no-op.
+    if (!(await verifyTurnstile(parsed.data.captchaToken, ip))) {
+      return NextResponse.json(
+        { error: "No pudimos verificar que eres una persona. Recarga la página e intenta de nuevo." },
+        { status: 400 },
+      );
+    }
+
     const { barberId, startsAt, serviceIds, notes, client } = parsed.data;
     const start = new Date(startsAt);
 

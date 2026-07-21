@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { formatCLP, formatDuration } from "@/lib/format";
 import { trackBookingConfirmed } from "@/lib/track";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { TurnstileWidget } from "@/components/booking/turnstile-widget";
 
 interface Service {
   id: string;
@@ -88,6 +89,7 @@ export function BookingWizard({
   initialServices,
   initialBarbers,
   weekdaysByBarber,
+  turnstileSiteKey,
 }: {
   slug: string;
   currency: string;
@@ -99,6 +101,8 @@ export function BookingWizard({
   initialBarbers?: Barber[];
   // Días de la semana (0=dom) con horario por barbero: atenúa días cerrados.
   weekdaysByBarber?: Record<string, number[]>;
+  // Site key de Turnstile resuelta en el server; null = captcha apagado.
+  turnstileSiteKey?: string | null;
 }) {
   const base = `/api/public/${slug}`;
   const minStep: Step = presetServiceId ? 1 : 0;
@@ -122,6 +126,10 @@ export function BookingWizard({
   const [fieldErrors, setFieldErrors] = useState<{ firstName?: string; phone?: string; email?: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<BookResult | null>(null);
+  // Captcha: el token es de un solo uso, así que tras un submit fallido subimos
+  // `captchaRound` para remontar el widget y pedir uno nuevo.
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaRound, setCaptchaRound] = useState(0);
   const stepCardRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(false);
 
@@ -301,6 +309,10 @@ export function BookingWizard({
       });
       return;
     }
+    if (turnstileSiteKey && !captchaToken) {
+      toast.error("Espera un segundo: estamos verificando que no seas un bot.");
+      return;
+    }
     setSubmitting(true);
     try {
       const d: BookResponse = await apiJson(`${base}/book`, {
@@ -310,6 +322,7 @@ export function BookingWizard({
           barberId: barberChoice,
           startsAt: slot.startsAt,
           serviceIds: selectedServices,
+          captchaToken: captchaToken ?? undefined,
           client: {
             firstName: form.firstName.trim(),
             lastName: form.lastName.trim(),
@@ -330,6 +343,11 @@ export function BookingWizard({
     } catch (e) {
       const msg = (e as Error).message;
       toast.error(msg);
+      // El token del captcha ya se consumió en el intento fallido: pedir otro.
+      if (turnstileSiteKey) {
+        setCaptchaToken(null);
+        setCaptchaRound((r) => r + 1);
+      }
       // Si otro cliente tomó la hora mientras llenaba sus datos, volvemos al
       // paso de hora y recargamos los cupos del día (antes quedaba estancado
       // en "Tus datos" con un slot muerto).
@@ -663,6 +681,14 @@ export function BookingWizard({
                 </p>
               )}
             </div>
+            {turnstileSiteKey && (
+              <TurnstileWidget
+                key={captchaRound}
+                siteKey={turnstileSiteKey}
+                action="book"
+                onToken={setCaptchaToken}
+              />
+            )}
           </form>
         )}
       </div>
