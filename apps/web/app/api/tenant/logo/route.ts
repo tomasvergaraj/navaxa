@@ -3,6 +3,7 @@ import { prisma } from "@navaxa/db";
 import { requireManager, apiError } from "@/lib/api-errors";
 import { storage } from "@/lib/storage";
 import { compressImage } from "@/lib/images";
+import { guardUploadSize } from "@/lib/upload";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ const MAX_BYTES = 4 * 1024 * 1024; // 4 MB
 export async function POST(req: Request) {
   try {
     const { tenantId } = requireManager();
+    guardUploadSize(req, MAX_BYTES);
 
     const form = await req.formData();
     const file = form.get("file");

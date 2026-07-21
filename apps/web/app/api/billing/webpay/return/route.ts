@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, Plan, SubscriptionStatus, BillingInterval } from "@navaxa/db";
 import { commitWebpayTransaction } from "@/lib/webpay";
-import { addMonths, isPaidPlan, isBillingInterval, periodMonths, signBillingToken } from "@/lib/billing";
+import { addMonths, isPaidPlan, isBillingInterval, periodMonths, signBillingToken, planPriceClp } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +47,14 @@ async function handle(req: Request): Promise<Response> {
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });
   if (!tenant) {
     return NextResponse.redirect(`${APP_URL}/configuracion?tab=plan&error=tenant`, 303);
+  }
+
+  // Reconciliación de monto: no activamos un plan si lo cobrado no coincide con su
+  // precio (el plan viene de session_id, visible/manipulable por el cliente). Sin
+  // esto, un token_ws de menor monto podría activar un plan caro.
+  if (result.amount !== planPriceClp(plan, interval)) {
+    console.warn(`[billing/webpay] monto descalzado tenant=${tenantId} plan=${plan} esperado=${planPriceClp(plan, interval)} cobrado=${result.amount}`);
+    return NextResponse.redirect(`${APP_URL}/configuracion?tab=plan&error=monto`, 303);
   }
 
   const now = new Date();

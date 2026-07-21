@@ -10,7 +10,11 @@ export const dynamic = "force-dynamic";
 const DELIM = ";";
 function csvCell(v: string | number): string {
   const s = String(v);
-  return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  // Anti CSV/formula injection: Excel/Sheets ejecutan celdas que empiezan con
+  // = + - @ (o tab/CR). Como el nombre/teléfono del cliente es atacante-controlado
+  // (reserva pública), prefijamos con comilla simple para forzar texto literal.
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return /[";\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 function csvRow(cells: (string | number)[]): string {
   return cells.map(csvCell).join(DELIM);

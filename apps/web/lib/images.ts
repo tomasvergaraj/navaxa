@@ -13,13 +13,19 @@ export interface ProcessedImageWithThumb extends ProcessedImage {
 const MAIN_MAX = 1600;
 const THUMB_SIZE = 300;
 
+// Tope de píxeles de entrada (~24 MP). Evita "decompression bombs": un archivo
+// chico (que pasa el límite de bytes) que descomprime a miles de px por lado y
+// haría que libvips aloque cientos de MB de raw pixels → DoS por memoria.
+// `failOn: "error"` aborta ante entradas corruptas/truncadas en vez de seguir.
+const SHARP_OPTS = { limitInputPixels: 24_000_000, failOn: "error" } as const;
+
 /**
  * Comprime una imagen a JPEG (mozjpeg) limitando su lado mayor. Llamar ANTES de
  * subir a storage (COSTS.md S1): evita guardar/servir el archivo original de
  * varios MB. Respeta la orientación EXIF y aplana transparencias sobre blanco.
  */
 export async function compressImage(input: Buffer, maxSize = MAIN_MAX): Promise<ProcessedImage> {
-  const main = await sharp(input)
+  const main = await sharp(input, SHARP_OPTS)
     .rotate()
     .resize(maxSize, maxSize, { fit: "inside", withoutEnlargement: true })
     .flatten({ background: "#ffffff" })
@@ -40,7 +46,7 @@ export async function compressImageWithThumb(
 ): Promise<ProcessedImageWithThumb> {
   const [{ main }, thumb] = await Promise.all([
     compressImage(input, maxSize),
-    sharp(input)
+    sharp(input, SHARP_OPTS)
       .rotate()
       .resize(thumbSize, thumbSize, { fit: "cover" })
       .flatten({ background: "#ffffff" })

@@ -22,10 +22,18 @@ export function webpayHost(): string {
 }
 
 function creds(): { cc: string; key: string } {
-  return {
-    cc: process.env.WEBPAY_COMMERCE_CODE || PUBLIC_INT_CC,
-    key: process.env.WEBPAY_API_KEY || PUBLIC_INT_KEY,
-  };
+  const cc = process.env.WEBPAY_COMMERCE_CODE || PUBLIC_INT_CC;
+  const key = process.env.WEBPAY_API_KEY || PUBLIC_INT_KEY;
+  // Fail-closed: en producción nunca operamos con las credenciales públicas de
+  // integración (Transbank sandbox: toda tarjeta de prueba "aprueba" y no mueve
+  // dinero real). Faltar WEBPAY_* en prod es un error de despliegue.
+  if (
+    process.env.NODE_ENV === "production" &&
+    (cc === PUBLIC_INT_CC || key === PUBLIC_INT_KEY || process.env.WEBPAY_ENV !== "production")
+  ) {
+    throw new Error("Webpay mal configurado en producción (faltan WEBPAY_COMMERCE_CODE/API_KEY/ENV reales)");
+  }
+  return { cc, key };
 }
 
 export interface WebpayCreated {

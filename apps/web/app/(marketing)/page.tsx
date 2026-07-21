@@ -73,7 +73,7 @@ export default function MarketingPage() {
     <div className="min-h-screen overflow-x-hidden bg-background">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()).replace(/</g, "\\u003c") }}
       />
       {/* Nav: transparente sobre el hero, fondo + hairline solo al scrollear. */}
       <LandingHeader>

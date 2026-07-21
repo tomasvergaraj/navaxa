@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { prisma, PasswordTokenPurpose } from "@navaxa/db";
+import { invalidateSessionState } from "@/lib/session-revocation";
 
 // Vigencia de cada tipo de token.
 const TTL_MS: Record<PasswordTokenPurpose, number> = {
@@ -85,11 +86,14 @@ export async function consumePasswordToken(raw: string, passwordHash: string): P
     if (claimed.count === 0) return false;
     await tx.user.update({
       where: { id: record.userId },
-      data: { passwordHash },
+      // Cambiar la clave mata las sesiones abiertas: si el reset fue por cuenta
+      // comprometida, el JWT del atacante valdría 7 días más sin este corte.
+      data: { passwordHash, sessionInvalidBefore: new Date() },
     });
     return true;
   });
 
+  if (result) invalidateSessionState(record.userId);
   return result;
 }
 

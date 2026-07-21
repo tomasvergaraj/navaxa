@@ -4,11 +4,23 @@ import { prisma, Role, Plan, CampaignTrigger, NotificationChannel } from "@navax
 import { registerSchema } from "@/lib/validators";
 import { apiError } from "@/lib/api-errors";
 import { slugify } from "@/lib/utils";
+import { isSuperAdminEmail } from "@/lib/auth";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
+    // Rate limit: el registro crea tenant + suscripción + servicios + campañas
+    // (escritura pesada) y además es oráculo de enumeración (ver abajo). 5/hora/IP.
+    const { ok, retryAfter } = rateLimit(`register:${clientIp(req)}`, 5, 60 * 60 * 1000);
+    if (!ok) {
+      return NextResponse.json(
+        { error: { formErrors: ["Demasiados intentos. Intenta más tarde."] } },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
+    }
+
     const parsed = registerSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -16,6 +28,16 @@ export async function POST(req: Request) {
     const { shopName, ownerName, email, password, phone } = parsed.data;
 
     const cleanEmail = email.toLowerCase().trim();
+
+    // No permitir auto-registrar un email de super-admin: si un email de
+    // SUPER_ADMIN_EMAILS aún no tiene cuenta, un atacante podría registrarlo y,
+    // al hacer login, auth.ts lo promovería a platformAdmin (toma de plataforma).
+    if (isSuperAdminEmail(cleanEmail)) {
+      return NextResponse.json(
+        { error: { formErrors: ["No se puede registrar este correo. Contacta a soporte."] } },
+        { status: 400 },
+      );
+    }
     const exists = await prisma.user.findFirst({ where: { email: cleanEmail } });
     if (exists) {
       return NextResponse.json(

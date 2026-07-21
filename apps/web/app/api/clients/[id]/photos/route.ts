@@ -7,6 +7,7 @@ import { compressImageWithThumb } from "@/lib/images";
 import { haircutPhotoMetaSchema } from "@/lib/validators";
 import { buildHaircutRatingUrl } from "@/lib/haircut-rating";
 import { buildReviewUrl } from "@/lib/reviews";
+import { guardUploadSize } from "@/lib/upload";
 import { subHours, addHours } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
+    guardUploadSize(req, MAX_BYTES);
     const { tenantId } = getTenantContext();
     const db = scopedDb();
 

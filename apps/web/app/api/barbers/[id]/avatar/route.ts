@@ -4,6 +4,7 @@ import { scopedDb, getTenantContext } from "@/lib/tenant";
 import { apiError } from "@/lib/api-errors";
 import { storage } from "@/lib/storage";
 import { compressImage } from "@/lib/images";
+import { guardUploadSize } from "@/lib/upload";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const auth = await authorize(params.id);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
+    guardUploadSize(req, MAX_BYTES);
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });
