@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Button, Input, Label, cn } from "@navaxa/ui";
 import { toast } from "sonner";
-import { formatCLP, formatDuration } from "@/lib/format";
+import { formatCLP, formatDuration, nextDaysYmd, tzFormatters, weekdayShortFromYmd } from "@/lib/format";
 import { trackBookingConfirmed } from "@/lib/track";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { TurnstileWidget } from "@/components/booking/turnstile-widget";
@@ -177,26 +177,9 @@ export function BookingWizard({
     el.focus({ preventScroll: true });
   }, [step]);
 
-  const fmtTime = useMemo(
-    () =>
-      new Intl.DateTimeFormat("es-CL", {
-        timeZone: timezone,
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }),
-    [timezone],
-  );
-  const fmtDayLong = useMemo(
-    () =>
-      new Intl.DateTimeFormat("es-CL", {
-        timeZone: timezone,
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      }),
-    [timezone],
-  );
+  const fmt = useMemo(() => tzFormatters(timezone), [timezone]);
+  const fmtTime = fmt.time;
+  const fmtDayLong = fmt.dayLong;
 
   const totals = useMemo(() => {
     const chosen = services.filter((s) => selectedServices.includes(s.id));
@@ -227,18 +210,8 @@ export function BookingWizard({
     return new Set(sets.flat());
   }, [weekdaysByBarber, barberChoice]);
 
-  // Próximos 14 días como YYYY-MM-DD calculados en la TZ del LOCAL (no la del
-  // dispositivo): un cliente en otra zona veía el número de día corrido.
-  const days = useMemo(() => {
-    const todayYmd = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
-    const [y, m, d] = todayYmd.split("-").map(Number);
-    const out: string[] = [];
-    for (let i = 0; i < 14; i++) {
-      const dt = new Date(Date.UTC(y, m - 1, d + i, 12));
-      out.push(dt.toISOString().slice(0, 10));
-    }
-    return out;
-  }, [timezone]);
+  // Próximos 14 días en la TZ del LOCAL (ver nextDaysYmd en lib/format).
+  const days = useMemo(() => nextDaysYmd(timezone), [timezone]);
 
   // Selección única + autoavance al paso siguiente.
   function selectService(id: string) {
@@ -558,7 +531,7 @@ export function BookingWizard({
                     )}
                   >
                     <span className="text-[10px] uppercase">
-                      {new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", weekday: "short" }).format(noon)}
+                      {weekdayShortFromYmd(ymd)}
                     </span>
                     <span className="text-sm font-medium">{Number(ymd.slice(8, 10))}</span>
                   </button>

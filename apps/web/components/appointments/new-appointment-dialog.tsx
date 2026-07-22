@@ -75,6 +75,9 @@ export function NewAppointmentDialog({
   const [client, setClient] = useState<ClientLite | null>(presetClient ?? null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ClientLite[]>([]);
+  // Opción resaltada del combobox (-1 = ninguna). El foco nunca sale del input:
+  // la opción activa se anuncia por aria-activedescendant.
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   useEffect(() => {
     if (!open) return;
@@ -91,6 +94,13 @@ export function NewAppointmentDialog({
     if (presetDate) setDate(presetDate);
   }, [open, presetBarberId, presetDate]);
 
+  const pickClient = (c: ClientLite) => {
+    setClient(c);
+    setQuery("");
+    setResults([]);
+    setActiveIndex(-1);
+  };
+
   // Búsqueda de clientes (debounce simple)
   useEffect(() => {
     if (presetClient || query.trim().length < 2) {
@@ -102,6 +112,7 @@ export function NewAppointmentDialog({
       try {
         const d = await apiJson(`/api/clients?q=${encodeURIComponent(query.trim())}&take=6`);
         if (stale) return; // respuesta de una búsqueda anterior: descartar
+        setActiveIndex(-1); // resultados nuevos ⇒ ninguna opción resaltada
         setResults(
           d.clients.map((c: { id: string; firstName: string; lastName: string | null }) => ({
             id: c.id,
@@ -229,6 +240,7 @@ export function NewAppointmentDialog({
     setSlot(null);
     setQuery("");
     setResults([]);
+    setActiveIndex(-1);
     if (!presetClient) setClient(null);
   }
 
@@ -276,10 +288,45 @@ export function NewAppointmentDialog({
                     role="combobox"
                     aria-expanded={results.length > 0}
                     aria-controls="client-results"
+                    aria-autocomplete="list"
+                    aria-activedescendant={
+                      activeIndex >= 0 && results[activeIndex]
+                        ? `client-opt-${results[activeIndex].id}`
+                        : undefined
+                    }
                     aria-label="Buscar cliente por nombre o teléfono"
                     placeholder="Buscar por nombre o teléfono…"
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setActiveIndex(-1);
+                    }}
+                    onKeyDown={(e) => {
+                      if (results.length === 0) return;
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setActiveIndex((i) => (i + 1) % results.length);
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setActiveIndex((i) => (i <= 0 ? results.length - 1 : i - 1));
+                      } else if (e.key === "Home") {
+                        e.preventDefault();
+                        setActiveIndex(0);
+                      } else if (e.key === "End") {
+                        e.preventDefault();
+                        setActiveIndex(results.length - 1);
+                      } else if (e.key === "Enter" && activeIndex >= 0) {
+                        e.preventDefault();
+                        pickClient(results[activeIndex]);
+                      } else if (e.key === "Escape" && activeIndex >= 0) {
+                        // Solo cierra la lista; el Escape del diálogo se maneja
+                        // más arriba y no queremos cerrarlo entero por error.
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setResults([]);
+                        setActiveIndex(-1);
+                      }
+                    }}
                   />
                   {query.trim().length >= 2 && results.length === 0 && (
                     <Button
@@ -295,18 +342,25 @@ export function NewAppointmentDialog({
                     </Button>
                   )}
                   {results.length > 0 && (
-                    <div id="client-results" role="listbox" className="mt-1 rounded-md border border-border">
-                      {results.map((c) => (
+                    <div
+                      id="client-results"
+                      role="listbox"
+                      aria-label="Clientes encontrados"
+                      className="mt-1 rounded-md border border-border"
+                    >
+                      {results.map((c, i) => (
                         <button
                           key={c.id}
+                          id={`client-opt-${c.id}`}
                           role="option"
-                          aria-selected={false}
-                          onClick={() => {
-                            setClient(c);
-                            setQuery("");
-                            setResults([]);
-                          }}
-                          className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
+                          aria-selected={i === activeIndex}
+                          tabIndex={-1}
+                          onMouseEnter={() => setActiveIndex(i)}
+                          onClick={() => pickClient(c)}
+                          className={cn(
+                            "block w-full px-3 py-2 text-left text-sm",
+                            i === activeIndex ? "bg-muted" : "hover:bg-muted",
+                          )}
                         >
                           {c.name}
                         </button>

@@ -154,16 +154,51 @@ export default async function ClientePage({ params }: PageProps) {
             {client.appointments.length === 0 ? (
               <p className="text-sm text-muted-foreground">Sin citas registradas.</p>
             ) : (
-              <Card className="overflow-hidden">
+              <>
+              {/* Móvil: tarjetas, mismo criterio que el listado de clientes
+                  (la tabla obligaba a pan horizontal). Desde md: tabla. */}
+              <div className="space-y-2 md:hidden">
+                {client.appointments.map((a) => (
+                  <Card key={a.id} className="p-4">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-sm font-medium">
+                        {formatDateTime(a.startsAt)}
+                      </span>
+                      <span className="shrink-0 text-sm tabular-nums">
+                        {formatCLP(a.totalPrice)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <span className="truncate text-xs text-muted-foreground">
+                        {a.services.map((s) => s.service.name).join(", ")} · {a.barber.user.name}
+                      </span>
+                      <Badge
+                        variant={
+                          a.status === "COMPLETED"
+                            ? "success"
+                            : a.status === "CANCELLED" || a.status === "NO_SHOW"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                        className="shrink-0 text-xs"
+                      >
+                        {APPOINTMENT_STATUS_LABELS[a.status]}
+                      </Badge>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              <Card className="hidden overflow-hidden md:block">
 <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
                     <tr>
-                      <th className="px-4 py-3 text-left font-medium">Fecha</th>
-                      <th className="px-4 py-3 text-left font-medium">Barbero</th>
-                      <th className="px-4 py-3 text-left font-medium">Servicios</th>
-                      <th className="px-4 py-3 text-left font-medium">Estado</th>
-                      <th className="px-4 py-3 text-right font-medium">Total</th>
+                      <th scope="col" className="px-4 py-3 text-left font-medium">Fecha</th>
+                      <th scope="col" className="px-4 py-3 text-left font-medium">Barbero</th>
+                      <th scope="col" className="px-4 py-3 text-left font-medium">Servicios</th>
+                      <th scope="col" className="px-4 py-3 text-left font-medium">Estado</th>
+                      <th scope="col" className="px-4 py-3 text-right font-medium">Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -197,6 +232,7 @@ export default async function ClientePage({ params }: PageProps) {
                 </table>
 </div>
               </Card>
+              </>
             )}
           </div>
         </section>

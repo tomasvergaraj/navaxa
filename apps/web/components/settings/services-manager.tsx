@@ -137,10 +137,10 @@ export function ServicesManager({ services }: { services: Service[] }) {
       <table className="w-full text-sm">
         <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="px-4 py-3 text-left font-medium">Servicio</th>
-            <th className="px-4 py-3 text-left font-medium">Duración</th>
-            <th className="px-4 py-3 text-right font-medium">Precio</th>
-            <th className="px-4 py-3" />
+            <th scope="col" className="px-4 py-3 text-left font-medium">Servicio</th>
+            <th scope="col" className="px-4 py-3 text-left font-medium">Duración</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Precio</th>
+            <th scope="col" className="px-4 py-3" />
           </tr>
         </thead>
         <tbody className="divide-y divide-border">

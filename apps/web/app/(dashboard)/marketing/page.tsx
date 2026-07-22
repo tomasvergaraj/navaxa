@@ -149,11 +149,11 @@ export default async function MarketingPage() {
             <table className="w-full min-w-[42rem] text-sm">
               <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Cuándo</th>
-                  <th className="px-4 py-3 text-left font-medium">Canal</th>
-                  <th className="px-4 py-3 text-left font-medium">Destinatario</th>
-                  <th className="px-4 py-3 text-left font-medium">Plantilla</th>
-                  <th className="px-4 py-3 text-left font-medium">Estado</th>
+                  <th scope="col" className="px-4 py-3 text-left font-medium">Cuándo</th>
+                  <th scope="col" className="px-4 py-3 text-left font-medium">Canal</th>
+                  <th scope="col" className="px-4 py-3 text-left font-medium">Destinatario</th>
+                  <th scope="col" className="px-4 py-3 text-left font-medium">Plantilla</th>
+                  <th scope="col" className="px-4 py-3 text-left font-medium">Estado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

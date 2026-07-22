@@ -22,10 +22,37 @@ export const revalidate = 120;
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const tenant = await resolveTenantBySlug(params.slug);
+  if (!tenant) return { title: "Reservar hora" };
+
+  // Sin esto el preview heredaba el OG de navaxa: el dueño compartía su vitrina
+  // por WhatsApp/Instagram y salía la marca del SaaS, no su barbería.
+  const title = `Reservar hora · ${tenant.name}`;
+  const description =
+    tenant.description?.trim() ||
+    `Reserva tu hora en ${tenant.name}${tenant.city ? ` · ${tenant.city}` : ""}.`;
+  const image = tenant.coverUrl ?? tenant.logoUrl ?? undefined;
+
   return {
-    title: tenant ? `Reservar hora · ${tenant.name}` : "Reservar hora",
     // Indexable a propósito: es la vitrina pública del local (SEO local con
     // sus reseñas de Google). /agendar y /gestion siguen noindex.
+    title,
+    description,
+    alternates: { canonical: `/reservar/${tenant.slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `/reservar/${tenant.slug}`,
+      siteName: tenant.name,
+      locale: "es_CL",
+      type: "website",
+      ...(image ? { images: [{ url: image }] } : {}),
+    },
+    twitter: {
+      card: image ? ("summary_large_image" as const) : ("summary" as const),
+      title,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
   };
 }
 

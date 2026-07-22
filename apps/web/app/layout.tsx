@@ -36,6 +36,15 @@ export const metadata: Metadata = {
     locale: "es_CL",
     type: "website",
   },
+  // Twitter/X cae a og:image cuando no hay twitter:image, pero sin la card
+  // declarada el preview sale como link pelado. `summary_large_image` usa la
+  // OG de 1200x630 de app/opengraph-image.tsx.
+  twitter: {
+    card: "summary_large_image",
+    title: "navaxa",
+    description:
+      "El sistema operativo para barberías que recuerdan a cada cliente.",
+  },
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },

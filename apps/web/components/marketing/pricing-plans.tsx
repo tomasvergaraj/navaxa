@@ -88,6 +88,17 @@ export function PricingPlans() {
                 >
                   <Link href={`/registro?plan=${plan.id.toLowerCase()}&interval=${interval.toLowerCase()}`}>Empezar</Link>
                 </Button>
+
+                {/* Enterprise incluye multi-local e integraciones a medida: eso
+                    no se resuelve solo con el alta self-service. */}
+                {plan.id === "ENTERPRISE" && (
+                  <a
+                    href="mailto:contacto@navaxa.cl?subject=Plan%20Enterprise"
+                    className="mt-3 text-center text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                  >
+                    ¿Multi-local o integración a medida? Escríbenos
+                  </a>
+                )}
               </div>
             </Reveal>
           );

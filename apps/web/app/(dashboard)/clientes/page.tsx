@@ -123,12 +123,12 @@ export default async function ClientesPage({ searchParams }: PageProps) {
           <table className="w-full min-w-[40rem] text-sm">
             <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Cliente</th>
-                <th className="px-4 py-3 text-left font-medium">Contacto</th>
-                <th className="px-4 py-3 text-left font-medium">Cortes</th>
-                <th className="px-4 py-3 text-left font-medium">Gastado</th>
-                <th className="px-4 py-3 text-left font-medium">Última visita</th>
-                <th className="px-4 py-3 text-left font-medium">Tags</th>
+                <th scope="col" className="px-4 py-3 text-left font-medium">Cliente</th>
+                <th scope="col" className="px-4 py-3 text-left font-medium">Contacto</th>
+                <th scope="col" className="px-4 py-3 text-left font-medium">Cortes</th>
+                <th scope="col" className="px-4 py-3 text-left font-medium">Gastado</th>
+                <th scope="col" className="px-4 py-3 text-left font-medium">Última visita</th>
+                <th scope="col" className="px-4 py-3 text-left font-medium">Tags</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

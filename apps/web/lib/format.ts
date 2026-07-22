@@ -69,6 +69,61 @@ export function formatRelative(d: Date | string): string {
   return `hace ${Math.floor(diffDays / 365)} años`;
 }
 
+/**
+ * "Hoy" como YYYY-MM-DD en la timezone del LOCAL, no la del dispositivo: un
+ * cliente en otra zona veía el número de día corrido.
+ */
+export function todayYmd(timezone: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
+}
+
+/** Los próximos `count` días (incluye hoy) como YYYY-MM-DD en `timezone`. */
+export function nextDaysYmd(timezone: string, count = 14): string[] {
+  const [y, m, d] = todayYmd(timezone).split("-").map(Number);
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    // Mediodía UTC: evita que el ±1 día del offset cruce la fecha al serializar.
+    out.push(new Date(Date.UTC(y, m - 1, d + i, 12)).toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+const WEEKDAY_SHORT_UTC = new Intl.DateTimeFormat("es-CL", {
+  timeZone: "UTC",
+  weekday: "short",
+});
+
+/**
+ * Día abreviado de un YYYY-MM-DD. El ymd ya viene calculado en la TZ del local,
+ * así que se interpreta a mediodía UTC y se formatea en UTC: reinterpretarlo en
+ * otra zona corría el día. Módulo-level a propósito: los chips lo llamaban 14
+ * veces por render y cada llamada construía un Intl.DateTimeFormat nuevo.
+ */
+export const weekdayShortFromYmd = (ymd: string) =>
+  WEEKDAY_SHORT_UTC.format(new Date(`${ymd}T12:00:00.000Z`));
+
+/**
+ * Formateadores es-CL atados a la timezone del local. Construir un
+ * Intl.DateTimeFormat es caro: memoiza el resultado por timezone en el caller.
+ */
+export function tzFormatters(timezone: string) {
+  return {
+    time: new Intl.DateTimeFormat("es-CL", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }),
+    dayLong: new Intl.DateTimeFormat("es-CL", {
+      timeZone: timezone,
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }),
+    weekdayShort: new Intl.DateTimeFormat("es-CL", { timeZone: timezone, weekday: "short" }),
+  };
+}
+
 export function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);

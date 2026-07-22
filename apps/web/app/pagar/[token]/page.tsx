@@ -9,6 +9,7 @@ import { formatCLP } from "@/lib/format";
 import { PaymentCheckout } from "./payment-checkout";
 import { WebpayCheckout } from "./webpay-checkout";
 import { GiftCardRedeem } from "./giftcard-redeem";
+import { DeadlineCountdown } from "./deadline-countdown";
 
 export const dynamic = "force-dynamic";
 
@@ -139,18 +140,15 @@ export default async function PagarPage({ params }: { params: { token: string } 
       </div>
 
       {/* Deadline: la hora se libera en silencio al expirar — hacerlo visible. */}
-      <p className="mt-2 text-xs text-muted-foreground">
-        Tienes hasta las{" "}
-        <strong className="text-foreground">
-          {new Intl.DateTimeFormat("es-CL", {
-            timeZone: tenant.timezone ?? "America/Santiago",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          }).format(payment.expiresAt)}
-        </strong>{" "}
-        para pagar; si no, la hora se libera automáticamente.
-      </p>
+      <DeadlineCountdown
+        expiresAt={payment.expiresAt.toISOString()}
+        timeLabel={new Intl.DateTimeFormat("es-CL", {
+          timeZone: tenant.timezone ?? "America/Santiago",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(payment.expiresAt)}
+      />
 
       {/* Antes de los botones de pago: si el saldo cubre todo, el cliente no
           llega a la pasarela. Solo en planes con giftcards y una por abono. */}

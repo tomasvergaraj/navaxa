@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, CalendarPlus, Loader2, MapPin, Scissors, User, Wallet, X } from "lucide-react";
 import { Button, cn } from "@navaxa/ui";
 import { toast } from "sonner";
-import { formatCLP } from "@/lib/format";
+import { formatCLP, nextDaysYmd, tzFormatters, weekdayShortFromYmd } from "@/lib/format";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface Appointment {
@@ -122,32 +122,17 @@ export function ManageBooking({ token }: { token: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const fmt = useMemo(() => {
-    const tz = appt?.timezone ?? "America/Santiago";
-    return {
-      dayLong: new Intl.DateTimeFormat("es-CL", {
-        timeZone: tz,
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      }),
-      time: new Intl.DateTimeFormat("es-CL", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }),
-      weekdayShort: new Intl.DateTimeFormat("es-CL", { timeZone: tz, weekday: "short" }),
-    };
-  }, [appt?.timezone]);
+  const fmt = useMemo(
+    () => tzFormatters(appt?.timezone ?? "America/Santiago"),
+    [appt?.timezone],
+  );
 
-  // Próximos 14 días como YYYY-MM-DD en la TZ del LOCAL (mismo fix que el
-  // wizard: con la TZ del dispositivo el número de día podía salir corrido).
-  const days = useMemo(() => {
-    const tz = appt?.timezone ?? "America/Santiago";
-    const todayYmd = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
-    const [y, m, d] = todayYmd.split("-").map(Number);
-    const out: string[] = [];
-    for (let i = 0; i < 14; i++) {
-      out.push(new Date(Date.UTC(y, m - 1, d + i, 12)).toISOString().slice(0, 10));
-    }
-    return out;
-  }, [appt?.timezone]);
+  // Próximos 14 días en la TZ del LOCAL (mismo fix que el wizard: con la TZ del
+  // dispositivo el número de día podía salir corrido).
+  const days = useMemo(
+    () => nextDaysYmd(appt?.timezone ?? "America/Santiago"),
+    [appt?.timezone],
+  );
 
   const canModify =
     appt &&
@@ -370,7 +355,6 @@ export function ManageBooking({ token }: { token: string }) {
           <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1">
             {days.map((ymd) => {
               const active = day === ymd;
-              const noon = new Date(`${ymd}T12:00:00.000Z`);
               return (
                 <button
                   key={ymd}
@@ -382,7 +366,7 @@ export function ManageBooking({ token }: { token: string }) {
                   )}
                 >
                   <span className="text-[10px] uppercase">
-                    {new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", weekday: "short" }).format(noon)}
+                    {weekdayShortFromYmd(ymd)}
                   </span>
                   <span className="text-sm font-medium">{Number(ymd.slice(8, 10))}</span>
                 </button>

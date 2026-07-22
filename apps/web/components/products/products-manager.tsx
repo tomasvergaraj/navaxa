@@ -217,12 +217,12 @@ export function ProductsManager({ products }: { products: Product[] }) {
             <table className="w-full min-w-[44rem] text-sm">
               <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Producto</th>
-                  <th className="px-4 py-3 text-right font-medium">Precio</th>
-                  <th className="px-4 py-3 text-right font-medium">Costo</th>
-                  <th className="px-4 py-3 text-right font-medium">Stock</th>
-                  <th className="px-4 py-3 text-left font-medium">Estado</th>
-                  <th className="px-4 py-3 text-right font-medium">
+                  <th scope="col" className="px-4 py-3 text-left font-medium">Producto</th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">Precio</th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">Costo</th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">Stock</th>
+                  <th scope="col" className="px-4 py-3 text-left font-medium">Estado</th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">
                     <span className="sr-only">Acciones</span>
                   </th>
                 </tr>

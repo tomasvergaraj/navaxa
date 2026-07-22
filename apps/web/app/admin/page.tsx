@@ -58,14 +58,14 @@ export default async function AdminIndex({ searchParams }: { searchParams: { pag
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Barbería</th>
-              <th className="px-4 py-3 text-left font-medium">Plan</th>
-              <th className="px-4 py-3 text-left font-medium">Suscripción</th>
-              <th className="px-4 py-3 text-right font-medium">Usuarios</th>
-              <th className="px-4 py-3 text-right font-medium">Clientes</th>
-              <th className="px-4 py-3 text-right font-medium">Citas</th>
-              <th className="px-4 py-3 text-left font-medium">Creada</th>
-              <th className="px-4 py-3" />
+              <th scope="col" className="px-4 py-3 text-left font-medium">Barbería</th>
+              <th scope="col" className="px-4 py-3 text-left font-medium">Plan</th>
+              <th scope="col" className="px-4 py-3 text-left font-medium">Suscripción</th>
+              <th scope="col" className="px-4 py-3 text-right font-medium">Usuarios</th>
+              <th scope="col" className="px-4 py-3 text-right font-medium">Clientes</th>
+              <th scope="col" className="px-4 py-3 text-right font-medium">Citas</th>
+              <th scope="col" className="px-4 py-3 text-left font-medium">Creada</th>
+              <th scope="col" className="px-4 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

@@ -45,11 +45,11 @@ export function AuditLogTable({
       <table className="w-full text-sm">
         <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="px-4 py-3 text-left font-medium">Cuándo</th>
-            <th className="px-4 py-3 text-left font-medium">Actor</th>
-            <th className="px-4 py-3 text-left font-medium">Acción</th>
-            {!hideTarget && <th className="px-4 py-3 text-left font-medium">Objetivo</th>}
-            <th className="px-4 py-3 text-left font-medium">Cambios</th>
+            <th scope="col" className="px-4 py-3 text-left font-medium">Cuándo</th>
+            <th scope="col" className="px-4 py-3 text-left font-medium">Actor</th>
+            <th scope="col" className="px-4 py-3 text-left font-medium">Acción</th>
+            {!hideTarget && <th scope="col" className="px-4 py-3 text-left font-medium">Objetivo</th>}
+            <th scope="col" className="px-4 py-3 text-left font-medium">Cambios</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
