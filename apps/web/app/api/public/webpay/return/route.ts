@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
 import { commitWebpayTransaction } from "@/lib/webpay";
-import { failPaymentAndReleaseSlot, signPaymentToken } from "@/lib/payments";
+import { chargeableAmount, failPaymentAndReleaseSlot, signPaymentToken } from "@/lib/payments";
 import { notifyAppointment } from "@/lib/appointment-notify";
 
 export const dynamic = "force-dynamic";
@@ -85,8 +85,11 @@ async function handle(req: Request): Promise<Response> {
   // Reconciliación de monto (defensa en profundidad): el `token_ws` está atado al
   // monto en la creación, pero verificamos que lo cobrado == el abono esperado
   // antes de dar la cita por pagada. Un descalce = no confiar en el commit.
-  if (result.amount !== payment.amount) {
-    console.warn(`[webpay/return] monto descalzado payment=${payment.id} esperado=${payment.amount} cobrado=${result.amount}`);
+  // El esperado es el monto COBRABLE: si el cliente aplicó una giftcard, la
+  // transacción de Webpay se recreó por el resto, no por el abono completo.
+  const expected = chargeableAmount(payment);
+  if (result.amount !== expected) {
+    console.warn(`[webpay/return] monto descalzado payment=${payment.id} esperado=${expected} cobrado=${result.amount}`);
     await failPaymentAndReleaseSlot(payment.id, payment.appointmentId);
     return NextResponse.redirect(`${APP_URL}/pagar/${ownToken}`, 303);
   }

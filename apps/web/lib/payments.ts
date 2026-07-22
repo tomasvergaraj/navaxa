@@ -2,6 +2,10 @@ import { DepositType, prisma } from "@navaxa/db";
 import { signToken, verifyToken, TOKEN_TTL } from "@/lib/signed-token";
 import { createWebpayTransaction } from "@/lib/webpay";
 
+// La liberación de la hora vive en payment-release.ts (módulo sin `node:crypto`,
+// ver el comentario de ahí). Se re-exporta para no cambiar los call sites.
+export { releasePaymentSlot, failPaymentAndReleaseSlot } from "@/lib/payment-release";
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 /** Minutos que el cliente tiene para pagar antes de que se libere la hora. */
@@ -27,6 +31,15 @@ export function computeDeposit(
     default:
       return 0;
   }
+}
+
+/**
+ * Lo que efectivamente va a la pasarela: el abono menos lo ya cubierto con
+ * saldo de giftcard. Toda comparación de montos contra el proveedor usa ESTE
+ * valor, no `amount` (que es el abono completo).
+ */
+export function chargeableAmount(payment: { amount: number; giftCardAmount: number }): number {
+  return Math.max(0, payment.amount - payment.giftCardAmount);
 }
 
 // ---- Token de pago (stateless, HMAC) ----
@@ -126,6 +139,7 @@ export async function loadPaymentByToken(token: string) {
       tenant: {
         select: { id: true, name: true, slug: true, plan: true, address: true, timezone: true, currency: true },
       },
+      giftCard: { select: { code: true } },
       appointment: {
         include: {
           barber: { include: { user: { select: { name: true } } } },
@@ -139,25 +153,3 @@ export async function loadPaymentByToken(token: string) {
 
 export type PaymentWithContext = NonNullable<Awaited<ReturnType<typeof loadPaymentByToken>>>;
 
-/**
- * Marca un pago PENDING como FAILED y cancela la cita que lo esperaba, en la
- * misma transacción. Si el abono no se concreta, la reserva NO debe quedar
- * agendada: la cita se cancela y el slot se libera.
- *
- * Idempotente y a prueba de carreras: solo actúa si el pago sigue PENDING, y
- * solo cancela la cita si sigue PENDING_PAYMENT (no toca una cita que el
- * dueño haya confirmado a mano mientras tanto).
- */
-export async function failPaymentAndReleaseSlot(paymentId: string, appointmentId: string) {
-  await prisma.$transaction(async (tx) => {
-    const claimed = await tx.payment.updateMany({
-      where: { id: paymentId, status: "PENDING" },
-      data: { status: "FAILED" },
-    });
-    if (claimed.count === 0) return;
-    await tx.appointment.updateMany({
-      where: { id: appointmentId, status: "PENDING_PAYMENT" },
-      data: { status: "CANCELLED", cancelledAt: new Date(), cancelReason: "Abono no pagado" },
-    });
-  });
-}

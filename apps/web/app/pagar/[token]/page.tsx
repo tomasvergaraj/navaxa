@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@navaxa/ui";
-import { loadPaymentByToken } from "@/lib/payments";
+import { chargeableAmount, loadPaymentByToken } from "@/lib/payments";
 import { webpayFormUrl } from "@/lib/webpay";
 import { signManageToken } from "@/lib/public-booking";
+import { planHasGiftCards } from "@/lib/plan-features";
 import { formatCLP } from "@/lib/format";
 import { PaymentCheckout } from "./payment-checkout";
 import { WebpayCheckout } from "./webpay-checkout";
+import { GiftCardRedeem } from "./giftcard-redeem";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +52,11 @@ export default async function PagarPage({ params }: { params: { token: string } 
         <h1 className="mt-4 font-display text-xl font-medium">Pago confirmado</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Tu abono de <strong className="text-foreground">{formatCLP(payment.amount)}</strong> en{" "}
-          {tenant.name} quedó registrado. ¡Te esperamos!
+          {tenant.name} quedó registrado
+          {payment.giftCardAmount > 0
+            ? `, ${formatCLP(payment.giftCardAmount)} con la giftcard ${payment.giftCard?.code ?? ""}`.trimEnd()
+            : ""}
+          . ¡Te esperamos!
         </p>
         <Button asChild className="mt-6 w-full">
           <Link href={`/reservar/gestion/${manageToken}`}>Ver mi reserva</Link>
@@ -91,6 +97,7 @@ export default async function PagarPage({ params }: { params: { token: string } 
     hour12: false,
   });
   const serviceNames = appointment.services.map((s) => s.service.name).join(" + ");
+  const pending = chargeableAmount(payment);
 
   return (
     <Shell>
@@ -107,9 +114,28 @@ export default async function PagarPage({ params }: { params: { token: string } 
         <p className="text-muted-foreground">Total servicio: {formatCLP(appointment.totalPrice)}</p>
       </div>
 
-      <div className="mt-4 flex items-baseline justify-between border-t border-border pt-4">
-        <span className="text-sm text-muted-foreground">Abono a pagar ahora</span>
-        <span className="font-display text-2xl font-medium">{formatCLP(payment.amount)}</span>
+      {/* Con giftcard aplicada el abono se muestra desglosado: el saldo consumido
+          no es un cobro nuevo (ese ingreso se reconoció al emitir la giftcard). */}
+      {payment.giftCardAmount > 0 && (
+        <div className="mt-4 space-y-1 border-t border-border pt-4 text-sm">
+          <div className="flex items-baseline justify-between text-muted-foreground">
+            <span>Abono</span>
+            <span className="tabular-nums">{formatCLP(payment.amount)}</span>
+          </div>
+          <div className="flex items-baseline justify-between text-muted-foreground">
+            <span>Giftcard {payment.giftCard?.code}</span>
+            <span className="tabular-nums">−{formatCLP(payment.giftCardAmount)}</span>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`mt-4 flex items-baseline justify-between pt-4 ${
+          payment.giftCardAmount > 0 ? "" : "border-t border-border"
+        }`}
+      >
+        <span className="text-sm text-muted-foreground">A pagar ahora</span>
+        <span className="font-display text-2xl font-medium">{formatCLP(pending)}</span>
       </div>
 
       {/* Deadline: la hora se libera en silencio al expirar — hacerlo visible. */}
@@ -126,11 +152,17 @@ export default async function PagarPage({ params }: { params: { token: string } 
         para pagar; si no, la hora se libera automáticamente.
       </p>
 
+      {/* Antes de los botones de pago: si el saldo cubre todo, el cliente no
+          llega a la pasarela. Solo en planes con giftcards y una por abono. */}
+      {payment.giftCardAmount === 0 && planHasGiftCards(tenant.plan) && (
+        <GiftCardRedeem token={params.token} />
+      )}
+
       {payment.provider === "webpay" && payment.providerRef ? (
         <WebpayCheckout
           token={params.token}
           slug={tenant.slug}
-          amountLabel={formatCLP(payment.amount)}
+          amountLabel={formatCLP(pending)}
           formAction={webpayFormUrl()}
           webpayToken={payment.providerRef}
         />
@@ -139,7 +171,7 @@ export default async function PagarPage({ params }: { params: { token: string } 
           <PaymentCheckout
             token={params.token}
             slug={tenant.slug}
-            amountLabel={formatCLP(payment.amount)}
+            amountLabel={formatCLP(pending)}
           />
           <p className="mt-4 text-center text-xs text-muted-foreground">
             Pago de demostración (mock). No se cobra dinero real.

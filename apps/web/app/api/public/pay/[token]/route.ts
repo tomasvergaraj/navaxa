@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@navaxa/db";
-import { loadPaymentByToken, getPaymentProvider } from "@/lib/payments";
+import { loadPaymentByToken, getPaymentProvider, releasePaymentSlot } from "@/lib/payments";
 import { signManageToken } from "@/lib/public-booking";
 import { notifyAppointment } from "@/lib/appointment-notify";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
@@ -48,12 +48,9 @@ export async function POST(req: Request, { params }: { params: { token: string }
       );
     }
 
-    // Expirado: liberar la hora.
+    // Expirado: liberar la hora (y devolver el saldo de giftcard, si aplicó).
     if (payment.expiresAt < new Date()) {
-      await prisma.$transaction([
-        prisma.payment.update({ where: { id: payment.id }, data: { status: "EXPIRED" } }),
-        prisma.appointment.update({ where: { id: payment.appointmentId }, data: { status: "CANCELLED" } }),
-      ]);
+      await releasePaymentSlot(payment.id, payment.appointmentId, "EXPIRED");
       return NextResponse.json({ error: "El tiempo para pagar expiró. Reserva de nuevo." }, { status: 410 });
     }
 

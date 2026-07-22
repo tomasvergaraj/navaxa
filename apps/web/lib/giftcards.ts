@@ -1,12 +1,14 @@
-import crypto from "node:crypto";
 import { prisma, type Prisma } from "@navaxa/db";
 import { ApiError } from "./api-errors";
 
 // Alfabeto sin caracteres ambiguos (0/O, 1/I) para dictar el código por teléfono.
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
+// Web Crypto en vez de `node:crypto`: este módulo lo alcanza el bundle Edge por
+// la cadena instrumentation → jobs → liberación de abonos, y ahí `node:*` no
+// resuelve. `globalThis.crypto` existe en Node 18+ y en Edge.
 function randomCode(): string {
-  const bytes = crypto.randomBytes(6);
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
   let body = "";
   for (let i = 0; i < 6; i++) body += CODE_ALPHABET[bytes[i]! % CODE_ALPHABET.length];
   return `NVX-${body}`;
@@ -72,7 +74,7 @@ export async function findGiftCardByCode(tenantId: string, code: string) {
  *
  * Se expone en versión `tx` para que la caja pueda cobrar con giftcard y
  * descontar stock en la MISMA transacción: si la venta falla, el saldo no se
- * consume.
+ * consume. El abono de reserva la usa igual, pasando `paymentId`.
  */
 export async function redeemGiftCardTx(
   tx: Prisma.TransactionClient,
@@ -82,6 +84,7 @@ export async function redeemGiftCardTx(
     amount: number;
     note?: string;
     saleId?: string;
+    paymentId?: string;
   },
 ) {
   if (input.amount <= 0) throw new ApiError(400, "El monto a canjear debe ser mayor a 0");
@@ -116,6 +119,7 @@ export async function redeemGiftCardTx(
       tenantId: input.tenantId,
       giftCardId: card.id,
       saleId: input.saleId ?? null,
+      paymentId: input.paymentId ?? null,
       amount: input.amount,
       note: input.note || null,
     },
@@ -135,14 +139,22 @@ export async function redeemGiftCard(input: {
 }
 
 /**
- * Devuelve saldo consumido por una venta anulada. Deja un consumo negativo en
- * el histórico (la suma de `amount` sigue siendo el consumo neto) y reactiva la
- * giftcard si se había marcado REDEEMED. Una giftcard anulada recupera el saldo
- * pero sigue CANCELLED: anular es decisión del local, no la revierte un refund.
+ * Devuelve saldo consumido por una venta anulada —o por un abono de reserva que
+ * no llegó a concretarse—. Deja un consumo negativo en el histórico (la suma de
+ * `amount` sigue siendo el consumo neto) y reactiva la giftcard si se había
+ * marcado REDEEMED. Una giftcard anulada recupera el saldo pero sigue
+ * CANCELLED: anular es decisión del local, no la revierte un refund.
  */
 export async function refundGiftCardTx(
   tx: Prisma.TransactionClient,
-  input: { tenantId: string; giftCardId: string; amount: number; saleId: string; note?: string },
+  input: {
+    tenantId: string;
+    giftCardId: string;
+    amount: number;
+    saleId?: string;
+    paymentId?: string;
+    note?: string;
+  },
 ) {
   if (input.amount <= 0) return;
   const card = await tx.giftCard.findFirst({
@@ -162,7 +174,8 @@ export async function refundGiftCardTx(
     data: {
       tenantId: input.tenantId,
       giftCardId: card.id,
-      saleId: input.saleId,
+      saleId: input.saleId ?? null,
+      paymentId: input.paymentId ?? null,
       amount: -input.amount,
       note: input.note || "Venta anulada",
     },

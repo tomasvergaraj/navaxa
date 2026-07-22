@@ -241,6 +241,11 @@ export const giftCardRedeemSchema = z.object({
   note: z.string().trim().max(200).optional(),
 });
 
+/** Canje de giftcard contra el abono de una reserva (checkout público). */
+export const payWithGiftCardSchema = z.object({
+  code: z.string().trim().min(4).max(20),
+});
+
 // ---- Campañas de marketing ----
 // El canal SMS no tiene provider real (degrada a WhatsApp/mock): no se ofrece.
 const campaignChannelSchema = z.enum(["WHATSAPP", "EMAIL"]);

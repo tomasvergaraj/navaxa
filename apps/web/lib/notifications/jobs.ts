@@ -3,6 +3,7 @@ import { sendNotification } from "./index";
 import { pickChannel } from "./channel";
 import { addHours, addMinutes, subHours } from "date-fns";
 import { formatDate, formatTime } from "../format";
+import { releasePaymentSlot } from "../payment-release";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://navaxa.cl";
 
@@ -91,18 +92,10 @@ export async function expirePendingPayments() {
   });
 
   for (const p of expired) {
-    await prisma.$transaction([
-      // Guard de status en ambos: si el return de la pasarela llegó entre el
-      // findMany y acá (pago PAID / cita ya SCHEDULED), no pisarlo.
-      prisma.payment.updateMany({
-        where: { id: p.id, status: "PENDING" },
-        data: { status: "EXPIRED" },
-      }),
-      prisma.appointment.updateMany({
-        where: { id: p.appointmentId, status: "PENDING_PAYMENT" },
-        data: { status: "CANCELLED", cancelledAt: now, cancelReason: "Abono no pagado" },
-      }),
-    ]);
+    // Guard de status adentro: si el return de la pasarela llegó entre el
+    // findMany y acá (pago PAID / cita ya SCHEDULED), no pisarlo. Devuelve
+    // también el saldo de giftcard aplicado a un abono que nunca se completó.
+    await releasePaymentSlot(p.id, p.appointmentId, "EXPIRED");
   }
 
   return { expired: expired.length };

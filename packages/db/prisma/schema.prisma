@@ -421,7 +421,7 @@ model Payment {
   id            String        @id @default(cuid())
   tenantId      String
   appointmentId String        @unique
-  amount        Int           // CLP entero
+  amount        Int           // CLP entero: abono total, incluida la parte pagada con giftcard
   currency      String        @default("CLP")
   status        PaymentStatus @default(PENDING)
   provider      String        @default("mock")
@@ -431,8 +431,16 @@ model Payment {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  /// Parte del abono cubierta con saldo de giftcard. Lo que va a la pasarela es
+  /// `amount - giftCardAmount`; el ingreso de esa parte ya se reconoció al emitir
+  /// la giftcard, por eso se registra aparte y no se suma como cobro nuevo.
+  giftCardAmount Int     @default(0)
+  giftCardId     String?
+
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  giftCard    GiftCard?   @relation(fields: [giftCardId], references: [id])
+  redemptions GiftCardRedemption[]
 
   @@index([tenantId, status])
   @@index([status, expiresAt])
@@ -728,6 +736,7 @@ model GiftCard {
   tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   redemptions GiftCardRedemption[]
   sales       Sale[]
+  payments    Payment[]
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -749,12 +758,14 @@ model GiftCardRedemption {
   tenantId   String
   giftCardId String
   saleId     String? // venta de caja que consumió el saldo, si vino de ahí
+  paymentId  String? // abono de reserva que consumió el saldo, si vino de ahí
   amount     Int
   note       String?
   createdAt  DateTime @default(now())
 
   giftCard GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
   sale     Sale?    @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  payment  Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
   @@index([giftCardId, createdAt])
   @@map("gift_card_redemptions")
