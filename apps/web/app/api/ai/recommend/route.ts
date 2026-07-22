@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getTenantContext } from "@/lib/tenant";
+import { getTenantContext, scopedDb } from "@/lib/tenant";
 import { apiError } from "@/lib/api-errors";
+import { ownClientFilter } from "@/lib/page-guards";
 import { recommendNextHaircut } from "@/lib/ai/recommendation";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { prisma } from "@navaxa/db";
@@ -46,8 +47,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const client = await prisma.client.findFirst({
-      where: { id: parsed.data.clientId, tenantId },
+    // Mismo alcance que la ficha: la recomendación resume el historial del
+    // cliente, así que un barbero no la pide para uno que nunca atendió.
+    const client = await scopedDb().client.findFirst({
+      where: { id: parsed.data.clientId, ...(await ownClientFilter()) },
       select: { id: true },
     });
     if (!client) return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });

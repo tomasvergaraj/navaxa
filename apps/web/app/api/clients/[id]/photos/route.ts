@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { scopedDb, getTenantContext } from "@/lib/tenant";
 import { apiError } from "@/lib/api-errors";
+import { ownClientFilter } from "@/lib/page-guards";
 import { assertWithinPlanLimit } from "@/lib/plan-limits";
 import { storage, deleteStoredObjects } from "@/lib/storage";
 import { compressImageWithThumb } from "@/lib/images";
@@ -20,7 +21,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const { tenantId } = getTenantContext();
     const db = scopedDb();
 
-    const exists = await db.client.findFirst({ where: { id: params.id } });
+    // Mismo alcance que la ficha: un barbero no sube fotos a la galería de un
+    // cliente que nunca atendió (el DELETE de [photoId] ya filtraba, esto no).
+    const exists = await db.client.findFirst({
+      where: { id: params.id, ...(await ownClientFilter()) },
+    });
     if (!exists) return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
 
     const form = await req.formData();
@@ -123,6 +128,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   try {
     const db = scopedDb();
+    // La galería es parte de la ficha: si el barbero no puede abrirla, tampoco
+    // puede listar sus fotos.
+    const client = await db.client.findFirst({
+      where: { id: params.id, ...(await ownClientFilter()) },
+      select: { id: true },
+    });
+    if (!client) return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+
     const records = await db.haircutRecord.findMany({
       where: { clientId: params.id },
       orderBy: { performedAt: "desc" },

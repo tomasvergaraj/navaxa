@@ -1,22 +1,11 @@
 import { NextResponse } from "next/server";
 import { scopedDb } from "@/lib/tenant";
 import { apiError, requireManager } from "@/lib/api-errors";
-import { viewerScope } from "@/lib/page-guards";
+import { ownClientFilter } from "@/lib/page-guards";
 import { clientUpdateSchema, clientPreferenceSchema } from "@/lib/validators";
 import { deleteStoredObjects } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
-
-/**
- * Filtro de "cliente propio" para el BARBER: solo los que atendió alguna vez.
- * Misma definición que el listado (api/clients/route.ts) — si no, el listado le
- * muestra 3 clientes pero adivinando el id entraba a la ficha de cualquiera.
- * Gestión (OWNER/ADMIN) y recepción (STAFF) no se filtran.
- */
-async function ownClientFilter(): Promise<Record<string, unknown>> {
-  const { ownOnly, barberId } = await viewerScope();
-  return ownOnly ? { appointments: { some: { barberId: barberId ?? "__none__" } } } : {};
-}
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   try {

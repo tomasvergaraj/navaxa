@@ -5,6 +5,7 @@ import { Phone, Mail, ArrowLeft } from "lucide-react";
 import { APPOINTMENT_STATUS_LABELS } from "@navaxa/config";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
 import { scopedDb } from "@/lib/tenant";
+import { ownClientFilter } from "@/lib/page-guards";
 import { AIRecommendationCard } from "@/components/ai-recommendation-card";
 import { UploadPhotoDialog } from "@/components/upload-photo-dialog";
 import { EditClientDialog } from "@/components/clients/edit-client-dialog";
@@ -24,9 +25,13 @@ interface PageProps {
 export default async function ClientePage({ params }: PageProps) {
   const db = scopedDb();
 
+  // Mismo alcance que la API by-id: un barbero no abre la ficha (nombre, teléfono,
+  // historial) de un cliente que nunca atendió, aunque adivine el id.
+  const scope = await ownClientFilter();
+
   const [client, barbers] = await Promise.all([
     db.client.findFirst({
-      where: { id: params.id },
+      where: { id: params.id, ...scope },
       include: {
         preferences: true,
         haircuts: {

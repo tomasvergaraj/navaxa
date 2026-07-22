@@ -67,3 +67,19 @@ export async function viewerScope(): Promise<{
   const barberId = ownOnly ? await currentBarberId(ctx.userId) : null;
   return { ctx, isManager, ownOnly, barberId };
 }
+
+/**
+ * Filtro de "cliente propio" para el BARBER: solo los que atendió alguna vez.
+ * Misma definición que el listado (api/clients/route.ts) — si no, el listado le
+ * muestra 3 clientes pero adivinando el id entraba a la ficha de cualquiera.
+ * Gestión (OWNER/ADMIN) y recepción (STAFF) no se filtran.
+ *
+ * Vive acá y no en la ruta porque lo necesitan la API by-id, la página de la
+ * ficha, la galería de fotos y la recomendación con IA: con una copia por
+ * archivo, la que se olvide queda como agujero (así se filtraron la página y
+ * las fotos hasta 2026-07-22).
+ */
+export async function ownClientFilter(): Promise<Record<string, unknown>> {
+  const { ownOnly, barberId } = await viewerScope();
+  return ownOnly ? { appointments: { some: { barberId: barberId ?? "__none__" } } } : {};
+}
