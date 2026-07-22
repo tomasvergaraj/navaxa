@@ -6,7 +6,11 @@ import { Badge, Card } from "@navaxa/ui";
 import { ArrowLeft } from "lucide-react";
 import { formatCLP, formatDate, formatNumber } from "@/lib/format";
 import { TenantAdminActions } from "@/components/admin/tenant-admin-actions";
+import { AuditLogTable } from "@/components/admin/audit-log-table";
 import { requireSuperAdminPage } from "@/lib/page-guards";
+
+/** Últimas acciones mostradas en el detalle; el resto vive en /admin/audit. */
+const AUDIT_PREVIEW = 10;
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +35,7 @@ export default async function AdminTenantDetail({ params }: PageProps) {
   if (!tenant) notFound();
 
   const monthStart = startOfMonth(new Date());
-  const [apptCount, monthRevenue] = await Promise.all([
+  const [apptCount, monthRevenue, auditEntries] = await Promise.all([
     prisma.appointment.count({ where: { tenantId: tenant.id } }),
     prisma.appointment.aggregate({
       where: {
@@ -40,6 +44,12 @@ export default async function AdminTenantDetail({ params }: PageProps) {
         status: AppointmentStatus.COMPLETED,
       },
       _sum: { totalPrice: true },
+    }),
+    // Cae en el índice [targetType, targetId, createdAt] de AdminAuditLog.
+    prisma.adminAuditLog.findMany({
+      where: { targetType: "Tenant", targetId: params.id },
+      orderBy: { createdAt: "desc" },
+      take: AUDIT_PREVIEW,
     }),
   ]);
 
@@ -108,6 +118,25 @@ export default async function AdminTenantDetail({ params }: PageProps) {
             ) : (
               <p className="text-sm text-muted-foreground">Sin dueño registrado.</p>
             )}
+          </Card>
+
+          <Card className="overflow-hidden">
+            <div className="flex items-center justify-between px-5 pb-3 pt-5">
+              <h2 className="text-sm font-medium">Acciones de plataforma</h2>
+              {auditEntries.length > 0 && (
+                <Link
+                  href={`/admin/audit?target=${tenant.id}`}
+                  className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  Ver todo
+                </Link>
+              )}
+            </div>
+            <AuditLogTable
+              entries={auditEntries}
+              hideTarget
+              emptyMessage="Nadie ha modificado esta barbería desde /admin."
+            />
           </Card>
         </section>
 

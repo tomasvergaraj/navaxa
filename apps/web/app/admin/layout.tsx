@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Shield, Building2, ArrowLeft } from "lucide-react";
+import { Shield, Building2, ScrollText, ArrowLeft } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { requireSuperAdminPage } from "@/lib/page-guards";
 import { AuthSessionProvider } from "@/components/session-provider";
@@ -21,13 +21,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Shield className="h-4 w-4 text-amber-600" />
             navaxa admin
           </Link>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Volver a mi tenant
-          </Link>
+          <div className="flex items-center gap-1">
+            {/* Sin sidebar en celular, este es el único acceso al rastro. */}
+            <Link
+              href="/admin/audit"
+              aria-label="Auditoría"
+              className="rounded p-1.5 text-muted-foreground hover:bg-muted"
+            >
+              <ScrollText className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Volver a mi tenant
+            </Link>
+          </div>
         </header>
         <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-muted/30 md:flex">
           <div className="flex items-center gap-2 border-b border-border px-4 py-4">
@@ -44,6 +54,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             >
               <Building2 className="h-4 w-4" />
               Barberías
+            </Link>
+            <Link
+              href="/admin/audit"
+              className="flex items-center gap-2 rounded px-3 py-2 hover:bg-muted"
+            >
+              <ScrollText className="h-4 w-4" />
+              Auditoría
             </Link>
           </nav>
           <Link
