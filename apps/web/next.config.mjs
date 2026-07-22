@@ -37,7 +37,16 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Content-Security-Policy",
-            value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'",
+            // OJO con `form-action`: los checkouts de Webpay (/pagar, /facturar y
+            // la compra de giftcard) hacen POST NATIVO del formulario a
+            // Transbank, así que con `'self'` a secas el navegador bloquea el
+            // submit EN SILENCIO — el botón queda cargando para siempre y no
+            // hay forma de pagar. Pasó exactamente eso entre el 2026-07-20 y el
+            // 2026-07-22. Los dos hosts van listados: `webpay3g` es producción
+            // y `webpay3gint` el sandbox de integración.
+            value:
+              "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; " +
+              "form-action 'self' https://webpay3g.transbank.cl https://webpay3gint.transbank.cl",
           },
         ],
       },
