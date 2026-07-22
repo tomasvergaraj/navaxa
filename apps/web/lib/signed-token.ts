@@ -76,4 +76,10 @@ export const TOKEN_TTL = {
   pay: 24 * 60 * 60,
   /** Checkout de plan: el dueño lo usa de inmediato (además atado a sesión). */
   bill: 24 * 60 * 60,
+  /**
+   * Compra pública de giftcard. Largo a propósito: el comprador vuelve a este
+   * enlace para releer el código que compró. El guard del cobro es
+   * GiftCardOrder.expiresAt, no este TTL.
+   */
+  giftOrder: 180 * 24 * 60 * 60,
 } as const;

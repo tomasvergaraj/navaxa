@@ -21,8 +21,12 @@ const PUBLIC_PREFIXES = [
   "/foto/", // calificar foto de corte por token (sin login)
   "/api/billing/webpay/", // return URL de Webpay para SaaS: viene cross-site sin cookies
   "/pagar/", // checkout de abono (sin login)
+  "/regalar/", // compra pública de giftcard y su checkout (sin login)
   "/api/public/", // API pública de reservas y pagos
 ];
+
+/** URL canónica de Auth.js; define si las cookies llevan el prefijo `__Secure-`. */
+const authUrl = (process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "").trim();
 
 // Headers de confianza que fija el middleware a partir del JWT. Se borran de la
 // entrada (el cliente no debe poder inyectarlos) y se re-setean abajo.
@@ -55,7 +59,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const secureCookie = process.env.NODE_ENV === "production";
+  // Auth.js elige `__Secure-` según el PROTOCOLO de AUTH_URL, no según NODE_ENV.
+  // Acá se seguía NODE_ENV, así que un despliegue en http con la imagen de
+  // producción (el entorno de prueba de docker-compose.sandbox.yml) buscaba una
+  // cookie que Auth.js nunca escribió y toda sesión se veía como anónima. En
+  // producción AUTH_URL es https → mismo valor de antes.
+  const secureCookie = authUrl
+    ? authUrl.startsWith("https:")
+    : process.env.NODE_ENV === "production";
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET!,

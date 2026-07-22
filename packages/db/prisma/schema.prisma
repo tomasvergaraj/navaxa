@@ -82,6 +82,7 @@ model Tenant {
   products      Product[]
   sales         Sale[]
   giftCards     GiftCard[]
+  giftCardOrders GiftCardOrder[]
   subscription  Subscription?
 
   @@map("tenants")
@@ -738,10 +739,47 @@ model GiftCard {
   redemptions GiftCardRedemption[]
   sales       Sale[]
   payments    Payment[]
+  order       GiftCardOrder?
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
   @@map("gift_cards")
+}
+
+/// Compra pública de giftcard (la vitrina, sin sesión): la giftcard NO existe
+/// hasta que la pasarela confirma el cobro. Modelo aparte de `Payment` porque
+/// ese exige `appointmentId` — acá no hay cita.
+///
+/// Al confirmar se emite la GiftCard y se registra una Sale por el monto: el
+/// ingreso se reconoce al EMITIR, igual que una giftcard vendida en mostrador.
+/// Cuando después se canja, la venta suma `total - giftCardAmount` y no se
+/// cuenta dos veces.
+model GiftCardOrder {
+  id             String        @id @default(cuid())
+  tenantId       String
+  amount         Int // CLP entero
+  currency       String        @default("CLP")
+  status         PaymentStatus @default(PENDING)
+  provider       String        @default("mock")
+  providerRef    String? // token_ws de Webpay
+  buyerName      String
+  buyerEmail     String
+  recipientName  String?
+  recipientEmail String?
+  message        String?
+  expiresInMonths Int          @default(12) // vigencia de la giftcard a emitir (0 = sin vencimiento)
+  expiresAt      DateTime // vence el checkout, no la giftcard
+  paidAt         DateTime?
+  giftCardId     String?       @unique // se llena al confirmar el cobro
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  giftCard GiftCard? @relation(fields: [giftCardId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([providerRef])
+  @@map("gift_card_orders")
 }
 
 enum GiftCardStatus {

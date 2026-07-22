@@ -10,9 +10,9 @@ build
 out
 *.tsbuildinfo
 
-# Environment
-.env
-.env*.local
+# Environment — patrón amplio a propósito: cubre .env, .env.sandbox, .env.bak,
+# .env.local… Solo el ejemplo (sin secretos) se versiona.
+.env*
 !.env.example
 
 # Overrides locales por máquina (p. ej. remapeo de puerto de Postgres en Windows)

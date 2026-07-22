@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Globe, Instagram, MapPin, Phone } from "lucide-react";
+import { Gift, Globe, Instagram, MapPin, Phone } from "lucide-react";
 import { prisma } from "@navaxa/db";
 import { resolveTenantBySlug, getPublicHours } from "@/lib/public-booking";
 import { ServicesBrowser } from "@/components/booking/services-browser";
 import { TenantAnalytics } from "@/components/booking/tenant-analytics";
 import { brandStyle } from "@/lib/brand-color";
-import { planHasBranding } from "@/lib/plan-features";
+import { planHasBranding, planHasGiftCards } from "@/lib/plan-features";
 import { HoursToggle } from "@/components/booking/hours-toggle";
 import { Reveal } from "@/components/marketing/reveal";
 import { WhatsappIcon } from "@/components/ui/whatsapp-icon";
@@ -341,6 +341,24 @@ export default async function ReservarPage({ params }: { params: { slug: string 
           </h2>
           <ServicesBrowser slug={tenant.slug} services={services} />
         </Reveal>
+
+        {/* Giftcard (plan Pro): regalar es una segunda razón para entrar a la vitrina */}
+        {planHasGiftCards(tenant.plan) && (
+          <Reveal as="section" className="mt-12">
+            <Link
+              href={`/regalar/${tenant.slug}`}
+              className="flex items-center gap-4 rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/50"
+            >
+              <Gift className="h-8 w-8 shrink-0 text-primary" />
+              <span className="min-w-0">
+                <span className="block font-medium">Regala una giftcard</span>
+                <span className="mt-0.5 block text-sm text-muted-foreground">
+                  Elige el monto y le llega un código por email para usar acá.
+                </span>
+              </span>
+            </Link>
+          </Reveal>
+        )}
 
         {/* Reseñas internas: solo como fallback si el local no está vinculado a Google */}
         {!googleLinked && reviews.length > 0 && (

@@ -248,6 +248,21 @@ export const giftCardRedeemSchema = z.object({
   note: z.string().trim().max(200).optional(),
 });
 
+/**
+ * Compra pública de giftcard desde la vitrina. A diferencia de la emisión desde
+ * el panel, acá el comprador es un desconocido: nombre y email son obligatorios
+ * (son el comprobante de la compra) y la vigencia la fija el local, no el que compra.
+ */
+export const giftCardPurchaseSchema = z.object({
+  amount: z.coerce.number().int().min(1000, "Mínimo $1.000").max(1_000_000),
+  buyerName: z.string().trim().min(2, "Escribe tu nombre").max(80),
+  buyerEmail: z.string().trim().email("Email inválido").max(120),
+  recipientName: z.string().trim().max(80).optional(),
+  recipientEmail: z.string().trim().email("Email inválido").max(120).optional().or(z.literal("")),
+  message: z.string().trim().max(300).optional(),
+  captchaToken: z.string().optional(),
+});
+
 /** Canje de giftcard contra el abono de una reserva (checkout público). */
 export const payWithGiftCardSchema = z.object({
   code: z.string().trim().min(4).max(20),

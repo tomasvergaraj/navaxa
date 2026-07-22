@@ -15,10 +15,13 @@ function randomCode(): string {
 }
 
 /** Genera un código único por tenant (reintenta ante colisión, muy improbable). */
-async function uniqueCode(tenantId: string): Promise<string> {
+async function uniqueCode(
+  db: Prisma.TransactionClient | typeof prisma,
+  tenantId: string,
+): Promise<string> {
   for (let attempt = 0; attempt < 6; attempt++) {
     const code = randomCode();
-    const existing = await prisma.giftCard.findFirst({
+    const existing = await db.giftCard.findFirst({
       where: { tenantId, code },
       select: { id: true },
     });
@@ -27,7 +30,7 @@ async function uniqueCode(tenantId: string): Promise<string> {
   throw new ApiError(500, "No se pudo generar un código único, intenta de nuevo");
 }
 
-export async function issueGiftCard(input: {
+export interface IssueGiftCardInput {
   tenantId: string;
   amount: number;
   buyerName?: string;
@@ -35,8 +38,32 @@ export async function issueGiftCard(input: {
   recipientEmail?: string;
   message?: string;
   expiresAt?: Date | null;
-}) {
-  const code = await uniqueCode(input.tenantId);
+}
+
+/**
+ * Emite dentro de una transacción ya abierta. La compra pública la usa para que
+ * la giftcard, la venta que reconoce el ingreso y el cierre de la orden entren
+ * juntos o no entren.
+ */
+export async function issueGiftCardTx(tx: Prisma.TransactionClient, input: IssueGiftCardInput) {
+  const code = await uniqueCode(tx, input.tenantId);
+  return tx.giftCard.create({
+    data: {
+      tenantId: input.tenantId,
+      code,
+      initialValue: input.amount,
+      balance: input.amount,
+      buyerName: input.buyerName || null,
+      recipientName: input.recipientName || null,
+      recipientEmail: input.recipientEmail || null,
+      message: input.message || null,
+      expiresAt: input.expiresAt ?? null,
+    },
+  });
+}
+
+export async function issueGiftCard(input: IssueGiftCardInput) {
+  const code = await uniqueCode(prisma, input.tenantId);
   return prisma.giftCard.create({
     data: {
       tenantId: input.tenantId,

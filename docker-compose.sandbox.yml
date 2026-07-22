@@ -1,0 +1,65 @@
+# Entorno de PRUEBA aislado: misma imagen que producción, pero contra el sandbox
+# de Transbank (webpay3gint) y con su propia base de datos. Sirve para probar
+# cobros end-to-end sin mover dinero real.
+#
+# Levantar:
+#   docker compose -p navaxa-sandbox -f docker-compose.sandbox.yml up -d --build
+#
+# Se navega por túnel SSH desde tu máquina (NO se expone público a propósito):
+#   ssh -L 3005:127.0.0.1:3005 <vps>   →   http://localhost:3005
+# Por eso NEXT_PUBLIC_APP_URL es http://localhost:3005: el `return_url` de Webpay
+# lo abre TU navegador, así que resolver localhost basta y no hace falta DNS.
+#
+# Requiere un `.env.sandbox` (gitignoreado) con al menos:
+#   AUTH_SECRET=...            (cualquiera, es un entorno de prueba)
+#   NEXTAUTH_URL=http://localhost:3005
+#   NEXT_PUBLIC_APP_URL=http://localhost:3005
+#   PAYMENT_PROVIDER=webpay
+#   WEBPAY_ENV=integration
+#   WEBPAY_ALLOW_INTEGRATION=1   ← jamás en el .env de producción
+#   (sin WEBPAY_COMMERCE_CODE/WEBPAY_API_KEY: usa las credenciales públicas de Transbank)
+#   (sin TURNSTILE_*: el captcha queda en no-op)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: navaxa-sandbox-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: navaxa
+      POSTGRES_PASSWORD: navaxa
+      POSTGRES_DB: navaxa
+    # Volumen propio: nada de esta base toca la de producción.
+    volumes:
+      - navaxa_sandbox_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U navaxa"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: http://localhost:3005
+    container_name: navaxa-sandbox-web
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env.sandbox
+    environment:
+      DATABASE_URL: postgresql://navaxa:navaxa@postgres:5432/navaxa?schema=public
+      NODE_ENV: production
+      HOSTNAME: "0.0.0.0"
+      PORT: "3000"
+      TZ: "America/Santiago"
+      # Sin scheduler: el cron de notificaciones es de la instancia de producción.
+      INTERNAL_CRON: "false"
+    ports:
+      - "127.0.0.1:3005:3000"
+
+volumes:
+  navaxa_sandbox_pg:

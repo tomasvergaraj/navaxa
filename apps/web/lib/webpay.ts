@@ -21,6 +21,20 @@ export function webpayHost(): string {
   return process.env.WEBPAY_ENV === "production" ? HOST_PROD : HOST_INT;
 }
 
+/**
+ * Escotilla para el entorno de PRUEBA (docker-compose.sandbox.yml): una imagen
+ * de Next siempre corre con NODE_ENV=production, así que sin esto no hay forma
+ * de levantar una instancia contra el sandbox de Transbank. Nunca debe estar
+ * seteada en el .env de producción: si lo está, el checkout deja de cobrar de
+ * verdad. El guard de abajo la ignora si WEBPAY_ENV es "production", para que la
+ * combinación absurda (credenciales reales + modo prueba) no exista.
+ */
+function integrationAllowed(): boolean {
+  return (
+    process.env.WEBPAY_ALLOW_INTEGRATION === "1" && process.env.WEBPAY_ENV !== "production"
+  );
+}
+
 function creds(): { cc: string; key: string } {
   const cc = process.env.WEBPAY_COMMERCE_CODE || PUBLIC_INT_CC;
   const key = process.env.WEBPAY_API_KEY || PUBLIC_INT_KEY;
@@ -29,9 +43,13 @@ function creds(): { cc: string; key: string } {
   // dinero real). Faltar WEBPAY_* en prod es un error de despliegue.
   if (
     process.env.NODE_ENV === "production" &&
+    !integrationAllowed() &&
     (cc === PUBLIC_INT_CC || key === PUBLIC_INT_KEY || process.env.WEBPAY_ENV !== "production")
   ) {
     throw new Error("Webpay mal configurado en producción (faltan WEBPAY_COMMERCE_CODE/API_KEY/ENV reales)");
+  }
+  if (integrationAllowed()) {
+    console.warn("[webpay] MODO INTEGRACIÓN: los cobros son simulados, no mueven dinero real.");
   }
   return { cc, key };
 }
