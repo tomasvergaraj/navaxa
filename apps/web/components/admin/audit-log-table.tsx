@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTimeYear } from "@/lib/format";
 
 /**
  * Tabla del rastro de auditoría de plataforma (`AdminAuditLog`).
@@ -56,7 +56,7 @@ export function AuditLogTable({
           {entries.map((e) => (
             <tr key={e.id} className="align-top hover:bg-muted/30">
               <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
-                <div>{formatDateTime(e.createdAt)}</div>
+                <div>{formatDateTimeYear(e.createdAt)}</div>
                 {e.ip && <div className="mt-0.5 tabular-nums opacity-70">{e.ip}</div>}
               </td>
               <td className="px-4 py-3">
@@ -152,7 +152,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 function display(v: unknown): string {
   if (v === null || v === undefined) return "—";
   if (typeof v === "boolean") return v ? "sí" : "no";
-  if (typeof v === "string") return ISO_DATE.test(v) ? formatDateTime(v) : v;
+  if (typeof v === "string") return ISO_DATE.test(v) ? formatDateTimeYear(v) : v;
   if (typeof v === "number") return String(v);
   return JSON.stringify(v);
 }

@@ -49,3 +49,4 @@ coverage
 # Dumps de respaldo manuales (data prod, nunca commitear)
 backup-*.sql
 *.dump
+.claude/settings.local.json

@@ -33,6 +33,17 @@ const DATETIME = new Intl.DateTimeFormat("es-CL", {
   hour12: false,
 });
 
+// Con año: para rastros que duran años (auditoría) o fechas lejanas, donde
+// "31-may, 20:00" a secas se lee como si fuera de este año.
+const DATETIME_YEAR = new Intl.DateTimeFormat("es-CL", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
 export const formatCLP = (pesos: number | bigint) => CLP.format(Number(pesos));
 export const formatNumber = (n: number) => NUMBER.format(n);
 export const formatDate = (d: Date | string) =>
@@ -43,6 +54,8 @@ export const formatTime = (d: Date | string) =>
   TIME.format(typeof d === "string" ? new Date(d) : d);
 export const formatDateTime = (d: Date | string) =>
   DATETIME.format(typeof d === "string" ? new Date(d) : d);
+export const formatDateTimeYear = (d: Date | string) =>
+  DATETIME_YEAR.format(typeof d === "string" ? new Date(d) : d);
 
 export function formatRelative(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
