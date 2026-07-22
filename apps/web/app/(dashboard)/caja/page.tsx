@@ -5,7 +5,7 @@ import { Lock } from "lucide-react";
 import { startOfDay, endOfDay } from "date-fns";
 import { scopedDb } from "@/lib/tenant";
 import { viewerScope } from "@/lib/page-guards";
-import { getTenantPlan, planHasProducts } from "@/lib/plan-features";
+import { getTenantPlan, planHasProducts, planHasGiftCards } from "@/lib/plan-features";
 import { PageHeader } from "@/components/page-header";
 import { CashRegister } from "@/components/sales/cash-register";
 
@@ -60,6 +60,7 @@ export default async function CajaPage() {
       include: {
         items: { select: { name: true, qty: true, unitPrice: true } },
         client: { select: { firstName: true, lastName: true } },
+        giftCard: { select: { code: true } },
       },
     }),
     db.barber.findMany({
@@ -80,11 +81,14 @@ export default async function CajaPage() {
         services={services}
         barbers={barbers.map((b) => ({ id: b.id, name: b.user.name }))}
         isManager={isManager}
+        giftCardsEnabled={planHasGiftCards(plan)}
         initialSales={sales.map((s) => ({
           id: s.id,
           createdAt: s.createdAt.toISOString(),
           total: s.total,
           paymentMethod: s.paymentMethod,
+          giftCardAmount: s.giftCardAmount,
+          giftCardCode: s.giftCard?.code ?? null,
           cancelledAt: s.cancelledAt ? s.cancelledAt.toISOString() : null,
           clientName: s.client ? `${s.client.firstName} ${s.client.lastName ?? ""}`.trim() : null,
           items: s.items,

@@ -15,6 +15,8 @@ import {
   Undo2,
   Package,
   Scissors,
+  Gift,
+  X,
 } from "lucide-react";
 import { Button, Card, Badge, Input, Label, NativeSelect, cn } from "@navaxa/ui";
 import { toast } from "sonner";
@@ -36,10 +38,18 @@ interface SaleRow {
   id: string;
   createdAt: string;
   total: number;
-  paymentMethod: "CASH" | "CARD" | "TRANSFER" | "OTHER";
+  paymentMethod: "CASH" | "CARD" | "TRANSFER" | "OTHER" | "GIFTCARD";
+  giftCardAmount: number;
+  giftCardCode: string | null;
   cancelledAt: string | null;
   clientName: string | null;
   items: { name: string; qty: number; unitPrice: number }[];
+}
+
+/** Giftcard validada contra el server, lista para aplicar al cobro. */
+interface AppliedCard {
+  code: string;
+  balance: number;
 }
 
 interface CartLine {
@@ -63,6 +73,7 @@ const METHOD_LABEL: Record<SaleRow["paymentMethod"], string> = {
   CARD: "Tarjeta",
   TRANSFER: "Transferencia",
   OTHER: "Otro",
+  GIFTCARD: "Giftcard",
 };
 
 export function CashRegister({
@@ -70,12 +81,14 @@ export function CashRegister({
   services,
   barbers,
   isManager,
+  giftCardsEnabled,
   initialSales,
 }: {
   products: ProductOpt[];
   services: ServiceOpt[];
   barbers: { id: string; name: string }[];
   isManager: boolean;
+  giftCardsEnabled: boolean;
   initialSales: SaleRow[];
 }) {
   const router = useRouter();
@@ -88,6 +101,9 @@ export function CashRegister({
   const [barberId, setBarberId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [busySale, setBusySale] = useState<string | null>(null);
+  const [cardCode, setCardCode] = useState("");
+  const [card, setCard] = useState<AppliedCard | null>(null);
+  const [checkingCard, setCheckingCard] = useState(false);
 
   const q = query.trim().toLowerCase();
   const filteredProducts = useMemo(
@@ -100,6 +116,31 @@ export function CashRegister({
   );
 
   const total = cart.reduce((s, l) => s + l.unitPrice * l.qty, 0);
+  // El saldo puede ser menor que la venta: cubre lo que alcanza y el resto se
+  // cobra con el método elegido. El server recalcula igual con el saldo real.
+  const covered = card ? Math.min(card.balance, total) : 0;
+  const remainder = total - covered;
+
+  async function applyCard() {
+    const code = cardCode.trim();
+    if (code.length < 4) return;
+    setCheckingCard(true);
+    try {
+      const res = await fetch(`/api/giftcards/lookup?code=${encodeURIComponent(code)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "No se pudo buscar");
+      const found = data.giftCard as { code: string; balance: number; status: string; expiresAt: string | null };
+      if (found.status === "CANCELLED") throw new Error("Esta giftcard fue anulada");
+      if (found.status === "REDEEMED" || found.balance <= 0) throw new Error("Esta giftcard ya no tiene saldo");
+      if (found.expiresAt && new Date(found.expiresAt) < new Date()) throw new Error("Esta giftcard está vencida");
+      setCard({ code: found.code, balance: found.balance });
+      setCardCode("");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setCheckingCard(false);
+    }
+  }
 
   function addLine(kind: "product" | "service", opt: ProductOpt | ServiceOpt) {
     setCart((prev) => {
@@ -151,13 +192,20 @@ export function CashRegister({
           ),
           paymentMethod: method,
           barberId: barberId || undefined,
+          giftCardCode: card?.code,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "No se pudo registrar");
-      toast.success(`Venta registrada — ${formatCLP(total)}`);
+      toast.success(
+        covered > 0
+          ? `Venta registrada — ${formatCLP(covered)} con giftcard${remainder > 0 ? ` y ${formatCLP(remainder)} en ${METHOD_LABEL[method]}` : ""}`
+          : `Venta registrada — ${formatCLP(total)}`,
+      );
       setCart([]);
       setBarberId("");
+      setCard(null);
+      setCardCode("");
       router.refresh();
     } catch (e) {
       toast.error((e as Error).message);
@@ -189,10 +237,15 @@ export function CashRegister({
   }
 
   const activeSales = initialSales.filter((s) => !s.cancelledAt);
-  const dayTotal = activeSales.reduce((s, v) => s + v.total, 0);
+  // El total del día es el dinero que entró hoy: lo pagado con giftcard se
+  // muestra aparte porque ya ingresó cuando se vendió la giftcard.
+  const dayTotal = activeSales.reduce((s, v) => s + v.total - v.giftCardAmount, 0);
+  const dayGiftCard = activeSales.reduce((s, v) => s + v.giftCardAmount, 0);
   const byMethod = METHODS.map((m) => ({
     ...m,
-    total: activeSales.filter((s) => s.paymentMethod === m.key).reduce((s, v) => s + v.total, 0),
+    total: activeSales
+      .filter((s) => s.paymentMethod === m.key)
+      .reduce((s, v) => s + v.total - v.giftCardAmount, 0),
   })).filter((m) => m.total > 0);
 
   return (
@@ -348,9 +401,62 @@ export function CashRegister({
 
           {cart.length > 0 && (
             <div className="mt-4 space-y-4 border-t border-border pt-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {giftCardsEnabled && (
                 <div className="space-y-1.5">
-                  <Label>Método de pago</Label>
+                  <Label htmlFor="sale-giftcard">Giftcard (opcional)</Label>
+                  {card ? (
+                    <div className="flex items-center gap-2 rounded-md border border-accent bg-accent/15 px-3 py-2 text-sm">
+                      <Gift className="h-4 w-4 shrink-0" aria-hidden />
+                      <span className="min-w-0 flex-1">
+                        <span className="font-medium tabular-nums">{card.code}</span>
+                        <span className="ml-2 text-muted-foreground tabular-nums">
+                          saldo {formatCLP(card.balance)}
+                        </span>
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 shrink-0 p-0"
+                        onClick={() => setCard(null)}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        <span className="sr-only">Quitar giftcard {card.code}</span>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        id="sale-giftcard"
+                        value={cardCode}
+                        onChange={(e) => setCardCode(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void applyCard();
+                          }
+                        }}
+                        placeholder="NVX-XXXXXX"
+                        autoComplete="off"
+                        className="flex-1 uppercase"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={applyCard}
+                        loading={checkingCard}
+                        disabled={cardCode.trim().length < 4}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className={cn("space-y-1.5", remainder === 0 && "opacity-50")}>
+                  <Label>
+                    {covered > 0 ? "Método del resto" : "Método de pago"}
+                  </Label>
                   <div className="grid grid-cols-2 gap-1.5">
                     {METHODS.map((m) => (
                       <button
@@ -358,8 +464,9 @@ export function CashRegister({
                         type="button"
                         onClick={() => setMethod(m.key)}
                         aria-pressed={method === m.key}
+                        disabled={remainder === 0}
                         className={cn(
-                          "flex items-center justify-center gap-1.5 rounded-md border px-2 py-2 text-xs font-medium transition-colors",
+                          "flex items-center justify-center gap-1.5 rounded-md border px-2 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed",
                           method === m.key
                             ? "border-accent bg-accent/15"
                             : "border-input text-muted-foreground hover:text-foreground",
@@ -390,15 +497,40 @@ export function CashRegister({
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total</span>
-                <span className="text-2xl font-medium tabular-nums tracking-tight">
-                  {formatCLP(total)}
-                </span>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total</span>
+                  <span
+                    className={cn(
+                      "font-medium tabular-nums tracking-tight",
+                      covered > 0 ? "text-base" : "text-2xl",
+                    )}
+                  >
+                    {formatCLP(total)}
+                  </span>
+                </div>
+                {covered > 0 && (
+                  <>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>Giftcard {card!.code}</span>
+                      <span className="tabular-nums">−{formatCLP(covered)}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border pt-1">
+                      <span className="text-sm text-muted-foreground">
+                        {remainder === 0 ? "Nada por cobrar" : "Por cobrar"}
+                      </span>
+                      <span className="text-2xl font-medium tabular-nums tracking-tight">
+                        {formatCLP(remainder)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
               <Button className="w-full" onClick={submit} disabled={submitting}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
-                Cobrar {formatCLP(total)}
+                {remainder === 0 && covered > 0
+                  ? `Cobrar con giftcard (${formatCLP(covered)})`
+                  : `Cobrar ${formatCLP(remainder)}`}
               </Button>
             </div>
           )}
@@ -414,7 +546,7 @@ export function CashRegister({
               {formatCLP(dayTotal)}
             </span>
           </div>
-          {byMethod.length > 0 && (
+          {(byMethod.length > 0 || dayGiftCard > 0) && (
             <div className="mt-2 flex flex-wrap gap-2">
               {byMethod.map((m) => (
                 <span
@@ -425,6 +557,15 @@ export function CashRegister({
                   {m.label}: {formatCLP(m.total)}
                 </span>
               ))}
+              {dayGiftCard > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs tabular-nums text-muted-foreground"
+                  title="Ya ingresó al vender la giftcard: no suma al total del día"
+                >
+                  <Gift className="h-3 w-3" />
+                  Giftcard: {formatCLP(dayGiftCard)}
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -446,6 +587,11 @@ export function CashRegister({
                     <Badge variant="outline" className="text-xs">
                       {METHOD_LABEL[s.paymentMethod]}
                     </Badge>
+                    {s.giftCardAmount > 0 && s.paymentMethod !== "GIFTCARD" && (
+                      <Badge variant="outline" className="text-xs">
+                        + giftcard {formatCLP(s.giftCardAmount)}
+                      </Badge>
+                    )}
                     {s.cancelledAt && (
                       <Badge variant="destructive" className="text-xs">
                         Anulada
@@ -455,6 +601,7 @@ export function CashRegister({
                   <div className="mt-0.5 truncate text-xs text-muted-foreground">
                     {s.items.map((i) => (i.qty > 1 ? `${i.qty}× ${i.name}` : i.name)).join(", ")}
                     {s.clientName ? ` · ${s.clientName}` : ""}
+                    {s.giftCardCode ? ` · ${s.giftCardCode}` : ""}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">

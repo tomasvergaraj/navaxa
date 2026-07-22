@@ -97,10 +97,11 @@ export default async function ReportesPage({
     }),
     // Tenant no lleva columna tenantId → prisma directo, no scopedDb.
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { plan: true } }),
-    // Ventas de caja del período (las anuladas no cuentan).
+    // Ventas de caja del período (las anuladas no cuentan). Lo pagado con
+    // giftcard se resta: ese ingreso ya se reconoció al emitirla.
     db.sale.aggregate({
       where: { createdAt: range, cancelledAt: null },
-      _sum: { total: true },
+      _sum: { total: true, giftCardAmount: true },
       _count: true,
     }),
   ]);
@@ -186,7 +187,7 @@ export default async function ReportesPage({
         <StatsCard label="Ingresos servicios" value={formatCLP(revenue)} icon={DollarSign} />
         <StatsCard
           label="Ventas caja"
-          value={formatCLP(salesAgg._sum.total ?? 0)}
+          value={formatCLP((salesAgg._sum.total ?? 0) - (salesAgg._sum.giftCardAmount ?? 0))}
           trend={salesAgg._count > 0 ? { value: `${salesAgg._count} venta${salesAgg._count === 1 ? "" : "s"}`, positive: true } : undefined}
           icon={ShoppingBag}
         />

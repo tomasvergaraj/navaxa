@@ -215,10 +215,13 @@ const saleItemSchema = z
 
 export const saleCreateSchema = z.object({
   items: z.array(saleItemSchema).min(1).max(30),
+  // GIFTCARD no se acepta desde el cliente: lo deriva el server cuando el saldo
+  // cubre el total. Acá viaja el método del resto en dinero.
   paymentMethod: z.enum(["CASH", "CARD", "TRANSFER", "OTHER"]),
   clientId: z.string().optional(),
   appointmentId: z.string().optional(),
   barberId: z.string().optional(),
+  giftCardCode: z.string().trim().min(4).max(20).optional(),
   note: z.string().trim().max(200).optional(),
 });
 

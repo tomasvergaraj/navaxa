@@ -1,5 +1,6 @@
 import { prisma, type SalePaymentMethod } from "@navaxa/db";
 import { ApiError } from "./api-errors";
+import { normalizeCode, redeemGiftCardTx, refundGiftCardTx } from "./giftcards";
 
 export interface SaleItemInput {
   productId?: string;
@@ -12,6 +13,10 @@ export interface SaleItemInput {
  * snapshot de nombre/precio en cada línea, descuenta stock con guard
  * (stock >= qty, si no la venta completa se rechaza) y deja el movimiento
  * en stock_movements.
+ *
+ * Con `giftCardCode`, el saldo de la giftcard cubre el total (o lo que alcance)
+ * y el resto se cobra con `paymentMethod`; el canje ocurre en la MISMA
+ * transacción que el stock, así que un fallo no consume saldo.
  */
 export async function createSale(input: {
   tenantId: string;
@@ -20,6 +25,7 @@ export async function createSale(input: {
   clientId?: string;
   appointmentId?: string;
   barberId?: string;
+  giftCardCode?: string;
   note?: string;
 }) {
   const productIds = input.items.filter((i) => i.productId).map((i) => i.productId!);
@@ -89,8 +95,24 @@ export async function createSale(input: {
   }
 
   const total = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
+  const code = input.giftCardCode ? normalizeCode(input.giftCardCode) : null;
 
   return prisma.$transaction(async (tx) => {
+    // Cuánto cubre la giftcard se decide DENTRO de la tx: el saldo leído acá es
+    // el mismo que valida el guard del canje más abajo.
+    let giftCardId: string | null = null;
+    let giftCardAmount = 0;
+    if (code && total > 0) {
+      const card = await tx.giftCard.findFirst({
+        where: { tenantId: input.tenantId, code },
+        select: { id: true, balance: true },
+      });
+      if (!card) throw new ApiError(404, "No existe una giftcard con ese código");
+      giftCardId = card.id;
+      giftCardAmount = Math.min(card.balance, total);
+      if (giftCardAmount <= 0) throw new ApiError(409, "Esta giftcard ya no tiene saldo");
+    }
+
     const sale = await tx.sale.create({
       data: {
         tenantId: input.tenantId,
@@ -98,7 +120,11 @@ export async function createSale(input: {
         appointmentId: appointment?.id ?? null,
         barberId: barber?.id ?? null,
         total,
-        paymentMethod: input.paymentMethod,
+        // Si la giftcard cubre todo, el método ES la giftcard; si cubre parte,
+        // el método guardado es el del vuelto en dinero.
+        paymentMethod: giftCardAmount >= total && giftCardAmount > 0 ? "GIFTCARD" : input.paymentMethod,
+        giftCardId,
+        giftCardAmount,
         note: input.note || null,
         items: {
           create: lines.map((l) => ({
@@ -135,13 +161,24 @@ export async function createSale(input: {
       });
     }
 
+    if (giftCardId && giftCardAmount > 0) {
+      await redeemGiftCardTx(tx, {
+        tenantId: input.tenantId,
+        giftCardId,
+        amount: giftCardAmount,
+        saleId: sale.id,
+        note: "Venta en caja",
+      });
+    }
+
     return sale;
   });
 }
 
 /**
- * Anula una venta: marca cancelledAt y devuelve el stock de los productos
- * (movimiento RETURN). Idempotente: una venta ya anulada no se re-procesa.
+ * Anula una venta: marca cancelledAt, devuelve el stock de los productos
+ * (movimiento RETURN) y devuelve a la giftcard el saldo que consumió.
+ * Idempotente: una venta ya anulada no se re-procesa.
  */
 export async function cancelSale(tenantId: string, saleId: string) {
   return prisma.$transaction(async (tx) => {
@@ -176,6 +213,16 @@ export async function cancelSale(tenantId: string, saleId: string) {
         },
       });
     }
+
+    if (sale!.giftCardId && sale!.giftCardAmount > 0) {
+      await refundGiftCardTx(tx, {
+        tenantId,
+        giftCardId: sale!.giftCardId,
+        amount: sale!.giftCardAmount,
+        saleId,
+      });
+    }
+
     return sale!;
   });
 }

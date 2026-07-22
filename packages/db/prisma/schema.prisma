@@ -656,6 +656,13 @@ model Sale {
   barberId      String? // quién vendió (comisión de productos, futuro)
   total         Int
   paymentMethod SalePaymentMethod
+  /// Parte del total pagada con saldo de giftcard. El resto (total -
+  /// giftCardAmount) se pagó con `paymentMethod`; si cubre todo, el método es
+  /// GIFTCARD. Se separa porque ese dinero YA entró al emitir la giftcard: los
+  /// totales de caja e ingresos suman `total - giftCardAmount` para no contarlo
+  /// dos veces.
+  giftCardAmount Int              @default(0)
+  giftCardId     String?
   note          String?
   cancelledAt   DateTime?
   createdAt     DateTime          @default(now())
@@ -664,7 +671,9 @@ model Sale {
   client      Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
   barber      Barber?      @relation(fields: [barberId], references: [id], onDelete: SetNull)
   appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  giftCard    GiftCard?    @relation(fields: [giftCardId], references: [id], onDelete: SetNull)
   items       SaleItem[]
+  giftCardRedemptions GiftCardRedemption[]
 
   @@index([tenantId, createdAt])
   @@map("sales")
@@ -675,6 +684,7 @@ enum SalePaymentMethod {
   CARD
   TRANSFER
   OTHER
+  GIFTCARD
 }
 
 /// Línea de venta con snapshot de nombre y precio (histórico estable aunque el
@@ -717,6 +727,7 @@ model GiftCard {
 
   tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   redemptions GiftCardRedemption[]
+  sales       Sale[]
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -730,16 +741,20 @@ enum GiftCardStatus {
   CANCELLED
 }
 
-/// Cada consumo de saldo de una giftcard (canje parcial o total).
+/// Cada consumo de saldo de una giftcard (canje parcial o total). El monto es
+/// negativo cuando se devuelve saldo (venta de caja anulada): el histórico
+/// queda completo y la suma de `amount` sigue siendo el consumo neto.
 model GiftCardRedemption {
   id         String   @id @default(cuid())
   tenantId   String
   giftCardId String
+  saleId     String? // venta de caja que consumió el saldo, si vino de ahí
   amount     Int
   note       String?
   createdAt  DateTime @default(now())
 
   giftCard GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
+  sale     Sale?    @relation(fields: [saleId], references: [id], onDelete: SetNull)
 
   @@index([giftCardId, createdAt])
   @@map("gift_card_redemptions")

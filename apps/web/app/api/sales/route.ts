@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { startOfDay, endOfDay } from "date-fns";
 import { scopedDb } from "@/lib/tenant";
 import { apiError, requireRole } from "@/lib/api-errors";
-import { assertProductsPlan } from "@/lib/plan-features";
+import { assertProductsPlan, assertGiftCardsPlan } from "@/lib/plan-features";
 import { saleCreateSchema } from "@/lib/validators";
 import { createSale } from "@/lib/sales";
 
@@ -47,6 +47,8 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
+    // Cobrar con giftcard es feature PRO+, aunque la caja arranque en Starter.
+    if (parsed.data.giftCardCode) await assertGiftCardsPlan(tenantId);
     const sale = await createSale({ tenantId, ...parsed.data });
     return NextResponse.json({ sale }, { status: 201 });
   } catch (e) {
