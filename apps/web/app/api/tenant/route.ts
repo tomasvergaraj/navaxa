@@ -39,10 +39,12 @@ export async function PATCH(req: Request) {
     // null (limpiar) debe llegar a Prisma como null; ?.toLowerCase() lo volvía
     // undefined y la columna nunca se limpiaba.
     const brandColor = typeof brandRaw === "string" ? brandRaw.toLowerCase() : brandRaw;
-    // GA/Pixel y color de marca son features PRO+: guardar un valor nuevo exige
+    const accentRaw = emptyToNull(d.brandAccentColor);
+    const brandAccentColor = typeof accentRaw === "string" ? accentRaw.toLowerCase() : accentRaw;
+    // GA/Pixel y colores de marca son features PRO+: guardar un valor nuevo exige
     // el plan (quitar o dejar igual siempre se permite; si el plan baja, el
     // storefront deja de aplicarlo aunque el valor quede guardado).
-    if (gaMeasurementId || metaPixelId || brandColor) {
+    if (gaMeasurementId || metaPixelId || brandColor || brandAccentColor) {
       const t = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { plan: true } });
       if (t?.plan !== "PRO" && t?.plan !== "ENTERPRISE") {
         return NextResponse.json(
@@ -70,6 +72,7 @@ export async function PATCH(req: Request) {
         gaMeasurementId,
         metaPixelId,
         brandColor,
+        brandAccentColor,
         marketplaceVisible: d.marketplaceVisible,
         paymentsEnabled: d.paymentsEnabled,
         depositType: d.depositType ? (d.depositType as DepositType) : undefined,

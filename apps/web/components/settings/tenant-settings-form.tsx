@@ -34,6 +34,7 @@ interface Tenant {
   gaMeasurementId: string | null;
   metaPixelId: string | null;
   brandColor: string | null;
+  brandAccentColor: string | null;
   marketplaceVisible: boolean;
 }
 
@@ -73,6 +74,7 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
     gaMeasurementId: tenant.gaMeasurementId ?? "",
     metaPixelId: tenant.metaPixelId ?? "",
     brandColor: tenant.brandColor ?? "",
+    brandAccentColor: tenant.brandAccentColor ?? "",
     marketplaceVisible: tenant.marketplaceVisible,
   });
   const [saving, setSaving] = useState(false);
@@ -225,27 +227,55 @@ export function TenantSettingsForm({ tenant }: { tenant: Tenant }) {
       </div>
 
       <div className="border-t border-border pt-5">
-        <h3 className="mb-1 text-sm font-medium">Color de marca del sitio</h3>
+        <h3 className="mb-1 text-sm font-medium">Colores de marca del sitio</h3>
         <p className="mb-3 text-xs text-muted-foreground">
-          Pinta los botones de tu página de reservas con el color de tu barbería. El texto se ajusta
-          solo para que siempre se lea bien.
+          Pinta tu página de reservas con los colores de tu barbería: el principal va en los botones
+          y el acento en los realces (opción elegida, estado de la reserva, fondo del logo). El texto
+          se ajusta solo para que siempre se lea bien.
         </p>
         {tenant.plan === "PRO" || tenant.plan === "ENTERPRISE" ? (
-          <div className="flex flex-wrap items-center gap-4">
-            <input
-              type="color"
-              aria-label="Color de marca"
-              value={/^#[0-9a-fA-F]{6}$/.test(form.brandColor) ? form.brandColor : "#0d0f13"}
-              onChange={(e) => set({ brandColor: e.target.value })}
-              className="h-10 w-14 cursor-pointer rounded-md border border-input bg-background p-1"
-            />
-            <BrandPreview color={form.brandColor} />
-            {form.brandColor && (
-              <Button type="button" variant="ghost" size="sm" onClick={() => set({ brandColor: "" })}>
-                <X className="h-4 w-4" />
-                Usar paleta navaxa
-              </Button>
-            )}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-4">
+              <input
+                type="color"
+                aria-label="Color principal"
+                value={/^#[0-9a-fA-F]{6}$/.test(form.brandColor) ? form.brandColor : "#0d0f13"}
+                onChange={(e) => set({ brandColor: e.target.value })}
+                className="h-10 w-14 cursor-pointer rounded-md border border-input bg-background p-1"
+              />
+              <BrandPreview color={form.brandColor} />
+              {form.brandColor && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => set({ brandColor: "" })}>
+                  <X className="h-4 w-4" />
+                  Usar el principal de navaxa
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <input
+                type="color"
+                aria-label="Color de acento"
+                value={
+                  /^#[0-9a-fA-F]{6}$/.test(form.brandAccentColor)
+                    ? form.brandAccentColor
+                    : "#c9a961"
+                }
+                onChange={(e) => set({ brandAccentColor: e.target.value })}
+                className="h-10 w-14 cursor-pointer rounded-md border border-input bg-background p-1"
+              />
+              <AccentPreview color={form.brandAccentColor} />
+              {form.brandAccentColor && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => set({ brandAccentColor: "" })}
+                >
+                  <X className="h-4 w-4" />
+                  Usar el acento de navaxa
+                </Button>
+              )}
+            </div>
           </div>
         ) : (
           <p className="flex items-center gap-2 rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
@@ -341,6 +371,20 @@ function BrandPreview({ color }: { color: string }) {
       style={bg ? { backgroundColor: bg, color: fg } : undefined}
     >
       {valid ? "Reservar hora" : "Elige un color"}
+    </span>
+  );
+}
+
+function AccentPreview({ color }: { color: string }) {
+  const valid = /^#[0-9a-fA-F]{6}$/.test(color);
+  // El acento se usa siempre como tinte (bg-accent/15) con texto normal encima,
+  // así que la muestra replica esa transparencia en vez del color plano.
+  return (
+    <span
+      className="inline-flex h-10 items-center rounded-full px-4 text-sm font-medium text-foreground"
+      style={valid ? { backgroundColor: `${color}26` } : undefined}
+    >
+      {valid ? "Reserva agendada" : "Elige un acento"}
     </span>
   );
 }

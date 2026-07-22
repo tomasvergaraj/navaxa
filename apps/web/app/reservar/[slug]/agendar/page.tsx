@@ -75,7 +75,11 @@ export default async function AgendarPage({
   return (
     <div
       className="min-h-screen bg-muted/30"
-      style={planHasBranding(tenant.plan) ? brandStyle(tenant.brandColor) : undefined}
+      style={
+        planHasBranding(tenant.plan)
+          ? brandStyle(tenant.brandColor, tenant.brandAccentColor)
+          : undefined
+      }
     >
       <TenantAnalytics tenant={tenant} />
       <nav className="border-b border-border bg-card">

@@ -55,16 +55,39 @@ export function readableForegroundTriple(hex: string): string {
 }
 
 /**
- * Variables CSS para pintar los CTA del storefront con el color del tenant.
+ * Variables CSS para pintar los CTA del storefront con los colores del tenant.
  * Se aplican en un ancestro del árbol público (inline style): sobreescriben
- * `--primary`/`--primary-foreground` solo ahí, sin tocar el dashboard.
- * Devuelve undefined si no hay color o es inválido (usa la paleta navaxa).
+ * `--primary`/`--accent` solo ahí, sin tocar el dashboard.
+ *
+ * `accentHex` es el segundo color de marca: tiñe los realces (chips de estado,
+ * opción seleccionada del wizard, tile del logo, degradado de portada). No toca
+ * `--accent-ink` a propósito: ese token necesita valores distintos en claro y
+ * oscuro y un style inline no puede llevar media query, así que las estrellas y
+ * el resto del texto sobre acento siguen con el dorado del sistema (que ya es
+ * AA en ambos temas).
+ *
+ * Devuelve undefined si no hay ningún color válido (usa la paleta navaxa).
  */
-export function brandStyle(hex: string | null | undefined): CSSProperties | undefined {
-  if (!hex || !isHexColor(hex)) return undefined;
+export function brandStyle(
+  hex: string | null | undefined,
+  accentHex?: string | null,
+): CSSProperties | undefined {
+  const primary = hex && isHexColor(hex) ? hex : null;
+  const accent = accentHex && isHexColor(accentHex) ? accentHex : null;
+  if (!primary && !accent) return undefined;
   return {
-    ["--primary" as string]: hexToHslTriple(hex),
-    ["--primary-foreground" as string]: readableForegroundTriple(hex),
-    ["--ring" as string]: hexToHslTriple(hex),
+    ...(primary
+      ? {
+          ["--primary" as string]: hexToHslTriple(primary),
+          ["--primary-foreground" as string]: readableForegroundTriple(primary),
+          ["--ring" as string]: hexToHslTriple(primary),
+        }
+      : {}),
+    ...(accent
+      ? {
+          ["--accent" as string]: hexToHslTriple(accent),
+          ["--accent-foreground" as string]: readableForegroundTriple(accent),
+        }
+      : {}),
   } as CSSProperties;
 }

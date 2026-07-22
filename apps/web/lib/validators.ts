@@ -174,6 +174,13 @@ export const tenantUpdateSchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/, "Color inválido (formato #RRGGBB)")
     .optional()
     .or(z.literal("")),
+  // Color de acento del storefront (PRO+); vacío = dorado navaxa.
+  brandAccentColor: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color inválido (formato #RRGGBB)")
+    .optional()
+    .or(z.literal("")),
   marketplaceVisible: z.boolean().optional(),
   bookingEnabled: z.boolean().optional(),
   bookingNoticeMin: z.coerce.number().int().min(0).max(10080).optional(), // hasta 7 días

@@ -62,6 +62,7 @@ model Tenant {
   metaPixelId     String? // Meta Pixel, numérico
   // Personalización del sitio público (plan PRO+).
   brandColor        String? // color de marca en hex (#RRGGBB) para los CTA del storefront
+  brandAccentColor  String? // color de acento en hex (#RRGGBB) para realces del storefront
   marketplaceVisible Boolean @default(true) // listarse en el índice público /reservar
   trialEndsAt DateTime?
   createdAt   DateTime  @default(now())
