@@ -1,0 +1,66 @@
+# sandbox.navaxa.cl — entorno de PRUEBA de navaxa (contenedor navaxa-sandbox-web,
+# 127.0.0.1:3005). Base de datos y volumen propios; la pasarela apunta al sandbox
+# de Transbank (webpay3gint), así que los cobros son simulados.
+#
+# Instalar:
+#   cp deploy/nginx/navaxa-sandbox         /etc/nginx/sites-available/navaxa-sandbox
+#   cp deploy/nginx/navaxa-sandbox-proxy.conf /etc/nginx/snippets/
+#   ln -s /etc/nginx/sites-available/navaxa-sandbox /etc/nginx/sites-enabled/
+#   nginx -t && systemctl reload nginx
+#
+# Cert: el Origin de Cloudflare de navaxa.cl es wildcard (*.navaxa.cl), sirve tal cual.
+# DNS: requiere un registro sandbox.navaxa.cl → este VPS, PROXIED en Cloudflare
+# (si no está proxied, el guard $cf_edge de abajo devuelve 403 a todo).
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name sandbox.navaxa.cl;
+    return 301 https://sandbox.navaxa.cl$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name sandbox.navaxa.cl;
+
+    ssl_certificate     /etc/ssl/cloudflare/navaxa.cl.pem;
+    ssl_certificate_key /etc/ssl/cloudflare/navaxa.cl.key;
+
+    ssl_protocols             TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache         shared:SSL:10m;
+    ssl_session_timeout       1d;
+
+    client_max_body_size 9m;
+
+    # Mismo candado que producción: sin esto se le puede pegar directo a la IP
+    # del VPS con Host: sandbox.navaxa.cl e inventar CF-Connecting-IP.
+    include /etc/nginx/snippets/cloudflare-realip.conf;
+    if ($cf_edge = 0) {
+        return 403;
+    }
+
+    # Es una copia de la app con datos falsos: fuera de los buscadores.
+    add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+
+    location = /robots.txt {
+        add_header Content-Type text/plain;
+        return 200 "User-agent: *\nDisallow: /\n";
+    }
+
+    # El return de Webpay llega como POST cross-site desde Transbank. Se deja sin
+    # basic auth para no depender de que el browser reenvíe el Authorization en
+    # ese salto: el endpoint igual exige un `token_ws` que solo existe si la
+    # transacción se creó desde acá, y sin él no hace nada.
+    location /api/public/webpay/ {
+        auth_basic off;
+        include /etc/nginx/snippets/navaxa-sandbox-proxy.conf;
+    }
+
+    location / {
+        auth_basic           "navaxa sandbox";
+        auth_basic_user_file /etc/nginx/.htpasswd-navaxa-sandbox;
+        include /etc/nginx/snippets/navaxa-sandbox-proxy.conf;
+    }
+}

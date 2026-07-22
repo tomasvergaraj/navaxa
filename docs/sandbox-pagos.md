@@ -30,22 +30,44 @@ prueba" no puede existir.
 
 ## Cómo se navega
 
-No se expone público a propósito: túnel SSH desde tu máquina.
+En **https://sandbox.navaxa.cl**, detrás de basic auth. El contenedor solo
+escucha en `127.0.0.1:3005`; quien lo publica es nginx.
 
-```bash
-ssh -L 3005:127.0.0.1:3005 <vps>
-# luego abrir http://localhost:3005
-```
+Montaje (una vez):
 
-Por eso `NEXT_PUBLIC_APP_URL` es `http://localhost:3005`: el `return_url` que
-Webpay usa lo abre **tu** navegador, así que resolver `localhost` alcanza y no
-hace falta DNS ni un vhost en nginx.
+1. **DNS**: registro `sandbox.navaxa.cl` → este VPS en Cloudflare, **proxied**.
+   Si no está proxied, el guard `$cf_edge` del vhost responde 403 a todo.
+2. **nginx**:
+   ```bash
+   cp deploy/nginx/navaxa-sandbox            /etc/nginx/sites-available/navaxa-sandbox
+   cp deploy/nginx/navaxa-sandbox-proxy.conf /etc/nginx/snippets/
+   ln -s /etc/nginx/sites-available/navaxa-sandbox /etc/nginx/sites-enabled/
+   nginx -t && systemctl reload nginx
+   ```
+   El cert Origin de Cloudflare de `navaxa.cl` es wildcard, cubre el subdominio.
+3. **Basic auth**: el `.htpasswd` vive en `/etc/nginx/.htpasswd-navaxa-sandbox`.
+   Regenerar la clave:
+   ```bash
+   printf 'navaxa:%s\n' "$(openssl passwd -apr1 'CLAVE_NUEVA')" \
+     > /etc/nginx/.htpasswd-navaxa-sandbox
+   ```
+4. **Link en /admin**: setear `SANDBOX_URL=https://sandbox.navaxa.cl` en el `.env`
+   de producción y `docker compose up -d web`. Sin esa variable el panel queda
+   igual que antes (la tarjeta no se renderiza).
 
-Consecuencia: el sandbox corre sobre http. Auth.js nombra su cookie de sesión
-según el protocolo de `AUTH_URL`, y el middleware la buscaba según `NODE_ENV`
-(siempre `production` en la imagen) — con eso toda sesión se veía anónima en
-http. Ya está alineado con Auth.js en [middleware.ts](../apps/web/middleware.ts);
-en producción `AUTH_URL` es https y el valor no cambió.
+El vhost sirve `robots.txt` con `Disallow: /` y `X-Robots-Tag: noindex`: es una
+copia de la app con datos falsos, no debe indexarse. El return de Webpay
+(`/api/public/webpay/`) va **sin** basic auth, porque llega como POST cross-site
+desde Transbank; ese endpoint igual exige un `token_ws` que solo existe si la
+transacción se creó acá.
+
+Alternativa sin DNS: túnel SSH (`ssh -L 3005:127.0.0.1:3005 <vps>`), volviendo
+`AUTH_URL`/`NEXT_PUBLIC_APP_URL` a `http://localhost:3005`. Ojo con eso: Auth.js
+nombra su cookie de sesión según el protocolo de `AUTH_URL`, y el middleware la
+buscaba según `NODE_ENV` (siempre `production` en la imagen), así que en http
+toda sesión se veía anónima. Ya está alineado con Auth.js en
+[middleware.ts](../apps/web/middleware.ts); en producción `AUTH_URL` es https y
+el valor no cambió.
 
 ## Tarjetas de prueba de Transbank
 

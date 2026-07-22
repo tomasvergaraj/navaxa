@@ -5,15 +5,16 @@
 # Levantar:
 #   docker compose -p navaxa-sandbox -f docker-compose.sandbox.yml up -d --build
 #
-# Se navega por túnel SSH desde tu máquina (NO se expone público a propósito):
+# Se publica en https://sandbox.navaxa.cl (vhost en deploy/nginx/navaxa-sandbox,
+# detrás de basic auth y con noindex). El contenedor solo escucha en
+# 127.0.0.1:3005; quien lo alcanza es nginx. Alternativa sin DNS, por túnel SSH:
 #   ssh -L 3005:127.0.0.1:3005 <vps>   →   http://localhost:3005
-# Por eso NEXT_PUBLIC_APP_URL es http://localhost:3005: el `return_url` de Webpay
-# lo abre TU navegador, así que resolver localhost basta y no hace falta DNS.
+# (en ese caso hay que volver las URL de abajo a http://localhost:3005).
 #
 # Requiere un `.env.sandbox` (gitignoreado) con al menos:
 #   AUTH_SECRET=...            (cualquiera, es un entorno de prueba)
-#   NEXTAUTH_URL=http://localhost:3005
-#   NEXT_PUBLIC_APP_URL=http://localhost:3005
+#   NEXTAUTH_URL=https://sandbox.navaxa.cl
+#   NEXT_PUBLIC_APP_URL=https://sandbox.navaxa.cl
 #   PAYMENT_PROVIDER=webpay
 #   WEBPAY_ENV=integration
 #   WEBPAY_ALLOW_INTEGRATION=1   ← jamás en el .env de producción
@@ -43,7 +44,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        NEXT_PUBLIC_APP_URL: http://localhost:3005
+        NEXT_PUBLIC_APP_URL: https://sandbox.navaxa.cl
     container_name: navaxa-sandbox-web
     restart: unless-stopped
     depends_on:
