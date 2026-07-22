@@ -37,8 +37,9 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Content-Security-Policy",
-            // OJO con `form-action`: los checkouts de Webpay (/pagar, /facturar y
-            // la compra de giftcard) hacen POST NATIVO del formulario a
+            // OJO con `form-action`: los checkouts de Webpay (/pagar,
+            // /pagar/cita, /facturar y la compra de giftcard) hacen POST NATIVO
+            // del formulario a
             // Transbank, así que con `'self'` a secas el navegador bloquea el
             // submit EN SILENCIO — el botón queda cargando para siempre y no
             // hay forma de pagar. Pasó exactamente eso entre el 2026-07-20 y el

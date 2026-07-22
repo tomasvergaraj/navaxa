@@ -24,6 +24,7 @@ export async function register() {
     processReminders1h,
     processInactiveRecalls,
     expirePendingPayments,
+    expirePendingAppointmentCharges,
     processSubscriptionRenewals,
     processBirthdays,
   } = await import("@/lib/notifications/jobs");
@@ -47,6 +48,12 @@ export async function register() {
       if (e.expired) console.log(`[cron] abonos expirados — ${e.expired}`);
     } catch (e) {
       console.error("[cron] error expirando abonos:", (e as Error).message);
+    }
+    try {
+      const c = await expirePendingAppointmentCharges();
+      if (c.expired) console.log(`[cron] enlaces de cobro expirados — ${c.expired}`);
+    } catch (e) {
+      console.error("[cron] error expirando enlaces de cobro:", (e as Error).message);
     }
   }, intervalMs);
 

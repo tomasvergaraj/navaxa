@@ -185,11 +185,18 @@ async function renderDay(
         status: true,
         totalPrice: true,
         notes: true,
-        client: { select: { id: true, firstName: true, lastName: true } },
+        client: { select: { id: true, firstName: true, lastName: true, phone: true } },
         services: { select: { service: { select: { name: true, color: true } } } },
         // Saldo pendiente: abono online + cobros ya registrados contra la cita.
         payment: { select: { amount: true, status: true } },
         sales: { where: { cancelledAt: null }, select: { total: true } },
+        // Link/QR de cobro circulando: se avisa en el detalle para no cobrar dos veces.
+        charges: {
+          where: { status: "PENDING", expiresAt: { gt: new Date() } },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { amount: true },
+        },
       },
     }),
     prisma.barberSchedule.findMany({

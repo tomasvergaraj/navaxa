@@ -1,6 +1,10 @@
 import { prisma, type SalePaymentMethod } from "@navaxa/db";
 import { ApiError } from "./api-errors";
-import { computeAppointmentBalance, isChargeableStatus } from "./appointment-balance";
+import {
+  balanceItemLabel,
+  computeAppointmentBalance,
+  isChargeableStatus,
+} from "./appointment-balance";
 
 /**
  * Cobro del saldo pendiente de una cita, en el local.
@@ -67,8 +71,7 @@ export async function chargeAppointmentBalance(input: {
       throw new ApiError(400, "El monto supera el saldo pendiente de la cita.");
     }
 
-    const serviceNames = appointment.services.map((s) => s.service.name).join(", ");
-    const label = serviceNames ? `Saldo: ${serviceNames}` : "Saldo de la cita";
+    const label = balanceItemLabel(appointment.services.map((s) => s.service.name));
 
     const sale = await tx.sale.create({
       data: {
@@ -80,11 +83,24 @@ export async function chargeAppointmentBalance(input: {
         paymentMethod: input.paymentMethod,
         kind: "APPOINTMENT_BALANCE",
         note: input.note,
-        items: { create: [{ name: label.slice(0, 120), unitPrice: input.amount, qty: 1 }] },
+        items: { create: [{ name: label, unitPrice: input.amount, qty: 1 }] },
       },
       select: { id: true, total: true, paymentMethod: true, createdAt: true },
     });
 
-    return { sale, balance: balance - input.amount };
+    const remaining = balance - input.amount;
+
+    // Si este cobro salda la cita, los links/QR de pago online que estuvieran
+    // circulando quedan sin objeto: se anulan acá para que el cliente no pague
+    // por segunda vez algo ya cobrado en el local (el sobrepago no se puede
+    // rechazar después: Transbank ya movió la plata).
+    if (remaining <= 0) {
+      await tx.appointmentCharge.updateMany({
+        where: { appointmentId: appointment.id, status: "PENDING" },
+        data: { status: "EXPIRED" },
+      });
+    }
+
+    return { sale, balance: remaining };
   });
 }

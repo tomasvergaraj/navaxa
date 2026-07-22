@@ -244,6 +244,11 @@ export const appointmentChargeSchema = z.object({
   note: z.string().trim().max(200).optional(),
 });
 
+/** Link/QR para que el cliente pague el saldo desde su teléfono. */
+export const appointmentChargeLinkSchema = z.object({
+  amount: z.coerce.number().int().min(1, "El monto debe ser mayor a cero"),
+});
+
 // ---- Gift cards ----
 export const giftCardIssueSchema = z.object({
   amount: z.coerce.number().int().min(1000, "Mínimo $1.000").max(1_000_000),

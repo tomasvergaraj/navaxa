@@ -77,6 +77,12 @@ export const TOKEN_TTL = {
   /** Checkout de plan: el dueño lo usa de inmediato (además atado a sesión). */
   bill: 24 * 60 * 60,
   /**
+   * Link/QR para que el cliente pague el saldo de su cita. Holgado respecto del
+   * `AppointmentCharge.expiresAt` (el guard real), para que un enlace vencido
+   * muestre «expiró» en vez de «enlace inválido».
+   */
+  apptCharge: 7 * 24 * 60 * 60,
+  /**
    * Compra pública de giftcard. Largo a propósito: el comprador vuelve a este
    * enlace para releer el código que compró. El guard del cobro es
    * GiftCardOrder.expiresAt, no este TTL.

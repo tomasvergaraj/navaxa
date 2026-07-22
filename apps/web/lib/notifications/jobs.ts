@@ -102,6 +102,23 @@ export async function expirePendingPayments() {
 }
 
 /**
+ * Vence los enlaces/QR de cobro del saldo que nadie pagó. Acá no hay nada que
+ * liberar: la deuda sigue viva y el dueño puede cobrarla en el local o emitir un
+ * enlace nuevo.
+ *
+ * `updateMany` plano a propósito: este archivo lo alcanza `instrumentation.ts`,
+ * que webpack bundlea también para Edge, y `lib/appointment-charge-links.ts`
+ * arrastra `node:crypto` (firma de tokens) que ahí no resuelve.
+ */
+export async function expirePendingAppointmentCharges() {
+  const res = await prisma.appointmentCharge.updateMany({
+    where: { status: "PENDING", expiresAt: { lt: new Date() } },
+    data: { status: "EXPIRED" },
+  });
+  return { expired: res.count };
+}
+
+/**
  * Procesa las suscripciones cuyo período venció. Las marcadas para cancelar
  * bajan a FREE; el resto quedan PAST_DUE (con pasarela real se intentaría cobrar
  * de nuevo aquí). Pensado para correr cada ~hora.

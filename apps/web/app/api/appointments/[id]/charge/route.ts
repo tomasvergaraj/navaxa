@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import QRCode from "qrcode";
 import { scopedDb } from "@/lib/tenant";
 import { apiError, requireRole } from "@/lib/api-errors";
 import { appointmentChargeSchema } from "@/lib/validators";
 import { chargeAppointmentBalance } from "@/lib/appointment-charges";
 import { computeAppointmentBalance } from "@/lib/appointment-balance";
+import { findPendingChargeLink } from "@/lib/appointment-charge-links";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +15,10 @@ const CASHIER_ROLES = ["OWNER", "ADMIN", "STAFF"] as const;
 // Sin gate de plan a propósito: un tenant FREE con abonos activados quedaría
 // sin ninguna forma de cobrar el saldo si esto exigiera plan de productos.
 
-/** Saldo pendiente de la cita + los cobros ya hechos. */
+/** Saldo pendiente de la cita, los cobros ya hechos y el link vigente si lo hay. */
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   try {
-    await requireRole(CASHIER_ROLES);
+    const { tenantId } = await requireRole(CASHIER_ROLES);
     const appt = await scopedDb().appointment.findFirst({
       where: { id: params.id },
       select: {
@@ -38,7 +40,20 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       payment: appt.payment,
       sales: appt.sales,
     });
-    return NextResponse.json({ ...balance, status: appt.status, sales: appt.sales });
+
+    // Link de cobro online vigente: el diálogo lo muestra tal cual en vez de
+    // emitir un segundo QR por la misma deuda.
+    const link = await findPendingChargeLink(tenantId, params.id);
+    const pendingLink = link
+      ? {
+          url: link.url,
+          amount: link.amount,
+          expiresAt: link.expiresAt,
+          qr: await QRCode.toDataURL(link.url, { width: 480, margin: 1 }),
+        }
+      : null;
+
+    return NextResponse.json({ ...balance, status: appt.status, sales: appt.sales, pendingLink });
   } catch (e) {
     return apiError(e);
   }

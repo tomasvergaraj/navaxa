@@ -3,7 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Pencil, Trash2, ExternalLink, Clock, User, Scissors, Wallet } from "lucide-react";
+import {
+  Loader2,
+  Pencil,
+  Trash2,
+  ExternalLink,
+  Clock,
+  User,
+  Scissors,
+  Wallet,
+  QrCode,
+} from "lucide-react";
 import {
   Button,
   Input,
@@ -33,6 +43,7 @@ import {
   type QuickAction,
 } from "@/components/agenda/appointment-quick-actions";
 import { ChargeBalanceDialog } from "@/components/agenda/charge-balance-dialog";
+import { ChargeLinkDialog } from "@/components/agenda/charge-link-dialog";
 
 type Props = {
   block: GridBlock | null;
@@ -64,6 +75,7 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
   const [cancelling, setCancelling] = useState(false);
   const [acting, setActing] = useState<AppointmentStatus | null>(null);
   const [charging, setCharging] = useState(false);
+  const [linking, setLinking] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
 
   const [status, setStatus] = useState<AppointmentStatus>(block?.status ?? AppointmentStatus.SCHEDULED);
@@ -271,16 +283,36 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
                           <dd className="tabular-nums">{formatCLP(block.balance)}</dd>
                         </div>
                       </dl>
+                      {block.pendingLinkAmount !== null && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          Hay un enlace de cobro por {formatCLP(block.pendingLinkAmount)} esperando
+                          pago del cliente.
+                        </p>
+                      )}
                       {canCharge && (
-                        <Button
-                          size="sm"
-                          className="mt-2 w-full"
-                          onClick={() => setCharging(true)}
-                          disabled={acting !== null}
-                        >
-                          <Wallet className="h-4 w-4" />
-                          Cobrar saldo
-                        </Button>
+                        <div className="mt-2 space-y-1.5">
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            onClick={() => setCharging(true)}
+                            disabled={acting !== null}
+                          >
+                            <Wallet className="h-4 w-4" />
+                            Cobrar saldo
+                          </Button>
+                          {/* Pago del cliente desde su propio teléfono: el saldo
+                              se registra solo cuando la pasarela confirma. */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setLinking(true)}
+                            disabled={acting !== null}
+                          >
+                            <QrCode className="h-4 w-4" />
+                            Cobrar por link o QR
+                          </Button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -457,6 +489,16 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
           open={charging}
           onOpenChange={setCharging}
           onCharged={onClose}
+        />
+      )}
+      {block && (
+        <ChargeLinkDialog
+          appointmentId={block.id}
+          clientName={block.clientName}
+          clientPhone={block.clientPhone}
+          balance={block.balance}
+          open={linking}
+          onOpenChange={setLinking}
         />
       )}
     </Dialog>

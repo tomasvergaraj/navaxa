@@ -83,6 +83,7 @@ model Tenant {
   sales         Sale[]
   giftCards     GiftCard[]
   giftCardOrders GiftCardOrder[]
+  appointmentCharges AppointmentCharge[]
   subscription  Subscription?
 
   @@map("tenants")
@@ -401,6 +402,7 @@ model Appointment {
   payment    Payment?
   review     Review?
   sales      Sale[]
+  charges    AppointmentCharge[]
 
   @@index([tenantId, startsAt])
   @@index([barberId, startsAt])
@@ -455,6 +457,41 @@ enum PaymentStatus {
   FAILED
   EXPIRED
   REFUNDED
+}
+
+/// Cobro online del saldo pendiente de una cita: el dueño genera un link/QR y el
+/// cliente paga desde su propio teléfono.
+///
+/// Por qué un modelo aparte de `Payment`: ese cuelga de la cita con
+/// `appointmentId @unique` (el abono de la reserva) y una cita puede necesitar
+/// varios cobros del saldo. Mismo motivo por el que existe `GiftCardOrder`.
+///
+/// Al confirmarse crea una `Sale` con `kind: APPOINTMENT_BALANCE` — cobranza, no
+/// ingreso nuevo: ese ya se reconoció con el `totalPrice` de la cita completada.
+model AppointmentCharge {
+  id            String        @id @default(cuid())
+  tenantId      String
+  appointmentId String
+  amount        Int // CLP entero
+  currency      String        @default("CLP")
+  status        PaymentStatus @default(PENDING)
+  provider      String        @default("mock")
+  providerRef   String? // token_ws de Webpay
+  expiresAt     DateTime // vence el enlace, no la deuda: la cita no se libera
+  paidAt        DateTime?
+  saleId        String?       @unique // la venta creada al confirmar el cobro
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  sale        Sale?       @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([appointmentId, status])
+  @@index([providerRef])
+  @@index([status, expiresAt])
+  @@map("appointment_charges")
 }
 
 model AppointmentService {
@@ -686,6 +723,7 @@ model Sale {
   giftCard    GiftCard?    @relation(fields: [giftCardId], references: [id], onDelete: SetNull)
   items       SaleItem[]
   giftCardRedemptions GiftCardRedemption[]
+  appointmentCharge   AppointmentCharge?
 
   @@index([tenantId, createdAt])
   @@index([tenantId, appointmentId])

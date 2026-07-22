@@ -49,6 +49,15 @@ export function computeAppointmentBalance(input: {
 }
 
 /**
+ * Etiqueta del ítem de la venta que registra un cobro del saldo. Compartida por
+ * el cobro manual y el cobro online para que ambos se lean igual en la caja.
+ */
+export function balanceItemLabel(serviceNames: string[]): string {
+  const names = serviceNames.filter(Boolean).join(", ");
+  return (names ? `Saldo: ${names}` : "Saldo de la cita").slice(0, 120);
+}
+
+/**
  * Estados en los que NO se cobra el saldo: la cita anulada no se cobra, y
  * PENDING_PAYMENT sigue dentro de la ventana del abono (su hora todavía se
  * puede liberar por expiración).

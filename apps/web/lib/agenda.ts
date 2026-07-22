@@ -43,12 +43,14 @@ export interface RawAppointment {
   status: AppointmentStatus;
   totalPrice: number;
   notes: string | null;
-  client: { id: string; firstName: string; lastName: string | null };
+  client: { id: string; firstName: string; lastName: string | null; phone?: string | null };
   services: { service: { name: string; color: string | null } }[];
   /** Abono online, si lo hubo. Alimenta el saldo pendiente. */
   payment?: { amount: number; status: string } | null;
   /** Cobros ya registrados contra la cita (el llamador filtra las anuladas). */
   sales?: { total: number }[] | null;
+  /** Links/QR de cobro vigentes (el llamador filtra por estado y vencimiento). */
+  charges?: { amount: number }[] | null;
 }
 
 export interface GridBlock {
@@ -62,6 +64,8 @@ export interface GridBlock {
   endsAtIso: string;
   status: AppointmentStatus;
   clientName: string;
+  /** Para compartir el link de cobro por WhatsApp (deep link wa.me). */
+  clientPhone: string | null;
   serviceNames: string[];
   color: string | null;
   totalPrice: number;
@@ -69,6 +73,12 @@ export interface GridBlock {
   paidAmount: number;
   /** Lo que falta por cobrar en el local. 0 si está saldada. */
   balance: number;
+  /**
+   * Monto del link/QR de cobro que está circulando, si lo hay. Se muestra para
+   * que el dueño no cobre en efectivo algo que el cliente ya está pagando online
+   * (un sobrepago no se puede rechazar: la pasarela ya movió la plata).
+   */
+  pendingLinkAmount: number | null;
   notes: string | null;
   /** Solo SCHEDULED/CONFIRMED se pueden arrastrar (coincide con el backend). */
   draggable: boolean;
@@ -139,11 +149,13 @@ export function buildDayGrid(
       endsAtIso: a.endsAt.toISOString(),
       status: a.status,
       clientName: `${a.client.firstName} ${a.client.lastName ?? ""}`.trim(),
+      clientPhone: a.client.phone ?? null,
       serviceNames: a.services.map((s) => s.service.name),
       color: a.services[0]?.service.color ?? null,
       totalPrice: a.totalPrice,
       paidAmount: paid,
       balance,
+      pendingLinkAmount: a.charges?.[0]?.amount ?? null,
       notes: a.notes,
       draggable: RESCHEDULABLE.has(a.status),
     });
