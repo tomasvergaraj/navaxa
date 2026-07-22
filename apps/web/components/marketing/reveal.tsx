@@ -18,14 +18,22 @@ export function Reveal({
   className,
   delay = 0,
   variant = "up",
+  as = "div",
+  id,
 }: {
   children: React.ReactNode;
   className?: string;
   delay?: number;
   /** Cómo entra: fade-up (default), solo fade, o fade+scale sutil para cards. */
   variant?: "up" | "fade" | "scale";
+  /** Etiqueta a renderizar: `section` evita envolver secciones en un div extra. */
+  as?: "div" | "section";
+  id?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Las props de div y section son idénticas en la práctica; el cast evita
+  // pelear con la unión de tipos intrínsecos por un solo atributo.
+  const Tag = as as "div";
   // Visible por defecto: el SSR/no-JS debe mostrar TODO el contenido (antes la
   // página nacía opacity-0 y sin hidratar los precios no se veían nunca).
   // Tras hidratar, solo lo que está bajo el viewport se oculta y se revela al
@@ -52,8 +60,9 @@ export function Reveal({
   }, []);
 
   return (
-    <div
+    <Tag
       ref={ref}
+      id={id}
       className={cn(
         "transition-all duration-700 ease-out-quart motion-reduce:transition-none motion-reduce:transform-none",
         shown ? "translate-y-0 scale-100 opacity-100" : HIDDEN[variant],
@@ -62,6 +71,6 @@ export function Reveal({
       style={{ transitionDelay: shown ? `${delay}ms` : "0ms" }}
     >
       {children}
-    </div>
+    </Tag>
   );
 }

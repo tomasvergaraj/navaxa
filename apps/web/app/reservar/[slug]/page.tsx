@@ -9,6 +9,7 @@ import { TenantAnalytics } from "@/components/booking/tenant-analytics";
 import { brandStyle } from "@/lib/brand-color";
 import { planHasBranding } from "@/lib/plan-features";
 import { HoursToggle } from "@/components/booking/hours-toggle";
+import { Reveal } from "@/components/marketing/reveal";
 import { WhatsappIcon } from "@/components/ui/whatsapp-icon";
 import { GoogleIcon } from "@/components/ui/google-icon";
 import { Stars } from "@/components/ui/stars";
@@ -125,15 +126,12 @@ export default async function ReservarPage({ params }: { params: { slug: string 
       }
     >
       <TenantAnalytics tenant={tenant} />
-      <nav className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-4xl items-center px-4 py-4">
-          <span className="font-display text-lg font-medium tracking-tight">{tenant.name}</span>
-        </div>
-      </nav>
 
+      {/* Sin barra con el nombre arriba: era el mismo dato que el <h1> de abajo. */}
       <main id="main" className="mx-auto max-w-4xl px-4 pb-14">
-        {/* Portada */}
-        <div className="mt-6 aspect-[16/5] w-full overflow-hidden rounded-2xl border border-border bg-muted">
+        {/* Portada: a sangre en móvil (sin marco, sin esquinas redondeadas y
+            pegada al borde superior); tarjeta enmarcada desde sm. */}
+        <div className="-mx-4 aspect-[16/5] animate-rise-blur overflow-hidden bg-muted sm:mx-0 sm:mt-6 sm:rounded-2xl sm:border sm:border-border">
           {tenant.coverUrl ? (
             // next/image: la portada full-res de R2 descargaba megas en 4G.
             <Image
@@ -143,7 +141,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
               height={320}
               priority
               sizes="(max-width: 896px) 100vw, 896px"
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover transition-transform [transition-duration:1200ms] ease-out-quart hover:scale-[1.04] motion-reduce:transition-none"
             />
           ) : (
             <div className="h-full w-full bg-gradient-to-br from-brand-graphite to-accent/30" />
@@ -159,15 +157,24 @@ export default async function ReservarPage({ params }: { params: { slug: string 
               width={96}
               height={96}
               sizes="96px"
-              className="-mt-12 h-24 w-24 rounded-2xl border-4 border-card bg-card object-cover shadow-sm"
+              className="-mt-12 h-24 w-24 animate-settle rounded-2xl border-4 border-card bg-card object-cover shadow-sm"
+              style={{ animationDelay: "120ms" }}
             />
           ) : (
-            <div className="-mt-12 flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-card bg-accent/15 font-display text-4xl font-medium text-foreground shadow-sm">
+            <div
+              className="-mt-12 flex h-24 w-24 animate-settle items-center justify-center rounded-2xl border-4 border-card bg-accent/15 font-display text-4xl font-medium text-foreground shadow-sm"
+              style={{ animationDelay: "120ms" }}
+            >
               {tenant.name.charAt(0).toUpperCase()}
             </div>
           )}
 
-          <h1 className="mt-3 font-display text-3xl font-medium tracking-tight">{tenant.name}</h1>
+          <h1
+            className="mt-3 animate-rise font-display text-3xl font-medium tracking-tight"
+            style={{ animationDelay: "220ms" }}
+          >
+            {tenant.name}
+          </h1>
 
           {!googleLinked && reviewCount > 0 && (
             <div className="mt-2 flex items-center gap-2 text-sm">
@@ -221,7 +228,10 @@ export default async function ReservarPage({ params }: { params: { slug: string 
           )}
 
           {/* Contacto en píldoras */}
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <div
+            className="mt-5 flex animate-rise flex-wrap items-center justify-center gap-2"
+            style={{ animationDelay: "320ms" }}
+          >
             {fullAddress && (
               <a href={mapsLink} target="_blank" rel="noopener noreferrer" className={pill}>
                 <MapPin className="h-4 w-4 shrink-0" />
@@ -250,7 +260,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
 
         {/* Equipo */}
         {professionals.length > 0 && (
-          <section className="mt-12">
+          <Reveal as="section" className="mt-12">
             <h2 className="mb-5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Nuestro equipo
             </h2>
@@ -294,20 +304,20 @@ export default async function ReservarPage({ params }: { params: { slug: string 
                 </div>
               ))}
             </div>
-          </section>
+          </Reveal>
         )}
 
         {/* Servicios */}
-        <section id="servicios" className="mt-12 scroll-mt-20">
+        <Reveal as="section" id="servicios" className="mt-12 scroll-mt-20">
           <h2 className="mb-5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Servicios
           </h2>
           <ServicesBrowser slug={tenant.slug} services={services} />
-        </section>
+        </Reveal>
 
         {/* Reseñas internas: solo como fallback si el local no está vinculado a Google */}
         {!googleLinked && reviews.length > 0 && (
-          <section className="mt-12">
+          <Reveal as="section" className="mt-12">
             <h2 className="mb-5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Reseñas
             </h2>
@@ -327,12 +337,12 @@ export default async function ReservarPage({ params }: { params: { slug: string 
                 </div>
               ))}
             </div>
-          </section>
+          </Reveal>
         )}
 
         {/* Reseñas de Google (cache diario de Places API, con atribución) */}
         {googleReviews.length > 0 && (
-          <section className="mt-12">
+          <Reveal as="section" className="mt-12">
             <h2 className="mb-5 flex items-center justify-center gap-2 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <GoogleIcon className="h-4 w-4" />
               Reseñas en Google
@@ -384,12 +394,12 @@ export default async function ReservarPage({ params }: { params: { slug: string 
                 </a>
               )}
             </div>
-          </section>
+          </Reveal>
         )}
 
         {/* Ubicación y horario */}
         {(fullAddress || hours.length > 0) && (
-          <section className="mt-12">
+          <Reveal as="section" className="mt-12">
             <h2 className="mb-5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Cómo llegar
             </h2>
@@ -424,7 +434,7 @@ export default async function ReservarPage({ params }: { params: { slug: string 
                 {hours.length > 0 && <HoursToggle hours={hours} timezone={tenant.timezone ?? "America/Santiago"} />}
               </div>
             </div>
-          </section>
+          </Reveal>
         )}
       </main>
 
