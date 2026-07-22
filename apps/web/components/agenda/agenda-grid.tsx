@@ -680,7 +680,12 @@ const GridColumnView = memo(function GridColumnView({
       {items.map(({ block: b, startMin: bStart, endMin: bEnd }) => {
         const dragging = draggedId === b.id;
         const height = Math.max(MIN_BLOCK_PX, (bEnd - bStart) * PX_PER_MIN - 2);
-        const tooltip = `${fmtMin(bStart)}–${fmtMin(bEnd)} · ${b.clientName}\n${b.serviceNames.join(", ")}${b.notes ? `\n${b.notes}` : ""}\n${APPOINTMENT_STATUS_LABELS[b.status]} · ${formatCLP(b.totalPrice)}`;
+        // El saldo solo se marca visualmente cuando el servicio ya se prestó:
+        // en una cita agendada tener saldo es lo normal, no un pendiente de cobro.
+        const owes =
+          b.balance > 0 &&
+          (b.status === "IN_PROGRESS" || b.status === "COMPLETED");
+        const tooltip = `${fmtMin(bStart)}–${fmtMin(bEnd)} · ${b.clientName}\n${b.serviceNames.join(", ")}${b.notes ? `\n${b.notes}` : ""}\n${APPOINTMENT_STATUS_LABELS[b.status]} · ${formatCLP(b.totalPrice)}${b.balance > 0 ? `\nSaldo por cobrar: ${formatCLP(b.balance)}` : ""}`;
         return (
           <div
             key={b.id}
@@ -712,6 +717,14 @@ const GridColumnView = memo(function GridColumnView({
                 {APPOINTMENT_STATUS_LABELS[b.status]}
               </div>
             )}
+            {owes && (
+              <span
+                aria-hidden
+                className="absolute bottom-0.5 right-1 rounded-sm bg-amber-500/25 px-1 text-[10px] font-semibold leading-tight tabular-nums text-amber-800 dark:text-amber-200"
+              >
+                {formatCLP(b.balance)}
+              </span>
+            )}
 
             {/* Menú "⋮": acciones de estado sin abrir el detalle. Es además la
                 entrada de teclado/lector de pantalla a la cita (el bloque en sí
@@ -720,7 +733,7 @@ const GridColumnView = memo(function GridColumnView({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  aria-label={`Cita de ${b.clientName} a las ${fmtMin(bStart)}, ${APPOINTMENT_STATUS_LABELS[b.status]} — acciones`}
+                  aria-label={`Cita de ${b.clientName} a las ${fmtMin(bStart)}, ${APPOINTMENT_STATUS_LABELS[b.status]}${owes ? `, saldo por cobrar ${formatCLP(b.balance)}` : ""} — acciones`}
                   disabled={actingId === b.id}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}

@@ -20,6 +20,7 @@ import {
 } from "date-fns";
 import { formatDateShort } from "@/lib/format";
 import { buildDayGrid, buildWeekCapacity, type RawBarber } from "@/lib/agenda";
+import { computeAppointmentBalance } from "@/lib/appointment-balance";
 
 export const dynamic = "force-dynamic";
 
@@ -70,8 +71,11 @@ export default async function AgendaPage({ searchParams }: PageProps) {
     select: {
       id: true,
       startsAt: true,
+      totalPrice: true,
       client: { select: { firstName: true, lastName: true } },
       barber: { select: { user: { select: { name: true } } } },
+      payment: { select: { amount: true, status: true } },
+      sales: { where: { cancelledAt: null }, select: { total: true } },
     },
   });
   const unmarked: UnmarkedItem[] = unmarkedRaw.map((a) => ({
@@ -79,6 +83,11 @@ export default async function AgendaPage({ searchParams }: PageProps) {
     when: `${a.startsAt.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}, ${a.startsAt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}`,
     clientName: `${a.client.firstName} ${a.client.lastName ?? ""}`.trim(),
     barberName: a.barber.user.name,
+    balance: computeAppointmentBalance({
+      totalPrice: a.totalPrice,
+      payment: a.payment,
+      sales: a.sales,
+    }).balance,
   }));
 
   // Navegación (preserva la vista actual)
@@ -178,6 +187,9 @@ async function renderDay(
         notes: true,
         client: { select: { id: true, firstName: true, lastName: true } },
         services: { select: { service: { select: { name: true, color: true } } } },
+        // Saldo pendiente: abono online + cobros ya registrados contra la cita.
+        payment: { select: { amount: true, status: true } },
+        sales: { where: { cancelledAt: null }, select: { total: true } },
       },
     }),
     prisma.barberSchedule.findMany({

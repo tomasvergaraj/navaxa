@@ -673,6 +673,8 @@ model Sale {
   /// dos veces.
   giftCardAmount Int              @default(0)
   giftCardId     String?
+  /// Discrimina el ingreso nuevo de la mera cobranza. Ver enum SaleKind.
+  kind          SaleKind          @default(COUNTER)
   note          String?
   cancelledAt   DateTime?
   createdAt     DateTime          @default(now())
@@ -686,6 +688,7 @@ model Sale {
   giftCardRedemptions GiftCardRedemption[]
 
   @@index([tenantId, createdAt])
+  @@index([tenantId, appointmentId])
   @@map("sales")
 }
 
@@ -695,6 +698,18 @@ enum SalePaymentMethod {
   TRANSFER
   OTHER
   GIFTCARD
+}
+
+/// COUNTER: venta de mostrador (productos / servicios sueltos / giftcard
+/// comprada). Es ingreso nuevo y suma en «Ventas caja».
+///
+/// APPOINTMENT_BALANCE: cobro del saldo pendiente de una cita. NO es ingreso
+/// nuevo — ese ingreso ya se reconoció con el `totalPrice` de la cita completada
+/// («Ingresos servicios»). Se excluye de «Ventas caja» para no contar dos veces,
+/// y se reporta en su propia línea.
+enum SaleKind {
+  COUNTER
+  APPOINTMENT_BALANCE
 }
 
 /// Línea de venta con snapshot de nombre y precio (histórico estable aunque el

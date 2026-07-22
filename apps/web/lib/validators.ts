@@ -232,6 +232,18 @@ export const saleCreateSchema = z.object({
   note: z.string().trim().max(200).optional(),
 });
 
+/**
+ * Cobro del saldo pendiente de una cita. El monto se revalida contra el saldo
+ * real en el servidor (`chargeAppointmentBalance`); acá solo se acota la forma.
+ * GIFTCARD no se acepta: canjear saldo de giftcard contra una cita va por la
+ * caja, que sabe descontar el balance.
+ */
+export const appointmentChargeSchema = z.object({
+  amount: z.coerce.number().int().min(1, "El monto debe ser mayor a cero"),
+  paymentMethod: z.enum(["CASH", "CARD", "TRANSFER", "OTHER"]),
+  note: z.string().trim().max(200).optional(),
+});
+
 // ---- Gift cards ----
 export const giftCardIssueSchema = z.object({
   amount: z.coerce.number().int().min(1000, "Mínimo $1.000").max(1_000_000),

@@ -48,6 +48,7 @@ export default async function ReportesPage({
     occupying,
     tenantPlan,
     salesAgg,
+    balanceAgg,
   ] = await Promise.all([
     db.appointment.findMany({
       where: { status: AppointmentStatus.COMPLETED, startsAt: range },
@@ -98,10 +99,20 @@ export default async function ReportesPage({
     // Tenant no lleva columna tenantId → prisma directo, no scopedDb.
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { plan: true } }),
     // Ventas de caja del período (las anuladas no cuentan). Lo pagado con
-    // giftcard se resta: ese ingreso ya se reconoció al emitirla.
+    // giftcard se resta: ese ingreso ya se reconoció al emitirla. Solo COUNTER:
+    // los cobros de saldo de citas NO son ingreso nuevo (ver el aggregate de
+    // abajo y el enum SaleKind).
     db.sale.aggregate({
-      where: { createdAt: range, cancelledAt: null },
+      where: { createdAt: range, cancelledAt: null, kind: "COUNTER" },
       _sum: { total: true, giftCardAmount: true },
+      _count: true,
+    }),
+    // Cobros del saldo pendiente de citas. Se reportan aparte porque ese
+    // ingreso YA está contado en «Ingresos servicios» (el totalPrice de la cita
+    // completada): sumarlo a «Ventas caja» sería contarlo dos veces.
+    db.sale.aggregate({
+      where: { createdAt: range, cancelledAt: null, kind: "APPOINTMENT_BALANCE" },
+      _sum: { total: true },
       _count: true,
     }),
   ]);
@@ -196,6 +207,17 @@ export default async function ReportesPage({
         <StatsCard label="No-shows" value={String(noShows)} icon={UserX} />
         <StatsCard label="Clientes nuevos" value={String(newClients)} icon={UserPlus} />
       </div>
+
+      {balanceAgg._count > 0 && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Además se cobraron{" "}
+          <strong className="font-medium text-foreground tabular-nums">
+            {formatCLP(balanceAgg._sum.total ?? 0)}
+          </strong>{" "}
+          en saldos de citas ({balanceAgg._count} cobro{balanceAgg._count === 1 ? "" : "s"}). Ese
+          dinero ya está contado en «Ingresos servicios», así que no se suma a «Ventas caja».
+        </p>
+      )}
 
       <Card className="mt-6 p-5">
         <h2 className="mb-4 font-medium">

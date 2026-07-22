@@ -25,6 +25,8 @@ interface Appointment {
   address: string | null;
   timezone: string;
   deposit: { amount: number; status: string } | null;
+  /** Saldo por pagar en la barbería: ya descuenta abono y cobros en el local. */
+  balance: number;
 }
 interface Slot {
   startsAt: string;
@@ -299,10 +301,12 @@ export function ManageBooking({ token }: { token: string }) {
             <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <span>
               Abono pagado <strong>{formatCLP(appt.deposit.amount)}</strong>
-              {appt.totalPrice > appt.deposit.amount && (
+              {appt.balance > 0 ? (
                 <>
-                  {" · "}Saldo <strong>{formatCLP(appt.totalPrice - appt.deposit.amount)}</strong> en la barbería
+                  {" · "}Saldo <strong>{formatCLP(appt.balance)}</strong> en la barbería
                 </>
+              ) : (
+                <>{" · "}Sin saldo pendiente</>
               )}
             </span>
           </div>

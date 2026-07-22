@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Pencil, Trash2, ExternalLink, Clock, User, Scissors } from "lucide-react";
+import { Loader2, Pencil, Trash2, ExternalLink, Clock, User, Scissors, Wallet } from "lucide-react";
 import {
   Button,
   Input,
@@ -32,6 +32,7 @@ import {
   patchAppointmentStatus,
   type QuickAction,
 } from "@/components/agenda/appointment-quick-actions";
+import { ChargeBalanceDialog } from "@/components/agenda/charge-balance-dialog";
 
 type Props = {
   block: GridBlock | null;
@@ -62,6 +63,7 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [acting, setActing] = useState<AppointmentStatus | null>(null);
+  const [charging, setCharging] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
 
   const [status, setStatus] = useState<AppointmentStatus>(block?.status ?? AppointmentStatus.SCHEDULED);
@@ -102,6 +104,14 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
   }, [editing, barberOptions]);
 
   const open = block !== null;
+  // Cancelada no se cobra; PENDING_PAYMENT sigue en la ventana del abono online
+  // y su hora todavía se puede liberar por expiración. Mismo criterio que el
+  // server en `lib/appointment-balance.ts`.
+  const canCharge =
+    block !== null &&
+    block.balance > 0 &&
+    block.status !== AppointmentStatus.CANCELLED &&
+    block.status !== AppointmentStatus.PENDING_PAYMENT;
 
   async function patchJson(id: string, body: Record<string, unknown>) {
     const res = await fetch(`/api/appointments/${id}`, {
@@ -246,6 +256,35 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
 
               {!editing && (
                 <>
+                  {(block.paidAmount > 0 || canCharge) && (
+                    <div className="rounded-md bg-muted/40 px-3 py-2">
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                        Pago
+                      </div>
+                      <dl className="mt-1 space-y-0.5">
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Pagado</dt>
+                          <dd className="tabular-nums">{formatCLP(block.paidAmount)}</dd>
+                        </div>
+                        <div className="flex justify-between font-medium">
+                          <dt>Saldo</dt>
+                          <dd className="tabular-nums">{formatCLP(block.balance)}</dd>
+                        </div>
+                      </dl>
+                      {canCharge && (
+                        <Button
+                          size="sm"
+                          className="mt-2 w-full"
+                          onClick={() => setCharging(true)}
+                          disabled={acting !== null}
+                        >
+                          <Wallet className="h-4 w-4" />
+                          Cobrar saldo
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
                   <div className="rounded-md bg-muted/40 px-3 py-2">
                     <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                       Estado
@@ -408,6 +447,18 @@ export function AppointmentDetailDialog({ block, onClose }: Props) {
         )}
       </DialogContent>
       {confirmDialog}
+      {block && (
+        <ChargeBalanceDialog
+          appointmentId={block.id}
+          clientName={block.clientName}
+          totalPrice={block.totalPrice}
+          paidAmount={block.paidAmount}
+          balance={block.balance}
+          open={charging}
+          onOpenChange={setCharging}
+          onCharged={onClose}
+        />
+      )}
     </Dialog>
   );
 }

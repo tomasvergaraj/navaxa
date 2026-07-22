@@ -8,12 +8,15 @@ import { Button, cn } from "@navaxa/ui";
 import { AppointmentStatus } from "@navaxa/db";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { patchAppointmentStatus } from "@/components/agenda/appointment-quick-actions";
+import { formatCLP } from "@/lib/format";
 
 export type UnmarkedItem = {
   id: string;
   when: string; // ya formateado en el server (ej: "lun 14 jul, 15:30")
   clientName: string;
   barberName: string;
+  /** Saldo pendiente; se muestra como aviso para no cerrar la cita sin cobrar. */
+  balance: number;
 };
 
 type Props = { items: UnmarkedItem[] };
@@ -125,6 +128,11 @@ export function UnmarkedBanner({ items }: Props) {
                 <span className="tabular-nums text-muted-foreground">{i.when}</span>
                 <span className="font-medium">{i.clientName}</span>
                 <span className={cn("text-muted-foreground", "hidden sm:inline")}>· {i.barberName}</span>
+                {i.balance > 0 && (
+                  <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium tabular-nums text-amber-800 dark:text-amber-200">
+                    Saldo {formatCLP(i.balance)}
+                  </span>
+                )}
                 <div className="ml-auto flex items-center gap-1">
                   <Button
                     size="sm"

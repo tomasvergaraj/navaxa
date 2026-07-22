@@ -89,6 +89,7 @@ export default async function CajaPage() {
           paymentMethod: s.paymentMethod,
           giftCardAmount: s.giftCardAmount,
           giftCardCode: s.giftCard?.code ?? null,
+          kind: s.kind,
           cancelledAt: s.cancelledAt ? s.cancelledAt.toISOString() : null,
           clientName: s.client ? `${s.client.firstName} ${s.client.lastName ?? ""}`.trim() : null,
           items: s.items,

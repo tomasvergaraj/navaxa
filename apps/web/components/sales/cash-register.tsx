@@ -4,9 +4,6 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Banknote,
-  CreditCard,
-  Landmark,
-  CircleDollarSign,
   Loader2,
   Minus,
   Plus,
@@ -22,6 +19,7 @@ import { Button, Card, Badge, Input, Label, NativeSelect, cn } from "@navaxa/ui"
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { formatCLP, formatTime } from "@/lib/format";
+import { PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from "@/lib/payment-methods";
 
 interface ProductOpt {
   id: string;
@@ -39,6 +37,8 @@ interface SaleRow {
   createdAt: string;
   total: number;
   paymentMethod: "CASH" | "CARD" | "TRANSFER" | "OTHER" | "GIFTCARD";
+  /** APPOINTMENT_BALANCE = cobro del saldo de una cita, no venta de mostrador. */
+  kind: "COUNTER" | "APPOINTMENT_BALANCE";
   giftCardAmount: number;
   giftCardCode: string | null;
   cancelledAt: string | null;
@@ -61,20 +61,8 @@ interface CartLine {
   maxQty?: number; // stock disponible (solo productos)
 }
 
-const METHODS = [
-  { key: "CASH", label: "Efectivo", icon: Banknote },
-  { key: "CARD", label: "Tarjeta", icon: CreditCard },
-  { key: "TRANSFER", label: "Transferencia", icon: Landmark },
-  { key: "OTHER", label: "Otro", icon: CircleDollarSign },
-] as const;
-
-const METHOD_LABEL: Record<SaleRow["paymentMethod"], string> = {
-  CASH: "Efectivo",
-  CARD: "Tarjeta",
-  TRANSFER: "Transferencia",
-  OTHER: "Otro",
-  GIFTCARD: "Giftcard",
-};
+const METHODS = PAYMENT_METHODS;
+const METHOD_LABEL = PAYMENT_METHOD_LABEL;
 
 export function CashRegister({
   products,
@@ -587,6 +575,11 @@ export function CashRegister({
                     <Badge variant="outline" className="text-xs">
                       {METHOD_LABEL[s.paymentMethod]}
                     </Badge>
+                    {s.kind === "APPOINTMENT_BALANCE" && (
+                      <Badge variant="outline" className="text-xs">
+                        Saldo de cita
+                      </Badge>
+                    )}
                     {s.giftCardAmount > 0 && s.paymentMethod !== "GIFTCARD" && (
                       <Badge variant="outline" className="text-xs">
                         + giftcard {formatCLP(s.giftCardAmount)}

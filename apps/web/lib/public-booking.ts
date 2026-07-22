@@ -125,6 +125,9 @@ export async function loadAppointmentByToken(token: string) {
       client: { select: { firstName: true, phone: true, email: true } },
       services: { include: { service: { select: { id: true, name: true, price: true, durationMin: true } } } },
       payment: { select: { id: true, amount: true, status: true, paidAt: true, expiresAt: true } },
+      // Cobros ya registrados en el local: sin esto la página del cliente
+      // seguiría mostrando como saldo algo que ya pagó en la barbería.
+      sales: { where: { cancelledAt: null }, select: { total: true } },
     },
   });
 }

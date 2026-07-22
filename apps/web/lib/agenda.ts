@@ -1,5 +1,6 @@
 import { startOfDay, getDay, addDays } from "date-fns";
 import { AppointmentStatus } from "@navaxa/db";
+import { computeAppointmentBalance } from "./appointment-balance";
 
 /**
  * Transforms puros para la agenda. Calculan los offsets en MINUTOS desde la
@@ -44,6 +45,10 @@ export interface RawAppointment {
   notes: string | null;
   client: { id: string; firstName: string; lastName: string | null };
   services: { service: { name: string; color: string | null } }[];
+  /** Abono online, si lo hubo. Alimenta el saldo pendiente. */
+  payment?: { amount: number; status: string } | null;
+  /** Cobros ya registrados contra la cita (el llamador filtra las anuladas). */
+  sales?: { total: number }[] | null;
 }
 
 export interface GridBlock {
@@ -60,6 +65,10 @@ export interface GridBlock {
   serviceNames: string[];
   color: string | null;
   totalPrice: number;
+  /** Abono pagado + cobros registrados. Ver `lib/appointment-balance.ts`. */
+  paidAmount: number;
+  /** Lo que falta por cobrar en el local. 0 si está saldada. */
+  balance: number;
   notes: string | null;
   /** Solo SCHEDULED/CONFIRMED se pueden arrastrar (coincide con el backend). */
   draggable: boolean;
@@ -114,6 +123,11 @@ export function buildDayGrid(
 
   const barberNameById = new Map(barbers.map((b) => [b.id, b.name]));
   for (const a of appointments) {
+    const { paid, balance } = computeAppointmentBalance({
+      totalPrice: a.totalPrice,
+      payment: a.payment,
+      sales: a.sales,
+    });
     blocksByBarber.get(a.barberId)?.push({
       id: a.id,
       clientId: a.client.id,
@@ -128,6 +142,8 @@ export function buildDayGrid(
       serviceNames: a.services.map((s) => s.service.name),
       color: a.services[0]?.service.color ?? null,
       totalPrice: a.totalPrice,
+      paidAmount: paid,
+      balance,
       notes: a.notes,
       draggable: RESCHEDULABLE.has(a.status),
     });
