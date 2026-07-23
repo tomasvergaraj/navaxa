@@ -31,7 +31,7 @@ export function BarChart({ points }: { points: ChartPoint[] }) {
         {points.map((p, i) => (
           <div
             key={i}
-            className="min-w-0 flex-1 whitespace-nowrap text-center text-[10px] text-muted-foreground"
+            className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-center text-[10px] text-muted-foreground"
           >
             {i % labelEvery === 0 ? p.label : ""}
           </div>

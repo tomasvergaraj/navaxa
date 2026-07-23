@@ -146,9 +146,9 @@ export default async function ComisionesPage() {
         <div className="space-y-6">
           {periodList.map((p) => (
             <Card key={p.key} className="overflow-hidden">
-              <div className="flex items-center justify-between gap-4 border-b border-border bg-muted/30 px-5 py-3">
-                <h2 className="font-medium">{p.label}</h2>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border bg-muted/30 px-5 py-3">
+                <h2 className="min-w-0 font-medium">{p.label}</h2>
+                <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   {p.pendingTotal > 0 && (
                     <span>
                       Pendiente{" "}

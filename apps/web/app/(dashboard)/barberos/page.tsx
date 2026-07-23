@@ -105,21 +105,21 @@ export default async function BarberosPage() {
               )}
 
               <div className="mt-auto grid grid-cols-3 gap-2 border-t border-border pt-4 text-center">
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs text-muted-foreground">Cortes 30d</div>
                   <div className="mt-1 font-medium tabular-nums">{b.apptsCount}</div>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs text-muted-foreground">Ingresos</div>
-                  <div className="mt-1 font-medium tabular-nums">
+                  <div className="mt-1 truncate font-medium tabular-nums">
                     {formatCLP(b.revenue)}
                   </div>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs text-muted-foreground">
                     Comisión {Math.round(b.commissionRate * 100)}%
                   </div>
-                  <div className="mt-1 font-medium tabular-nums">
+                  <div className="mt-1 truncate font-medium tabular-nums">
                     {formatCLP(b.commission)}
                   </div>
                 </div>

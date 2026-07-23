@@ -20,11 +20,13 @@ export function StatsCard({ label, value, trend, icon: Icon, className }: StatsC
         {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
       </div>
       <div className="mt-2 flex items-baseline justify-between gap-2">
-        <span className="text-2xl font-medium tracking-tight">{value}</span>
+        <span className="min-w-0 truncate text-xl font-medium tabular-nums tracking-tight sm:text-2xl">
+          {value}
+        </span>
         {trend && (
           <span
             className={cn(
-              "text-xs font-medium",
+              "shrink-0 text-xs font-medium",
               trend.positive
                 ? "text-green-700 dark:text-green-400"
                 : "text-red-700 dark:text-red-400",
