@@ -77,3 +77,25 @@ export function getNavItems({
 export function isNavActive(pathname: string, href: string): boolean {
   return href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 }
+
+// Orden de preferencia para la barra flotante de acceso rápido en mobile.
+const QUICK_HREFS = ["/dashboard", "/agenda", "/caja", "/clientes"];
+
+/**
+ * Los 4 accesos directos de la barra inferior (mobile). Toma los más usados
+ * que el rol puede ver; si a un barbero le falta la Caja, se rellena con
+ * "Mi perfil" para no dejar el hueco. La barra agrega "Más" aparte.
+ */
+export function getQuickNavItems(opts: {
+  isBarber?: boolean;
+  isManager?: boolean;
+}): NavItem[] {
+  const all = getNavItems(opts);
+  const byHref = new Map(all.map((i) => [i.href, i]));
+  const picks = QUICK_HREFS.map((h) => byHref.get(h)).filter(Boolean) as NavItem[];
+  if (picks.length < 4) {
+    const perfil = all.find((i) => i.href === "/mi-perfil");
+    if (perfil && !picks.includes(perfil)) picks.push(perfil);
+  }
+  return picks.slice(0, 4);
+}

@@ -49,6 +49,38 @@ const DialogContent = React.forwardRef<
 ));
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
+/**
+ * Variante drawer del Dialog: panel a pantalla completa pegado a un borde
+ * lateral. El DialogContent base es un modal centrado con `max-h-[85dvh]` y
+ * animación de zoom; forzarlo a drawer por className no sirve porque
+ * tailwind-merge no dedupe las clases de animación (quedan zoom + slide a la
+ * vez). Este componente trae su propio slide lateral y ocupa todo el alto.
+ */
+const SheetContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    side?: "left" | "right";
+  }
+>(({ side = "left", className, children, ...props }, ref) => (
+  <DialogPortal>
+    <DialogOverlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed inset-y-0 z-50 flex h-dvh w-72 max-w-[85vw] flex-col gap-0 border-border bg-card shadow-xl duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        side === "left"
+          ? "left-0 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left"
+          : "right-0 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Content>
+  </DialogPortal>
+));
+SheetContent.displayName = "SheetContent";
+
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />
 );
@@ -86,6 +118,7 @@ export {
   DialogTrigger,
   DialogClose,
   DialogContent,
+  SheetContent,
   DialogHeader,
   DialogFooter,
   DialogTitle,

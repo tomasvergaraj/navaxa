@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { AuthSessionProvider } from "@/components/session-provider";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { DashboardHeader } from "@/components/dashboard-header";
+import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { SubscriptionBanner } from "@/components/subscription-banner";
 import { isManagerRole } from "@/lib/page-guards";
 
@@ -43,8 +44,14 @@ export default async function DashboardLayout({
             trialEndsAt={tenant?.trialEndsAt ?? null}
             plan={tenant?.plan ?? "FREE"}
           />
-          <main id="main" className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+          <main
+            id="main"
+            className="min-h-0 flex-1 overflow-y-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0"
+          >
+            {children}
+          </main>
         </div>
+        <MobileTabBar isBarber={!!barber} isManager={isManager} />
       </div>
     </AuthSessionProvider>
   );
