@@ -81,7 +81,7 @@ export default function MarketingPage() {
           <Link href="/" className="shrink-0">
             <Logo size={28} />
           </Link>
-          <nav className="flex items-center gap-3 text-sm text-muted-foreground sm:gap-4 md:gap-8">
+          <nav className="hidden items-center gap-3 text-sm text-muted-foreground sm:flex sm:gap-4 md:gap-8">
             <a href="#features" className="hidden transition-colors hover:text-foreground sm:inline">
               <span className="md:hidden">Funciones</span>
               <span className="hidden md:inline">Funcionalidades</span>
