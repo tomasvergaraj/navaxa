@@ -206,3 +206,31 @@ Verificación final: tras disparar un envío, en BD
   llevan la URL como variable de cuerpo. Si Meta exige botón URL dinámico, se
   puede mover a un componente `button` — por ahora va en el cuerpo (aprobación
   más simple).
+
+## Alternativa: Twilio (provider `twilio`)
+
+El código soporta dos backends de WhatsApp: Meta Cloud API (`NOTIF_WHATSAPP_PROVIDER=meta`)
+y **Twilio** (`=twilio`). El provider Twilio ya está escrito
+([whatsapp.ts](../apps/web/lib/notifications/providers/whatsapp.ts),
+`TwilioWhatsappProvider`); solo falta setear env cuando aprueben el sender.
+
+1. En **Twilio → Content Template Builder** crea los mismos templates (Utility),
+   con `{{1}}…{{n}}` en el orden de la columna *variables* de este doc (el mismo
+   orden de `WA_TEMPLATES`, así son intercambiables con Meta). Cada uno da un
+   **ContentSid** (`HX…`).
+2. Env en el `.env` de prod:
+   ```
+   NOTIF_WHATSAPP_PROVIDER=twilio
+   TWILIO_ACCOUNT_SID=AC…
+   TWILIO_AUTH_TOKEN=…
+   TWILIO_WHATSAPP_FROM=whatsapp:+56957549549
+   TWILIO_CONTENT_SIDS={"reminder_24h":"HX…","reminder_1h":"HX…","thanks_post_visit":"HX…","recall_30d":"HX…","birthday":"HX…","appointment_scheduled":"HX…","appointment_confirmed":"HX…","appointment_cancelled":"HX…","review_request":"HX…"}
+   TWILIO_STATUS_CALLBACK_URL=https://navaxa.cl/api/webhooks/twilio
+   ```
+   `TWILIO_CONTENT_SIDS` es un JSON `TemplateKey → ContentSid` (una sola línea).
+3. Estados de entrega: configura `TWILIO_STATUS_CALLBACK_URL` (se manda como
+   `StatusCallback` en cada envío). El webhook
+   [/api/webhooks/twilio](../apps/web/app/api/webhooks/twilio/route.ts) valida
+   `X-Twilio-Signature` contra esa misma URL y actualiza `NotificationLog`
+   (`delivered`/`read` → DELIVERED, `failed`/`undelivered` → FAILED). Sin la URL
+   seteada el webhook responde 403 (no puede validar la firma tras el proxy).

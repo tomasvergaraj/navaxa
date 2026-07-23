@@ -109,6 +109,107 @@ class MetaWhatsappProvider implements ChannelProvider {
   }
 }
 
+/**
+ * Provider vía Twilio (API "Messages" clásica, no Conversations).
+ *
+ * Twilio manda WhatsApp business-initiated con Content Templates aprobados:
+ * `ContentSid` (el HX… del template en Twilio) + `ContentVariables` (JSON con
+ * las variables posicionales "1".."n"). Reusamos el MISMO orden de `WA_TEMPLATES`
+ * que Meta, así que crear los templates en Twilio con {{1}}…{{n}} en ese orden
+ * los deja intercambiables entre ambos proveedores.
+ *
+ * El mapa TemplateKey → ContentSid viene en `TWILIO_CONTENT_SIDS` como JSON
+ * (p.ej. {"reminder_24h":"HX…","reminder_1h":"HX…"}). Se parsea una vez.
+ */
+function parseContentSids(): Record<string, string> {
+  const raw = process.env.TWILIO_CONTENT_SIDS;
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, string>) : {};
+  } catch {
+    throw new Error("TWILIO_CONTENT_SIDS no es JSON válido");
+  }
+}
+const contentSids = parseContentSids();
+
+class TwilioWhatsappProvider implements ChannelProvider {
+  async send({
+    to,
+    templateKey,
+    data,
+  }: {
+    to: string;
+    templateKey?: TemplateKey;
+    data?: Record<string, string | number>;
+  }) {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const from = process.env.TWILIO_WHATSAPP_FROM;
+    if (!accountSid || !authToken || !from) {
+      throw new Error(
+        "WhatsApp (Twilio) no configurado: faltan TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_WHATSAPP_FROM",
+      );
+    }
+    if (!templateKey) {
+      throw new Error(
+        "WhatsApp requiere templateKey (Twilio manda business-initiated con Content Template)",
+      );
+    }
+    const tpl = WA_TEMPLATES[templateKey];
+    if (!tpl) {
+      throw new Error(`Sin template WhatsApp mapeado para "${templateKey}"`);
+    }
+    const contentSid = contentSids[templateKey];
+    if (!contentSid) {
+      throw new Error(`Sin ContentSid de Twilio para "${templateKey}" (revisa TWILIO_CONTENT_SIDS)`);
+    }
+
+    // Variables posicionales "1".."n" en el orden de tpl.params.
+    const contentVariables: Record<string, string> = {};
+    tpl.params.forEach((k, i) => {
+      contentVariables[String(i + 1)] = String(data?.[k] ?? "");
+    });
+
+    // whatsapp:+<E164>. El From ya debe venir con prefijo whatsapp: en env;
+    // si no, se lo agregamos por robustez.
+    const toAddr = `whatsapp:+${normalizePhone(to)}`;
+    const fromAddr = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
+
+    const form = new URLSearchParams({
+      To: toAddr,
+      From: fromAddr,
+      ContentSid: contentSid,
+      ContentVariables: JSON.stringify(contentVariables),
+    });
+    // Twilio POSTea aquí el estado (sent/delivered/read/failed) → webhook.
+    const statusCallback = process.env.TWILIO_STATUS_CALLBACK_URL;
+    if (statusCallback) form.set("StatusCallback", statusCallback);
+
+    const res = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: form.toString(),
+      },
+    );
+
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`Twilio WhatsApp error ${res.status}: ${t}`);
+    }
+    const json = await res.json();
+    // Respuesta OK: { sid: "SM…", status: "queued", … }. El sid es el providerId
+    // con el que el webhook de estados casa el NotificationLog.
+    const id = json?.sid as string | undefined;
+    return { providerId: id ?? "twilio_sent" };
+  }
+}
+
 class MockWhatsappProvider implements ChannelProvider {
   async send({ to, body }: { to: string; body: string }) {
     console.log(`[WhatsApp mock] → ${to}\n${body}\n---`);
@@ -117,4 +218,8 @@ class MockWhatsappProvider implements ChannelProvider {
 }
 
 export const whatsappProvider: ChannelProvider =
-  provider === "meta" ? new MetaWhatsappProvider() : new MockWhatsappProvider();
+  provider === "meta"
+    ? new MetaWhatsappProvider()
+    : provider === "twilio"
+      ? new TwilioWhatsappProvider()
+      : new MockWhatsappProvider();

@@ -12,13 +12,14 @@ export function whatsappMonthlyLimit(plan: Plan): number {
 }
 
 /**
- * WhatsApp está "vivo" solo con el provider real configurado (Meta Cloud API).
- * En mock (sin número real) los envíos no llegan a nadie, así que NO se enruta
- * a WhatsApp: se degrada a email para que las notificaciones sí lleguen.
- * Al setear NOTIF_WHATSAPP_PROVIDER=meta, WhatsApp vuelve a usarse solo.
+ * WhatsApp está "vivo" solo con un provider real configurado (Meta Cloud API o
+ * Twilio). En mock (sin número real) los envíos no llegan a nadie, así que NO se
+ * enruta a WhatsApp: se degrada a email para que las notificaciones sí lleguen.
+ * Al setear NOTIF_WHATSAPP_PROVIDER=meta|twilio, WhatsApp vuelve a usarse solo.
  */
 export function whatsappLive(): boolean {
-  return process.env.NOTIF_WHATSAPP_PROVIDER === "meta";
+  const p = process.env.NOTIF_WHATSAPP_PROVIDER;
+  return p === "meta" || p === "twilio";
 }
 
 /**

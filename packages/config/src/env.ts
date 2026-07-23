@@ -28,6 +28,10 @@ const envSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_WHATSAPP_FROM: z.string().optional(),
+  // Mapa JSON TemplateKey → ContentSid del template en Twilio (HX…).
+  TWILIO_CONTENT_SIDS: z.string().optional(),
+  // URL pública del webhook de estados; Twilio la firma en X-Twilio-Signature.
+  TWILIO_STATUS_CALLBACK_URL: z.string().url().optional(),
 
   // AI
   ANTHROPIC_API_KEY: z.string().optional(),
