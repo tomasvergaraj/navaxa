@@ -85,6 +85,7 @@ model Tenant {
   giftCardOrders GiftCardOrder[]
   appointmentCharges AppointmentCharge[]
   subscription  Subscription?
+  subscriptionCharges SubscriptionCharge[]
 
   @@map("tenants")
 }
@@ -111,10 +112,61 @@ model Subscription {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // ---- Cobro automático (Webpay Oneclick) ----
+  // `oneclickTbkUser` es la credencial con la que Transbank nos deja cobrar sin
+  // el dueño presente; `oneclickUsername` va en cada cobro y en el borrado, así
+  // que ambos tienen que sobrevivir juntos. `oneclickToken` guarda la
+  // inscripción EN VUELO: el return de Transbank solo trae TBK_TOKEN, sin
+  // referencia al tenant, y no se puede resolver por cookie (el POST de vuelta
+  // es cross-site y SameSite=Lax no la manda). Se limpia al confirmar.
+  oneclickUsername     String?
+  oneclickTbkUser      String?
+  oneclickToken        String?   @unique
+  cardBrand            String? // "Visa", "Mastercard", ... como lo reporta Transbank
+  cardLast4            String?
+  cardInscribedAt      DateTime?
+  // Reintentos de la renovación en curso; vuelve a 0 con cada cobro exitoso.
+  renewalAttempts      Int       @default(0)
+  lastRenewalAttemptAt DateTime?
+  lastRenewalError     String?
+
+  tenant  Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  charges SubscriptionCharge[]
 
   @@index([status, currentPeriodEnd])
   @@map("subscriptions")
+}
+
+// Historial de cobros de la suscripción SaaS (Oneclick). Cumple tres roles:
+// idempotencia (no cobrar dos veces el mismo período), auditoría de qué se
+// cobró y cuándo, y soporte del reintento (cada intento lleva su propio
+// buyOrder, porque Transbank rechaza un buy_order repetido).
+model SubscriptionCharge {
+  id                String          @id @default(cuid())
+  tenantId          String
+  subscriptionId    String
+  // buy_order enviado a Transbank (máx. 26 chars). Único = guard de idempotencia.
+  buyOrder          String          @unique
+  attempt           Int             @default(1)
+  // Fin del período que este cobro paga. Junto con subscriptionId identifica
+  // "la renovación de este ciclo", sin importar cuántos intentos haya tomado.
+  periodEnd         DateTime
+  amount            Int
+  plan              Plan
+  billingInterval   BillingInterval
+  status            String // AUTHORIZED | FAILED
+  responseCode      Int?
+  authorizationCode String?
+  cardLast4         String?
+  errorMessage      String?
+  createdAt         DateTime        @default(now())
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, periodEnd, attempt])
+  @@index([tenantId, createdAt])
+  @@map("subscription_charges")
 }
 
 enum SubscriptionStatus {

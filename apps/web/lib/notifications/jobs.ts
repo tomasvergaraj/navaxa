@@ -4,6 +4,7 @@ import { pickChannel } from "./channel";
 import { addHours, addMinutes, subHours } from "date-fns";
 import { formatDate, formatTime } from "../format";
 import { releasePaymentSlot } from "../payment-release";
+import { chargeSubscriptionRenewal, CHARGEABLE_SELECT } from "../subscription-billing";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://navaxa.cl";
 
@@ -119,20 +120,31 @@ export async function expirePendingAppointmentCharges() {
 }
 
 /**
- * Procesa las suscripciones cuyo período venció. Las marcadas para cancelar
- * bajan a FREE; el resto quedan PAST_DUE (con pasarela real se intentaría cobrar
- * de nuevo aquí). Pensado para correr cada ~hora.
+ * Procesa las suscripciones cuyo período venció:
+ *  - marcadas para cancelar → bajan a FREE;
+ *  - con tarjeta Oneclick inscrita → se cobran de verdad (ver
+ *    lib/subscription-billing.ts: idempotencia por ciclo y reintentos);
+ *  - sin tarjeta → quedan PAST_DUE, como antes (el dueño paga por el link).
+ *
+ * También toma las PAST_DUE con tarjeta, que son los reintentos del ciclo en
+ * curso. Pensado para correr una vez al día.
  */
 export async function processSubscriptionRenewals() {
   const now = new Date();
   const due = await prisma.subscription.findMany({
-    where: { status: "ACTIVE", currentPeriodEnd: { lt: now } },
-    select: { id: true, tenantId: true, cancelAtPeriodEnd: true },
+    where: {
+      status: { in: ["ACTIVE", "PAST_DUE"] },
+      currentPeriodEnd: { lt: now },
+    },
+    select: { ...CHARGEABLE_SELECT, cancelAtPeriodEnd: true },
     take: 200,
   });
 
   let downgraded = 0;
   let pastDue = 0;
+  let charged = 0;
+  let failed = 0;
+
   for (const s of due) {
     if (s.cancelAtPeriodEnd) {
       await prisma.$transaction([
@@ -143,13 +155,32 @@ export async function processSubscriptionRenewals() {
         prisma.tenant.update({ where: { id: s.tenantId }, data: { plan: Plan.FREE } }),
       ]);
       downgraded++;
-    } else {
+      continue;
+    }
+
+    if (s.oneclickTbkUser && s.oneclickUsername && s.plan !== Plan.FREE) {
+      try {
+        const res = await chargeSubscriptionRenewal(s);
+        if (res.ok) charged++;
+        else {
+          failed++;
+          if (res.suspended) downgraded++;
+        }
+      } catch (e) {
+        // Un tenant que revienta no puede dejar sin procesar a los siguientes.
+        failed++;
+        console.error(`[billing] renovación falló tenant=${s.tenantId}:`, (e as Error).message);
+      }
+      continue;
+    }
+
+    if (s.status !== "PAST_DUE") {
       await prisma.subscription.update({ where: { id: s.id }, data: { status: "PAST_DUE" } });
       pastDue++;
     }
   }
 
-  return { downgraded, pastDue };
+  return { downgraded, pastDue, charged, failed };
 }
 
 /** Día/mes/año de "hoy" en la zona horaria del tenant. */

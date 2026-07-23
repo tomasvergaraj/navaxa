@@ -11,6 +11,7 @@ import { TeamManager } from "@/components/settings/team-manager";
 import { PaymentSettingsForm } from "@/components/settings/payment-settings-form";
 import { PlanManager } from "@/components/settings/plan-manager";
 import { whatsappMonthlyLimit, whatsappUsageThisMonth } from "@/lib/notifications/channel";
+import { oneclickEnabled } from "@/lib/oneclick";
 
 export const dynamic = "force-dynamic";
 
@@ -159,6 +160,7 @@ export default async function ConfiguracionPage({
             currentPlan={tenant.plan}
             whatsappUsage={{ used: whatsappUsed, limit: whatsappMonthlyLimit(tenant.plan) }}
             trialEndsAt={tenant.trialEndsAt ? tenant.trialEndsAt.toISOString() : null}
+            oneclickAvailable={oneclickEnabled()}
             subscription={
               subscription
                 ? {
@@ -167,6 +169,11 @@ export default async function ConfiguracionPage({
                       ? subscription.currentPeriodEnd.toISOString()
                       : null,
                     cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+                    // Nunca se manda el tbk_user al cliente: solo lo que se muestra.
+                    card: subscription.oneclickTbkUser
+                      ? { brand: subscription.cardBrand, last4: subscription.cardLast4 }
+                      : null,
+                    lastRenewalError: subscription.lastRenewalError,
                   }
                 : null
             }

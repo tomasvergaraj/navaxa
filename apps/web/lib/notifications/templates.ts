@@ -10,7 +10,10 @@ export type TemplateKey =
   | "barber_invite"
   | "password_reset"
   | "review_request"
-  | "giftcard_issued";
+  | "giftcard_issued"
+  | "subscription_charged"
+  | "subscription_charge_failed"
+  | "subscription_suspended";
 
 interface Template {
   subject?: string;
@@ -73,6 +76,22 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     subject: "Tienes una giftcard de {shopName} 🎁",
     body:
       "Hola {recipientName} 👋 Recibiste una giftcard de {shopName} por ${amount}. Tu código es {code} — preséntalo al reservar o pagar. {message}",
+  },
+  // Facturación del SaaS: van al dueño de la barbería, no a sus clientes.
+  subscription_charged: {
+    subject: "Cobro de tu plan {planName} en navaxa",
+    body:
+      "Hola, cobramos {amount} a tu tarjeta terminada en {cardLast4} por el plan {planName} de {shopName}. Tu plan queda vigente hasta el {periodEnd}. Código de autorización: {authorizationCode}.",
+  },
+  subscription_charge_failed: {
+    subject: "No pudimos cobrar tu plan {planName}",
+    body:
+      "Hola, no pudimos cobrar {amount} a tu tarjeta terminada en {cardLast4} por el plan {planName} de {shopName}. Vamos a reintentar automáticamente. Si tu tarjeta cambió, actualízala acá: {actionUrl}",
+  },
+  subscription_suspended: {
+    subject: "Tu plan {planName} pasó a Gratis",
+    body:
+      "Hola, tras varios intentos no pudimos cobrar el plan {planName} de {shopName}, así que la cuenta quedó en el plan Gratis. Tus datos siguen ahí: para volver a tu plan, actualiza tu tarjeta acá: {actionUrl}",
   },
 };
 

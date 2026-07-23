@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, Badge, Button, cn } from "@navaxa/ui";
 import { toast } from "sonner";
-import { Check, Loader2 } from "lucide-react";
+import { Check, CreditCard, Loader2 } from "lucide-react";
 import { PLANS, ANNUAL_MONTHS_CHARGED } from "@navaxa/config";
 import { formatCLP } from "@/lib/format";
 import { IntervalToggle, type Interval } from "@/components/billing/interval-toggle";
@@ -18,8 +18,25 @@ interface Props {
   /** Mensajes WhatsApp del mes en curso vs cupo del plan (limit 0 = sin WhatsApp). */
   whatsappUsage: { used: number; limit: number };
   trialEndsAt: string | null;
-  subscription: { status: Status; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean } | null;
+  subscription: {
+    status: Status;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    /** Tarjeta inscrita en Oneclick, si el dueño activó el cobro automático. */
+    card: { brand: string | null; last4: string | null } | null;
+    lastRenewalError: string | null;
+  } | null;
+  /** false si el servidor no tiene credenciales Oneclick: se oculta la sección. */
+  oneclickAvailable: boolean;
 }
+
+/** Mensajes de la vuelta desde el formulario de inscripción de Transbank. */
+const CARD_RESULTS: Record<string, { ok: boolean; text: string }> = {
+  ok: { ok: true, text: "Tarjeta guardada: tu plan se renovará solo" },
+  rechazada: { ok: false, text: "Tu banco rechazó la inscripción de la tarjeta" },
+  cancel: { ok: false, text: "Inscripción cancelada" },
+  error: { ok: false, text: "No pudimos inscribir la tarjeta. Intenta de nuevo" },
+};
 
 const PAID: Plan[] = ["STARTER", "PRO", "ENTERPRISE"];
 
@@ -28,8 +45,29 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export function PlanManager({ currentPlan, whatsappUsage, trialEndsAt, subscription }: Props) {
+/** Envía el browser al formulario de inscripción de Transbank (POST TBK_TOKEN). */
+function postToTransbank(url: string, token: string) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = url;
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "TBK_TOKEN";
+  input.value = token;
+  form.appendChild(input);
+  document.body.appendChild(form);
+  form.submit();
+}
+
+export function PlanManager({
+  currentPlan,
+  whatsappUsage,
+  trialEndsAt,
+  subscription,
+  oneclickAvailable,
+}: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [busy, setBusy] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
   const [interval, setBillingInterval] = useState<Interval>("MONTHLY");
@@ -37,7 +75,20 @@ export function PlanManager({ currentPlan, whatsappUsage, trialEndsAt, subscript
   const status = subscription?.status;
   const periodEnd = subscription?.currentPeriodEnd ?? null;
   const cancelAtEnd = subscription?.cancelAtPeriodEnd ?? false;
+  const card = subscription?.card ?? null;
   const trialActive = !!trialEndsAt && new Date(trialEndsAt) > new Date() && status !== "ACTIVE";
+
+  // Vuelta desde Transbank: ?card=ok|rechazada|cancel|error. Se avisa una sola
+  // vez y se limpia el query para que un refresh no repita el toast.
+  const cardResult = searchParams.get("card");
+  const notified = useRef(false);
+  useEffect(() => {
+    if (!cardResult || notified.current) return;
+    notified.current = true;
+    const r = CARD_RESULTS[cardResult];
+    if (r) (r.ok ? toast.success : toast.error)(r.text);
+    router.replace("/configuracion?tab=plan", { scroll: false });
+  }, [cardResult, router]);
 
   async function action(body: Record<string, unknown>, key: string) {
     setBusy(key);
@@ -53,6 +104,12 @@ export function PlanManager({ currentPlan, whatsappUsage, trialEndsAt, subscript
         window.location.href = data.checkoutUrl as string;
         return;
       }
+      // Inscripción Oneclick: Transbank exige un POST de formulario con
+      // TBK_TOKEN, no admite navegar por GET a la URL que devuelve.
+      if (data.oneclick) {
+        postToTransbank(data.oneclick.url as string, data.oneclick.token as string);
+        return;
+      }
       toast.success("Plan actualizado");
       router.refresh();
     } catch (e) {
@@ -61,6 +118,20 @@ export function PlanManager({ currentPlan, whatsappUsage, trialEndsAt, subscript
       setBusy(null);
     }
   }
+
+  const inscribeCard = () => action({ action: "card_inscribe" }, "card");
+  const chargeNow = () => action({ action: "charge_now" }, "charge");
+  const removeCard = async () => {
+    const ok = await confirm({
+      title: "¿Quitar la tarjeta guardada?",
+      description:
+        "Dejaremos de cobrar automáticamente. Tendrás que pagar cada renovación a mano para no perder tu plan.",
+      confirmText: "Sí, quitar tarjeta",
+      destructive: true,
+    });
+    if (!ok) return;
+    await action({ action: "card_remove" }, "card-remove");
+  };
 
   const changePlan = (plan: Plan) =>
     action({ action: "checkout", plan, interval }, `pay-${plan}`);
@@ -160,6 +231,71 @@ export function PlanManager({ currentPlan, whatsappUsage, trialEndsAt, subscript
           );
         })()}
       </Card>
+
+      {/* Cobro automático (Oneclick). Solo tiene sentido con un plan pagado. */}
+      {oneclickAvailable && currentPlan !== "FREE" && (
+        <Card className="p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+                Cobro automático
+              </h2>
+              {card ? (
+                <>
+                  <p className="mt-2 flex items-center gap-2 font-display text-lg font-medium">
+                    <CreditCard className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {card.brand ?? "Tarjeta"} ···· {card.last4 ?? "····"}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {status === "PAST_DUE"
+                      ? "No pudimos cobrar el último período. Reintentamos una vez al día."
+                      : periodEnd
+                        ? `Cobramos solos el ${fmtDate(periodEnd)}.`
+                        : "Cobramos solos al vencer el período."}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-2 max-w-prose text-sm text-muted-foreground">
+                  Guarda una tarjeta y tu plan se renueva solo. Sin esto tienes que pagar a mano
+                  cada período, y si se te pasa la fecha la cuenta baja a Gratis.
+                </p>
+              )}
+              {subscription?.lastRenewalError && status === "PAST_DUE" && (
+                <p className="mt-1 text-xs text-destructive">{subscription.lastRenewalError}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+              {card ? (
+                <>
+                  {status === "PAST_DUE" && (
+                    <Button size="sm" onClick={chargeNow} disabled={busy !== null}>
+                      {busy === "charge" && <Loader2 className="h-4 w-4 animate-spin" />}
+                      Reintentar cobro
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={inscribeCard} disabled={busy !== null}>
+                    {busy === "card" && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Cambiar tarjeta
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={removeCard} disabled={busy !== null}>
+                    {busy === "card-remove" && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Quitar
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" onClick={inscribeCard} disabled={busy !== null}>
+                  {busy === "card" && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Activar cobro automático
+                </Button>
+              )}
+            </div>
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            La tarjeta la guarda Transbank (Webpay Oneclick); navaxa nunca ve el número completo.
+          </p>
+        </Card>
+      )}
 
       {/* Selector mensual / anual */}
       <div className="flex items-center justify-center">

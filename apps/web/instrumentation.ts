@@ -68,8 +68,10 @@ export async function register() {
       }
       try {
         const r = await processSubscriptionRenewals();
-        if (r.downgraded || r.pastDue) {
-          console.log(`[cron] suscripciones — bajadas:${r.downgraded} vencidas:${r.pastDue}`);
+        if (r.downgraded || r.pastDue || r.charged || r.failed) {
+          console.log(
+            `[cron] suscripciones — cobradas:${r.charged} fallidas:${r.failed} bajadas:${r.downgraded} vencidas:${r.pastDue}`,
+          );
         }
       } catch (e) {
         console.error("[cron] error renovando suscripciones:", (e as Error).message);
