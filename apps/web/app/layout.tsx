@@ -85,7 +85,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Toaster position="top-right" />
+          {/* Anclado bajo el header sticky (h-16 = 64px + 12px de aire). Sin
+              esto, sonner deja los toasts a top:32px en desktop y top:20px en
+              mobile (media query max-width:600px) — ambos caen ENCIMA del
+              header (hamburguesa izq. / avatar der.). El `top` inline gana sobre
+              esa media query por especificidad. Arriba también esquiva la barra
+              flotante inferior de mobile. */}
+          <Toaster position="top-right" style={{ top: "4.75rem" }} />
         </ThemeProvider>
       </body>
     </html>
