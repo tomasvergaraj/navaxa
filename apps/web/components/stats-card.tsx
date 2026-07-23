@@ -13,7 +13,7 @@ interface StatsCardProps {
 export function StatsCard({ label, value, trend, icon: Icon, className }: StatsCardProps) {
   return (
     <Card className={cn("p-5", className)}>
-      <div className="flex items-center justify-between">
+      <div className="flex min-h-8 items-start justify-between">
         <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           {label}
         </div>
