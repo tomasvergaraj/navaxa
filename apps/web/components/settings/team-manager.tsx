@@ -173,7 +173,7 @@ export function TeamManager({ members, currentUserId }: { members: Member[]; cur
                       disabled={busy}
                       aria-label={`Rol de ${m.name}`}
                       onChange={(e) => patchMember(m.id, { role: e.target.value })}
-                      className="h-8 w-auto px-2"
+                      className="h-8 w-auto px-2 py-0"
                     >
                       {ROLES.map((r) => (
                         <option key={r} value={r}>
