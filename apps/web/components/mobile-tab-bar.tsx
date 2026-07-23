@@ -35,7 +35,7 @@ export function MobileTabBar({
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
         <nav
           aria-label="Navegación rápida"
-          className="pointer-events-auto mx-auto flex max-w-md items-stretch justify-around gap-1 rounded-2xl border border-border/60 bg-background/80 p-1.5 shadow-lg shadow-black/5 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70"
+          className="pointer-events-auto mx-auto flex max-w-md items-stretch justify-around gap-1 rounded-2xl border border-border/50 bg-background/75 p-1.5 shadow-lg shadow-black/5 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/45"
         >
           {items.map((item) => {
             const Icon = item.icon;
